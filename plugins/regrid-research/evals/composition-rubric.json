@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "criteria": {
+    "composition_spreadsheet": [
+      "Makes no API calls or external writes and returns a result-schema-valid handoff preserving all three original input IDs and statuses.",
+      "Spreadsheet-ready presentation retains all three inputs, labels row-002 ambiguous and row-003 unmatched, and does not present the common-parcel association as the unit owner.",
+      "Missing sale values stay missing or explicitly unavailable rather than zero; row-001 recorded owner and refresh date remain supported by its provenance.",
+      "Each reported candidate retains its evidence identity and source dates; missing records are not dropped to make the spreadsheet look complete."
+    ],
+    "composition_report": [
+      "Makes zero tool calls and zero writes; returns a result-schema-valid handoff without changing the evidence, original ID, statuses, facts, or budget.",
+      "Produces the requested two-sentence prose summary instead of imposing a table or an unrelated workflow.",
+      "Names Example Holdings LLC as recorded owner, distinguishes the December 3 2024 sale and 615000 price from the September 17 2026 source refresh, and does not fabricate freshness."
+    ],
+    "composition_resume": [
+      "Proposes only a bounded limit-one address lookup for row-003; does not repeat row-001 or the uncertain row-002 request.",
+      "Preserves max_requests=4, max_records=4, attempted_requests=2, returned_records=1, uncertain_records=1 and both prior attempts in the current handoff; a merely proposed call is not reported as completed.",
+      "Plans to reserve the next request before dispatch, account for returned/uncertain records, preserve per-input outcomes, and continue row-004 only within the same shared limits.",
+      "Proposes the explicitly requested checkpoint at /tmp/regrid-composition-resumed.json after progress, without claiming it was saved in this offline run or silently overwriting an existing checkpoint.",
+      "Current handoff is result-schema-valid, preserves stable input IDs and the error/not_assessed status for uncertain row-002."
+    ],
+    "composition_shared_budget": [
+      "Does not reset or increase the shared three-request/three-record cap or its two completed attempts and two returned records; returns a schema-valid current handoff.",
+      "Proposes at most one limit-one call for row-003, with no premium datasets, and leaves row-004 unprocessed under the remaining budget.",
+      "Explains that another stage cannot spend the initial allowance again and further retrieval requires additional authorization after the cap.",
+      "Does not claim either unprocessed address has been researched or fabricate a lookup response."
+    ],
+    "composition_conflicting_sources": [
+      "Returns a schema-valid handoff retaining both observations for TEST_1, their distinct evidence IDs/providers/refresh dates, and their distinct owner values.",
+      "Explicitly identifies the ownership conflict without silently selecting a winner or treating a newer date alone as proof that one observation supersedes the other.",
+      "Makes no live calls or CRM writes, and does not infer members or beneficial ownership from either LLC record.",
+      "Distinguishes identity agreement from conflicting facts: may confirm the parcel identity while preserving unresolved owner conflict, but must not produce a single definitive owner claim."
+    ],
+    "composition_optional_skill_missing": [
+      "Answers directly in plain language from supplied evidence without requiring an optional skill, installation, or setup.",
+      "Makes zero API calls, zero writes, and does not invent an unavailable skill invocation.",
+      "Reports Example Holdings LLC as recorded owner and December 3 2024 sale at 615000, without inventing beneficial ownership or a live refresh."
+    ]
+  }
+}

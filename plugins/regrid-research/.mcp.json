@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "regrid": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://support.regrid.com/mcp",
+        "--header",
+        "x-regrid-token: ${REGRID_TOKEN}"
+      ],
+      "env": {
+        "REGRID_TOKEN": "${REGRID_TOKEN}"
+      }
+    }
+  }
+}

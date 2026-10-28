@@ -8,39 +8,45 @@ No releases have been tagged in this repository. `0.1.0` is the current package 
 
 ### Added
 
-- Opt-in `make live` smoke test with one-record lookup, local typed validation, before/after usage checks, and redacted status output.
+- Claude Regrid Research plugin with a bounded property-research skill, setup diagnostics, and a token-free MCP bridge configuration; includes import instructions and acceptance checks.
 
-- Versioned catalog of 169 US parcel fields and generated opt-in `ParcelProperties.typed_fields`, preserving existing dictionary access.
-- Optional SDK/CLI query validation against documented field and operator metadata, with an explicit escape hatch for unknown fields.
-- Field interpretation guidance and reproducible model generation checked by tests.
+- `make doctor` checks local `.env` presence and token configuration without revealing credentials or making API calls. Both `make doctor` and `make live` explicitly load `.env` through uv.
 
-- UTFGrid retrieval through raster TileJSON discovery in raw/typed clients and CLI, with same-origin validation and metadata reuse.
-- Complete typed matched-address, enhanced-ownership, building, zoning, typeahead, and county properties; validated direct schema-map field access.
-- Exact SDK and CLI contract tests for all 33 supplied OpenAPI operations and their parameter profiles.
-
-- Synchronous SDK and CLI for the supplied US/Canada Parcel API endpoints, public schemas, usage, reports, temporary tokens, TileJSON, and tile downloads.
-- Opt-in `TypedRegridClient` with typed parcel, count, geometry, usage, metadata, schema, report, and token responses; `.raw` retains dictionary access on the shared transport.
-- Strict Pydantic v2 request and client-configuration models with endpoint-specific option validation.
-- Response serialization that preserves unknown fields, aliases, and omitted versus explicit null values.
-- Make targets for installation, lint, formatting, typing, mocked tests, and separate local HTTPS E2E tests; mocked tests enforce 90% combined line and branch coverage.
-- Contributor guidelines, architecture documentation, API reference, and placeholder-only environment configuration.
+- Synchronous SDK and CLI covering all 33 operations in the supplied US/Canada OpenAPI contract, including public schemas, usage, reports, and temporary typeahead tokens.
+- TileJSON, raster/vector and retina tile downloads, and UTFGrid retrieval through advertised metadata, with metadata reuse and same-origin enforcement.
+- Opt-in `TypedRegridClient` with complete documented response structures and addon properties, lossless serialization, and shared `.raw` dictionary access.
+- Versioned catalog of 169 US parcel fields with SQL types, tiers, coverage-column names, and selected verified queryability, source, standardization, and preferred-field metadata.
+- Generated `ParcelFields` and opt-in `ParcelProperties.typed_fields`, preserving existing dictionary access, identifiers, unknown fields, and omitted/null distinctions.
+- Optional SDK/CLI query validation with an explicit escape hatch for unknown fields; existing queries keep their default behavior.
+- Opt-in `make live` smoke test: one-record lookup, premium datasets disabled, validation of the same response, before/after usage checks, and redacted output. Defaults to `24 pennbrook dr haddonfield nj 08033`; `REGRID_LIVE_ADDRESS` optionally overrides it.
+- Development commands for installation, lint, formatting, typing, coverage-gated mocked tests, and separate local HTTPS E2E tests.
+- Contributor, architecture, API coverage, parcel interpretation, and UTFGrid documentation; placeholder-only `.env.sample`.
 
 ### Changed
 
-- Request validation now uses Pydantic v2 while retaining dictionary responses and CLI JSON output by default.
-- Runtime dependencies now include `pydantic>=2.12,<3` alongside HTTPX.
+- Regrid Research 0.4.0 adds metadata-first discovery trials with without-skill baselines and trace/model recording, direct resource links, qualified MCP names, safer actionable validation diagnostics, and an explicit checkpoint save CLI. Real Claude model and Cowork acceptance gates remain separate from offline tests.
+
+- Regrid Research 0.3.0 adds composable structured results with independent lookup/match statuses, shared request/record budgets, supplied-evidence provenance, flexible presentation, and explicitly requested checkpoint/resume helpers. Adds downstream handoff evaluations and includes the offline helper in all package variants.
+
+- Regrid Research 0.2.0 separates Cowork HTTP and Claude Code local-bridge packages while sharing one canonical skill and its live MCP references. Adds explicit match states, unit/multiple-parcel handling, finite-list budgets, conditional ownership answers, response reuse, reproducible packaging checks, and offline behavioral evaluations.
+
+- Clarify Cowork web-connector authentication: limited request-header beta, custom-header approval, standalone skill setup, and separation from Desktop Developer JSON and the local Claude Code bridge.
+
+- Adopt Pydantic v2 for strict endpoint-specific requests and optional response validation, retaining raw SDK dictionaries and CLI JSON output.
+- Replace weak test assertions with exact SDK/CLI wire contracts, binary-output checks, and meaningful validation regressions. Generated parcel models are checked for drift during tests.
+- Expand `.gitignore` for Python build/test artifacts, local research output, editor files, and macOS metadata while retaining `.env.sample`.
 
 ### Fixed
 
-- Restrict default parcel-search limits to parcel routes so public address-schema requests carry no search parameters.
-
-- Reject non-finite upstream JSON numbers before response serialization can silently change them to null.
+- Restrict automatic parcel-search limits to parcel routes so public address-schema requests receive no search parameters.
+- Reject non-finite upstream JSON numbers before serialization can silently convert them to null.
 
 ### Security
 
-- Store account credentials as `SecretStr`; mask temporary-token models unless explicitly exported.
-- Sanitize request and typed-response validation failures without retaining underlying Pydantic exceptions containing input values.
-- Keep local environment files and private keys out of Git; authenticated request URLs must be redacted from logs.
+- Store account tokens as `SecretStr` and mask temporary-token models unless explicitly exported.
+- Sanitize request and response-validation failures without retaining input-bearing Pydantic exceptions.
+- Reject unsafe UTFGrid URLs and replace metadata credentials with the configured client token.
+- Keep local environment files and private keys out of Git. The live runner suppresses HTTP logging and prints no credentials, property details, response bodies, or exception text.
 
 ## Release Maintenance
 

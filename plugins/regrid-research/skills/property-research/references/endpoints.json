@@ -1,0 +1,167 @@
+{
+  "observed_date": "2026-10-27",
+  "spec_title": "Regrid OpenAPI Specification",
+  "endpoints": {
+    "/parcels/address": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [
+        {
+          "name": "query",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
+        },
+        {
+          "name": "path",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "return_custom",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_field_labels",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_stacked",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_zoning",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_buildings",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_addresses",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_enhanced_ownership",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_parcels",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      ],
+      "securitySchemes": {
+        "APIKeyHeader": {
+          "name": "x-regrid-token",
+          "description": "Your Regrid authorization token",
+          "type": "apiKey",
+          "in": "header"
+        },
+        "APIKeyQueryParam": {
+          "name": "token",
+          "description": "Your Regrid authorization token",
+          "type": "apiKey",
+          "in": "query"
+        }
+      }
+    },
+    "/usage": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [
+        {
+          "name": "return_full_history",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "begin_date",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "return_by_token",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_by_this_token",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        }
+      ],
+      "securitySchemes": {
+        "APIKeyHeader": {
+          "name": "x-regrid-token",
+          "description": "Your Regrid authorization token",
+          "type": "apiKey",
+          "in": "header"
+        },
+        "APIKeyQueryParam": {
+          "name": "token",
+          "description": "Your Regrid authorization token",
+          "type": "apiKey",
+          "in": "query"
+        }
+      }
+    }
+  }
+}

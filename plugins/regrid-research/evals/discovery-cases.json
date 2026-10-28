@@ -1,0 +1,6 @@
+[
+  {"id":"existing-evidence","fixture":"evidence","query":"Using data/evidence.json, who is the recorded owner of the supplied synthetic address? Give a short answer with evidence provenance. Do not retrieve more data."},
+  {"id":"structured-handoff","fixture":"handoff","query":"Prepare a structured property research handoff from data/evidence.json for another analyst. Preserve every identity, missing value and provenance detail. Check it against the supplied contract. No spreadsheet file is requested."},
+  {"id":"checkpoint-correction","fixture":"checkpoint","query":"Audit data/evidence.json as a checkpoint before resuming. Its request counter may be wrong. Use the supplied workflow helper to identify the inconsistency, explain the corrected counter from its ledger, and state whether the remaining request budget permits another lookup. Do not actually retrieve data or write a checkpoint."},
+  {"id":"irrelevant-request","fixture":"evidence","query":"Create a three-item agenda for a team planning meeting. No property research is needed."}
+]

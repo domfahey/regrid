@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "workflow_id": "example-report-01",
+  "results": [
+    {
+      "input_id": "row-12",
+      "requested": {
+        "address": "12 Example Ave, Exampletown NJ 08033",
+        "parcel_id": null,
+        "scope": "NJ 08033"
+      },
+      "lookup_status": "success",
+      "match_status": "confirmed",
+      "candidates": [
+        {
+          "parcel_id": "TEST_67_6",
+          "address": "12 EXAMPLE AVE, EXAMPLETOWN NJ 08033",
+          "facts": {
+            "recorded_owner": "Example LLC",
+            "sale_price": null
+          },
+          "provenance": {
+            "provider": "Regrid",
+            "retrieved_at": "2026-10-27T18:00:00Z",
+            "source_refreshed_at": "2026-09-17",
+            "source_url": null,
+            "evidence_id": "response-1"
+          }
+        }
+      ],
+      "missing_fields": [
+        "sale_price"
+      ],
+      "error": null,
+      "notes": [
+        "Synthetic example; no live property."
+      ]
+    }
+  ],
+  "budget": {
+    "max_requests": 1,
+    "max_records": 1,
+    "attempted_requests": 1,
+    "returned_records": 1,
+    "uncertain_records": 0
+  },
+  "attempts": [
+    {
+      "attempt_id": "request-1",
+      "input_ids": [
+        "row-12"
+      ],
+      "state": "success",
+      "record_limit": 1,
+      "returned_records": 1
+    }
+  ]
+}

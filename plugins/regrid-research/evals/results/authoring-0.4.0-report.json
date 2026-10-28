@@ -1,0 +1,56 @@
+{
+  "plugin_version": "0.4.0",
+  "date": "2026-10-28",
+  "scope": "Skill authoring fixes and metadata-first discovery evaluation infrastructure",
+  "local_validation": {
+    "make_check": {
+      "status": "passed",
+      "tests_passed": 692,
+      "e2e_deselected": 4,
+      "lint": "passed",
+      "format": "passed",
+      "mypy": "passed"
+    },
+    "coverage_scope": "src/regrid only",
+    "sdk_coverage_percent": 98.16,
+    "synthetic_fixture_validation": {
+      "status": "passed",
+      "cases": 19
+    },
+    "extracted_plugin_validation": {
+      "cowork": "passed",
+      "claude_code": "passed",
+      "standalone_skill": "passed"
+    }
+  },
+  "model_acceptance": {
+    "status": "blocked",
+    "cli_version": "2.1.296",
+    "requested_families": [
+      "haiku",
+      "sonnet",
+      "opus"
+    ],
+    "attempted_family": "haiku",
+    "observed_model_ids": [],
+    "probe": "Isolated no-tool Reply with OK prompt; sandbox and escalated retries",
+    "error": "Failed to authenticate: OAuth session expired and could not be refreshed",
+    "api_duration_ms": 0,
+    "model_tests_completed": 0,
+    "baseline_comparisons_completed": 0,
+    "next_step": "Run claude auth login locally, then run the discovery runner and grade retained traces against discovery-rubric.json."
+  },
+  "cowork_acceptance": {
+    "status": "blocked",
+    "attempt": "Select Claude Desktop via computer-use app API",
+    "error": "cgWindowNotFound",
+    "import_verified": false,
+    "authenticated_lookup_verified": false
+  },
+  "limits": [
+    "New discovery trials have not been graded on any Claude model.",
+    "Historical OpenAI-agent fixture evaluations are not Claude acceptance evidence.",
+    "Read-only model runner cannot execute checkpoint helpers; helper subprocess tests run separately.",
+    "No .env contents read and no Regrid calls made for this audit implementation."
+  ]
+}

@@ -9,6 +9,7 @@ A synchronous Python SDK and command-line client for the Regrid Parcel and Tiles
 - [Changelog](changelog.md): user-visible changes and release status.
 - [API reference](REFERENCE.md): the supplied Regrid API documentation summary.
 - [Operation coverage](docs/api-coverage.md): all 33 supplied OpenAPI operations and parameter profiles.
+- [Parcel schema guidance](docs/parcel-schema-guidance.md): field meanings, standardized alternatives, and coverage limitations.
 - [Response models](docs/model-coverage.md) and [UTFGrid](docs/utfgrid.md): typed fields and tileserver discovery.
 
 ## Installation
@@ -31,7 +32,7 @@ The editable installation provides `.venv/bin/regrid`. Activate `.venv` to use `
 To install into another project:
 
 ```sh
-uv add /absolute/path/to/regrid-sdk
+uv add /absolute/path/to/regrid
 ```
 
 ## Development commands
@@ -44,12 +45,13 @@ uv add /absolute/path/to/regrid-sdk
 | `make format-check` | Verify formatting without editing files |
 | `make typecheck` or `make type` | Run mypy on the SDK and CLI |
 | `make test` | Run mocked tests and require at least 90% combined line and branch coverage |
+| `make doctor` | Check `.env` presence and a nonblank, non-placeholder effective token locally; no API calls |
 | `make live` | Explicit bounded live Regrid smoke test; requires token; uses the default test address |
 | `make e2e` | Run subprocess and real local HTTPS tests |
 | `make check` | Run lint, format-check, typecheck, and the coverage-gated mocked suite |
 | `uv build` | Build wheel and source archives into `dist/` |
 
-Coverage includes every SDK and CLI module; XML output is written to ignored `coverage.xml`. E2E tests are separate from `make check`: they require `openssl` and permission to bind a localhost port, generate temporary TLS keys, and verify TLS using a temporary trusted certificate. They do not contact Regrid or incur API charges. Run `make check && make e2e` for the full suite. Override `PYTHON` if using a virtual environment other than `.venv`.
+Coverage includes every SDK and CLI module; XML output is written to ignored `coverage.xml`. E2E tests are separate from `make check`: they require `openssl` and permission to bind a localhost port, generate temporary TLS keys, and verify TLS using a temporary trusted certificate. They do not contact Regrid or incur API charges. Run `make check && make e2e` for the full offline suite. `make live` is a separate, explicitly invoked service check that can incur a parcel charge. Override `PYTHON` if using a virtual environment other than `.venv`.
 
 ## Command line
 
@@ -59,7 +61,7 @@ Coverage includes every SDK and CLI module; XML output is written to ignored `co
 .venv/bin/regrid address "123 Main St, Dallas, TX" --options '{"limit":1,"path":"/us/tx/dallas"}'
 .venv/bin/regrid apn "0012340000" --options '{"path":"/us/tx/dallas"}'
 .venv/bin/regrid point --lat 32.7767 --lon -96.7970 --options '{"radius":10,"limit":5}'
-.venv/bin/regrid query --fields '{"geoid":{"eq":"48113"}}' --options '{"limit":5}'
+.venv/bin/regrid query --validate-fields --fields '{"geoid":{"eq":"48113"}}' --options '{"limit":5}'
 .venv/bin/regrid area --method POST --geojson @area.geojson --options '{"limit":5}'
 .venv/bin/regrid usage --detailed
 .venv/bin/regrid tilejson --format mvt
@@ -143,7 +145,7 @@ Account tokens are held as `SecretStr` internally. Temporary-token response mode
 
 ## Parcel field catalog
 
-The versioned US catalog contains **169 fields** from the supplied July 9, 2026 schema. It records SQL datatypes, Standard/Premium tiers, documentation links, and known queryability and interpretation metadata. Unknown metadata is `None`, not a claim that a field is unavailable. Standard fields are also included in Premium. No coverage percentages or entitlements are inferred.
+The versioned US catalog contains **169 fields** from the supplied July 9, 2026 schema. It records SQL datatypes, Standard/Premium tiers, documentation links, and known queryability and interpretation metadata. Field definitions are versioned `2026-07-09`; selected live metadata was reviewed on `2026-10-27`. Standardization distinguishes `yes`, `no`, `some`, and `not-applicable`. Unknown metadata is `None`, not a claim that a field is unavailable. Standard fields are also included in Premium. No coverage percentages or entitlements are inferred.
 
 ```python
 from regrid.catalog import CATALOG_VERSION, PARCEL_FIELDS
@@ -209,18 +211,58 @@ See [REFERENCE.md](REFERENCE.md) for the supplied condensed reference, [Regrid A
 
 Catch `RegridError` for SDK failures, `RegridHTTPError` for non-success HTTP status codes, `AuthenticationError` for missing credentials or HTTP 401/403, and `RegridDecodeError` for invalid JSON or failed typed-response validation. HTTP errors expose `status_code`; exception messages omit upstream bodies and request URLs. Transport failures are not retried. Redirects are not followed.
 
-Invalid local arguments raise `ValueError` or `TypeError`. The client checks limits, coordinate ranges, supported options, and tile indices. Geometry topology, polygon area, valid server-side query fields/operators, and account permissions remain server-validated. Response dictionaries preserve unexpected and county-specific fields.
+Invalid local arguments raise `ValueError` or `TypeError`. The client checks limits, coordinate ranges, supported options, and tile indices. Geometry topology, polygon area, and account permissions remain server-validated. Field/operator checks are available locally through opt-in US catalog validation; the server remains authoritative for current query support. Response dictionaries preserve unexpected and county-specific fields.
 
 ## Verification status
 
-The mocked suite has 278 passing tests and 99.23% combined line and branch coverage, including 100% CLI and typed-client coverage. Validation was run on Python 3.12 with Pydantic 2.12.5. Lint, formatting, and type checks pass. Four HTTPS E2E cases are implemented but could not execute in the authoring sandbox because localhost socket binding is denied. No live Regrid account or billing tests have been performed.
+At commit `05fd61f`, `make check` passed **630 mocked tests** with **98.27% combined line and branch coverage**, including 100% CLI and typed-client coverage. The required coverage threshold is 90%. Validation was run on Python 3.12 with Pydantic 2.12.5. Lint, formatting, and type checks pass. Four HTTPS E2E cases are implemented but could not execute in the authoring sandbox because localhost socket binding is denied. `make live` was invoked but stopped before network access because no token was configured. Live Regrid responses and billing remain unverified.
 
 A targeted test-quality audit replaced route-only, truthiness, and configuration-inspection assertions with full request contracts, exact binary output, timeout forwarding, explicit false/zero preservation, and typed attribute checks. Seven controlled mutations that survived the previous assertions were caught by their replacements; this was a focused regression check, not a whole-project mutation score.
 
 ## Live smoke test
 
-Set `REGRID_TOKEN` locally, then run `make live`. The default test address is `24 pennbrook dr haddonfield nj 08033`; optionally set `REGRID_LIVE_ADDRESS` to override it. An unset or blank override uses the default. You may load your ignored `.env` using the installation instructions above; the runner does not load it automatically. Never paste tokens into reports or commit populated environment files.
+Set `REGRID_TOKEN` locally, then run `make live`. The default test address is `24 pennbrook dr haddonfield nj 08033`; optionally set `REGRID_LIVE_ADDRESS` to override it. An unset or blank override uses the default. `make live` and `make doctor` load your ignored `.env` through uv; exported environment values take precedence. For authenticated CLI calls use `uv run --env-file .env --no-sync regrid usage`; for SDK scripts use `uv run --env-file .env --no-sync python your_script.py`. Doctor checks configuration presence only, not token validity with Regrid. Loader errors are suppressed to avoid exposing credentials; failures return a generic diagnostic. Never paste tokens into reports or commit populated environment files.
+
+After loading your local environment:
+
+```sh
+make live
+# Optional: use another known complete US address
+REGRID_LIVE_ADDRESS="your complete US property address" make live
+```
 
 The runner fetches the public parcel schema, records usage, looks up one address with `limit=1` and premium datasets disabled, validates the same response using Pydantic and opt-in parcel fields, then checks usage again. It makes at most four requests with no retries, pagination, or expanded searches. A parcel lookup may incur a charge. A single result is not proof of an exact address match, and usage can lag or include concurrent clients. Schema type drift is reported as a count.
 
 Output contains only status and aggregate counts, not credentials, addresses, owners, response bodies, or exception details. HTTP logging is disabled in the runner process. A missing or placeholder token exits with status 2 before any network request; failed requests or validation exit with status 1; success exits with status 0. If lookup or validation fails, final usage is still attempted. Tiles and premium datasets are not tested. This target runs separately from ordinary checks and local HTTPS E2E tests.
+
+## Claude plugin
+
+The [Regrid Research guide](plugins/regrid-research/README.md) covers separate
+Cowork and Claude Code packages built from one canonical research skill:
+
+- `dist/regrid-research-cowork-0.4.0.zip`: remote connector declaration and skills.
+- `dist/regrid-research-claude-code-0.4.0.zip`: local bridge and skills.
+- `dist/regrid-property-research-skill-0.4.0.zip`: standalone skill with references.
+
+Build with `.venv/bin/python scripts/build_claude_plugins.py`. For Cowork,
+configure `x-regrid-token` privately in the custom web connector's Request headers
+settings. This is a limited beta and custom header names require approval.
+Desktop Developer JSON and the local `.env` do not configure Cowork.
+
+The skill verifies address/unit matches, honors finite-list budgets, distinguishes
+missing facts from failed matches, and reuses retrieved responses. Its
+[live tool reference](plugins/regrid-research/skills/property-research/references/mcp-tools.md)
+records observed MCP schemas and a successful authenticated usage-only call.
+[Offline evaluations](plugins/regrid-research/evals/README.md) test research decisions
+using synthetic saved responses. Neither proves Cowork import or account-specific
+header availability; those remain unverified. No credentials enter the packages.
+
+Regrid Research 0.3.0 adds a versioned structured handoff, separate lookup/match
+statuses, shared budgets, supplied-evidence reuse, and explicitly requested
+resumable checkpoints. See the [composition guide](plugins/regrid-research/skills/property-research/references/composition.md).
+
+Regrid Research 0.4.0 adds metadata-first discovery/baseline evaluations, direct
+resource links, qualified MCP tool names, and actionable offline validation.
+Save validated checkpoints with `workflow.py save INPUT.json DESTINATION.json`;
+Python 3.10+ is required, with no third-party packages. Actual Claude model and
+Cowork acceptance gates are tracked separately from local tests.

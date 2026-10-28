@@ -36,4 +36,4 @@ PRs should explain behavior changes, compatibility effects, and verification res
 
 ## Security & Configuration
 
-Never commit secrets. Use `REGRID_TOKEN` and placeholder-only `.env.sample`; local `.env` files are ignored and not automatically loaded. Do not log token-bearing URLs. Preserve bounded requests, disabled redirects, and explicit pagination/retries.
+Never commit secrets. Use `REGRID_TOKEN` and placeholder-only `.env.sample`; local `.env` files are ignored. `make live` and `make doctor` explicitly load `.env` through uv. For authenticated CLI/API work, use `uv run --env-file .env --no-sync regrid ...` or `uv run --env-file .env --no-sync python ...`. Never display or inspect the token; load it only into the child process. The SDK and CLI do not load `.env` themselves. Do not log token-bearing URLs. Preserve bounded requests, disabled redirects, and explicit pagination/retries.
