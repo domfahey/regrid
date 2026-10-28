@@ -19,6 +19,7 @@ from .models import (
     TileJSON,
     TypeaheadResponse,
     UsageResponse,
+    UTFGridResponse,
     VerseResponse,
     parse_parcel_response,
 )
@@ -121,10 +122,24 @@ class TypedRegridClient:
         return _validate(ParcelResponse, self.raw.owner(owner, country=country, **options))
 
     def query(
-        self, fields: Mapping[str, Mapping[str, Any]], *, country: str = "us", **options: Any
+        self,
+        fields: Mapping[str, Mapping[str, Any]],
+        *,
+        country: str = "us",
+        validate_fields: bool = False,
+        allow_unknown_fields: bool = False,
+        **options: Any,
     ) -> ParcelSearchResponse:
-        """Find parcels or retrieve a count using field filters."""
-        return _parcels(self.raw.query(fields, country=country, **options))
+        """Find parcels or a count, optionally validating US catalog filters."""
+        return _parcels(
+            self.raw.query(
+                fields,
+                country=country,
+                validate_fields=validate_fields,
+                allow_unknown_fields=allow_unknown_fields,
+                **options,
+            )
+        )
 
     def parcel(self, ll_uuid: str, *, country: str = "us", **options: Any) -> ParcelResponse:
         """Retrieve a parcel by Regrid UUID."""
@@ -194,3 +209,9 @@ class TypedRegridClient:
     def tile(self, z: int, x: int, y: int, *, format: str = "mvt", retina: bool = False) -> bytes:
         """Retrieve unchanged tile bytes."""
         return self.raw.tile(z, x, y, format=format, retina=retina)
+
+    def grid(
+        self, z: int, x: int, y: int, *, metadata: Mapping[str, Any] | None = None
+    ) -> UTFGridResponse:
+        """Fetch and validate UTFGrid JSON discovered from raster TileJSON."""
+        return _validate(UTFGridResponse, self.raw.grid(z, x, y, metadata=metadata))

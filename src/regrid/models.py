@@ -8,7 +8,9 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal, TypeAlias
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError, model_validator
+
+from .parcel_fields import ParcelFields
 
 Number: TypeAlias = int | float
 Position: TypeAlias = Annotated[list[Number], Field(min_length=2, max_length=3)]
@@ -68,6 +70,113 @@ Geometry: TypeAlias = Annotated[
 GeometryCollection.model_rebuild()
 
 
+class MatchedAddress(RegridModel):
+    """Matched secondary-address fields retain source strings and leading zeros."""
+
+    a_id: str | None = None
+    a_address: str | None = None
+    a_saddno: str | None = None
+    a_saddpref: str | None = None
+    a_saddstr: str | None = None
+    a_saddsttyp: str | None = None
+    a_saddstsuf: str | None = None
+    a_sunit: str | None = None
+    a_szip5: str | None = None
+    a_szip: str | None = None
+    a_carte: str | None = None
+    a_crtype: str | None = None
+    a_scity: str | None = None
+    a_state2: str | None = None
+    a_county: str | None = None
+    a_delvseqno: str | None = None
+    a_usps_elotseq: str | None = None
+    a_usps_elotsort: str | None = None
+    a_resbus: str | None = None
+    a_pmbdesc: str | None = None
+    a_pmbno: str | None = None
+    a_dpv_confirm: str | None = None
+    a_dpv_footnotes: str | None = None
+    a_default_match: str | None = None
+    a_lacsflag: str | None = None
+    a_nostats: str | None = None
+    a_error_code: str | None = None
+    a_extrainfo: str | None = None
+    a_dpv_type: str | None = None
+    a_geocodetype: str | None = None
+    a_moddate: str | None = None
+    a_census_blockgroup: str | None = None
+    a_lat: str | None = None
+    a_lon: str | None = None
+    a_geoid: str | None = None
+    ll_uuid: str | None = None
+    a_usps_vacancy: str | None = None
+
+
+class EnhancedOwnership(RegridModel):
+    """Enhanced ownership fields; date values retain the upstream string format."""
+
+    attom_id: str | None = None
+    eo_deedowner: str | None = None
+    eo_deedowner2: str | None = None
+    eo_deedowner2first: str | None = None
+    eo_deedowner2last: str | None = None
+    eo_deedowner2middle: str | None = None
+    eo_deedowner2suffix: str | None = None
+    eo_deedowner3: str | None = None
+    eo_deedowner3first: str | None = None
+    eo_deedowner3last: str | None = None
+    eo_deedowner3middle: str | None = None
+    eo_deedowner3suffix: str | None = None
+    eo_deedowner4: str | None = None
+    eo_deedowner4first: str | None = None
+    eo_deedowner4last: str | None = None
+    eo_deedowner4middle: str | None = None
+    eo_deedowner4suffix: str | None = None
+    eo_deedownerfirst: str | None = None
+    eo_deedownerlast: str | None = None
+    eo_deedownermiddle: str | None = None
+    eo_deedownersuffix: str | None = None
+    eo_geoid: str | None = None
+    eo_last_refresh: str | None = None
+    eo_mail_adddir: str | None = None
+    eo_mail_addno: str | None = None
+    eo_mail_addpref: str | None = None
+    eo_mail_address: str | None = None
+    eo_mail_addressinfoformat: str | None = None
+    eo_mail_addstr: str | None = None
+    eo_mail_addstsuf: str | None = None
+    eo_mail_carte: str | None = None
+    eo_mail_city: str | None = None
+    eo_mail_county: str | None = None
+    eo_mail_geoid: str | None = None
+    eo_mail_state2: str | None = None
+    eo_mail_unit: str | None = None
+    eo_mail_unitpref: str | None = None
+    eo_mail_zip: str | None = None
+    eo_mail_zip4: str | None = None
+    eo_owner: str | None = None
+    eo_owner2: str | None = None
+    eo_owner2first: str | None = None
+    eo_owner2last: str | None = None
+    eo_owner2middle: str | None = None
+    eo_owner2suffix: str | None = None
+    eo_owner3: str | None = None
+    eo_owner3first: str | None = None
+    eo_owner3last: str | None = None
+    eo_owner3middle: str | None = None
+    eo_owner3suffix: str | None = None
+    eo_owner4: str | None = None
+    eo_owner4first: str | None = None
+    eo_owner4last: str | None = None
+    eo_owner4middle: str | None = None
+    eo_owner4suffix: str | None = None
+    eo_ownerfirst: str | None = None
+    eo_ownerlast: str | None = None
+    eo_ownermiddle: str | None = None
+    eo_ownersuffix: str | None = None
+    ll_uuid: str | None = None
+
+
 class ParcelProperties(RegridModel):
     headline: str | None = None
     path: str | None = None
@@ -75,8 +184,23 @@ class ParcelProperties(RegridModel):
     fields: dict[str, Any] | None = None
     field_labels: dict[str, Any] | None = None
     context: dict[str, Any] | None = None
-    addresses: list[dict[str, Any]] | None = None
+    addresses: list[MatchedAddress] | None = None
+    enhanced_ownership: list[EnhancedOwnership] | None = None
     score: Number | None = None
+
+    @property
+    def typed_fields(self) -> ParcelFields | None:
+        """Validate US parcel fields on demand without changing their raw dictionary."""
+        if self.fields is None:
+            return None
+        try:
+            return ParcelFields.model_validate(self.fields)
+        except ValidationError:
+            pass
+        # Import lazily to avoid coupling model imports to transport initialization.
+        from .client import RegridDecodeError
+
+        raise RegridDecodeError("Parcel fields failed schema validation")
 
 
 class ParcelFeature(RegridModel):
@@ -106,10 +230,85 @@ class FeatureCollection(RegridModel):
     features: list[Feature]
 
 
+class BuildingProperties(RegridModel):
+    ed_str_uuid: str | None = None
+    ed_bld_uuid: str | None = None
+    ed_geoid: str | None = None
+    ed_lat: Number | None = None
+    ed_lon: Number | None = None
+    ed_bldg_footprint_sqft: Number | None = None
+    ed_largest: Number | None = None
+    ed_source: str | None = None
+    ed_source_date: str | None = None
+    ll_uuids: list[str] | None = None
+    ed_mean_height: Number | None = None
+    ed_max_object_height: Number | None = None
+    ed_lag: Number | None = None
+    ed_hag: Number | None = None
+    ed_mean_elevation: Number | None = None
+    ed_mean_slope: int | None = None
+    ed_stories: int | None = None
+    ed_gross_area: Number | None = None
+    ed_volume: Number | None = None
+
+
+class BuildingFeature(RegridModel):
+    type: Literal["Feature"] = "Feature"
+    geometry: Geometry | None = None
+    properties: BuildingProperties | None = None
+    id: int | None = None
+
+
+class BuildingCollection(RegridModel):
+    type: Literal["FeatureCollection"] = "FeatureCollection"
+    features: list[BuildingFeature]
+
+
+class ZoningProperties(RegridModel):
+    ogc_fid: int | None = None
+    zoning_id: int | None = None
+    municipality_id: int | None = None
+    municipality_name: str | None = None
+    zoning: str | None = None
+    zoning_description: str | None = None
+    zoning_type: str | None = None
+    zoning_subtype: str | None = None
+    zoning_guide: str | None = None
+    zoning_code_link: str | None = None
+    land_use_flags_permitted: str | None = None
+    land_use_flags_conditional: str | None = None
+    landuse_classes: dict[str, list[str]] | None = None
+    min_lot_area_sq_ft: Number | None = None
+    min_lot_width_ft: Number | None = None
+    max_building_height_ft: Number | None = None
+    max_far: Number | None = None
+    max_coverage_pct: Number | None = None
+    min_front_setback_ft: Number | None = None
+    min_rear_setback_ft: Number | None = None
+    max_impervious_coverage_pct: Number | None = None
+    min_side_setback_ft: Number | None = None
+    min_landscaped_space_pct: Number | None = None
+    min_open_space_pct: Number | None = None
+    max_density_du_per_acre: Number | None = None
+    zoning_data_date: str | None = None
+
+
+class ZoningFeature(RegridModel):
+    type: Literal["Feature"] = "Feature"
+    geometry: Geometry | None = None
+    properties: ZoningProperties | None = None
+    id: int | None = None
+
+
+class ZoningCollection(RegridModel):
+    type: Literal["FeatureCollection"] = "FeatureCollection"
+    features: list[ZoningFeature]
+
+
 class ParcelResponse(RegridModel):
     parcels: ParcelCollection | None = None
-    buildings: FeatureCollection | None = None
-    zoning: FeatureCollection | None = None
+    buildings: BuildingCollection | None = None
+    zoning: ZoningCollection | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -140,8 +339,30 @@ def parse_parcel_response(data: dict[str, Any]) -> ParcelSearchResponse:
     return ParcelResponse.model_validate(data)
 
 
+class TypeaheadProperties(RegridModel):
+    ll_uuid: str | None = None
+    score: Number | None = None
+    context: dict[str, Any] | None = None
+    path: str | None = None
+    address: str | None = None
+
+
+class TypeaheadFeature(RegridModel):
+    type: Literal["Feature"] = "Feature"
+    # The supplied centroid schema says Polygon/MultiPolygon; actual centroids
+    # may be Points. Keep the common geometry union to preserve both contracts.
+    geometry: Geometry | None = None
+    properties: TypeaheadProperties | None = None
+    id: int | None = None
+
+
+class TypeaheadCollection(RegridModel):
+    type: Literal["FeatureCollection"] = "FeatureCollection"
+    features: list[TypeaheadFeature]
+
+
 class TypeaheadResponse(RegridModel):
-    parcel_centroids: FeatureCollection
+    parcel_centroids: TypeaheadCollection
 
 
 class SchemaField(RegridModel):
@@ -156,6 +377,26 @@ class SchemaResponse(RegridModel):
     """Schema envelopes and direct schema maps both retain their original keys."""
 
     schema_: dict[str, SchemaField] | None = Field(default=None, alias="schema")
+
+    @property
+    def field_definitions(self) -> dict[str, SchemaField]:
+        """Typed fields from either a schema envelope or a direct field map.
+
+        Direct-map object values are validated while scalar metadata remains
+        available in model_extra and to_dict().
+        """
+        if self.schema_ is not None:
+            return self.schema_
+        return {
+            key: SchemaField.model_validate(value)
+            for key, value in (self.model_extra or {}).items()
+            if isinstance(value, dict)
+        }
+
+    @model_validator(mode="after")
+    def validate_direct_fields(self) -> SchemaResponse:
+        self.field_definitions
+        return self
 
 
 class CycleDates(RegridModel):
@@ -247,6 +488,8 @@ class VerseProperties(RegridModel):
     admin0: str | None = None
     admin1: str | None = None
     admin2: str | None = None
+    admin2_slug: int | None = None
+    admin2_center: int | None = None
     admin3: str | None = None
     geoid: str | None = None
     total_objects: int | None = None
@@ -255,6 +498,7 @@ class VerseProperties(RegridModel):
     usps_data_date: str | None = None
     date_added: str | None = None
     filename_stem: str | None = None
+    shapefile_size_flag: str | None = None
     table_name: str | None = None
     # The two supplied country schemas disagree on population's numeric type.
     population: int | str | None = None
@@ -318,3 +562,11 @@ class TileJSON(RegridModel):
     maxzoom: int | None = None
     bounds: list[Number] | None = None
     center: list[Number] | None = None
+
+
+class UTFGridResponse(RegridModel):
+    """UTFGrid rows, index keys, and feature data with unknown fields retained."""
+
+    grid: list[str]
+    keys: list[str]
+    data: dict[str, Any]

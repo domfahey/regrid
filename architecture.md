@@ -7,9 +7,13 @@ The SDK separates API transport, endpoint behavior, request validation, and opti
 | Module | Responsibility |
 | --- | --- |
 | `client.py` | HTTP client lifecycle, token injection, HTTP errors, JSON decoding, search limits, and tiles |
+| `grids.py` | TileJSON-driven UTFGrid discovery, URL validation, and token replacement |
 | `endpoints.py` | US/Canada routes, supported options, query serialization, and GET/POST bodies |
 | `requests.py` | Strict request models, cached endpoint-option models, and sanitized validation failures |
 | `config.py` | Client settings, HTTPS base URLs, limits, tile coordinates, and token storage |
+| `catalog.py`, `data/parcel_fields.json` | Versioned, immutable US field definitions and evidence-backed metadata |
+| `parcel_fields.py` | Generated opt-in strict parcel attributes, preserving JSON representations |
+| `query_catalog.py` | Optional US query field/operator validation before transport |
 | `models.py` | Response envelopes, discriminated GeoJSON models, usage, metadata, and serialization |
 | `typed.py` | `TypedRegridClient`, which validates raw responses into endpoint-specific models |
 | `cli.py` | Argument parsing, JSON or `@file` input, command dispatch, and output formatting |
@@ -35,7 +39,7 @@ flowchart TD
 
 `RegridClient` inherits endpoint helpers from `EndpointsMixin`. Helpers validate options against the selected endpoint and country, serialize GeoJSON and field filters, and call `_request`. The transport applies a default search limit, injects the token for authenticated requests, and decodes JSON. Binary tile responses bypass JSON decoding.
 
-`TypedRegridClient` owns a `RegridClient` exposed as `.raw`; both share one transport and lifetime. Its methods delegate once, then validate the response. `.to_dict()` serializes an existing model without another API call. Closing the typed client also closes `.raw`.
+`TypedRegridClient` owns a `RegridClient` exposed as `.raw`; both share one transport and lifetime. Its methods delegate to the raw client, then validate the response. UTFGrid can first discover its URL through TileJSON. `.to_dict()` serializes an existing model without another API call. Closing the typed client also closes `.raw`.
 
 ## Validation and Compatibility
 
@@ -43,7 +47,7 @@ Request models use strict types and reject extra parameters. Model schemas for e
 
 Response models validate known fields while allowing unknown fields. County attributes remain extensible dictionaries. Serialization uses aliases and excludes unset defaults, preserving omitted versus explicitly null fields. Count-only responses are selected explicitly rather than being interpreted as empty parcel responses.
 
-Building, zoning, and typeahead properties remain dynamic dictionaries. Direct schema-map responses are preserved as extras; enveloped schema fields are typed. GeoJSON coordinate structures are modeled, but topology and polygon area are not calculated locally. These boundaries reflect inconsistencies in the supplied API specification.
+Address, ownership, building, zoning, typeahead, and county properties are typed while retaining unknown fields. Direct schema maps expose validated `.field_definitions` without changing their serialized shape; enveloped schema fields remain accessible through `.schema_`. GeoJSON coordinate structures are modeled, but topology and polygon area are not calculated locally. These boundaries reflect inconsistencies in the supplied API specification.
 
 ## Credentials and Errors
 
@@ -55,6 +59,10 @@ HTTPX request logging can include tokens in URLs, so applications must redact lo
 
 ## Testing and Extension
 
-Mocked tests exercise endpoint serialization, country differences, model validation, CLI output, and errors. `make check` enforces lint, formatting, typing, and 90% combined line/branch coverage. Separate `make e2e` tests use a local HTTPS server, temporary trusted certificates, and subprocess CLI calls; they require socket access and never contact Regrid.
+The [contract inventory](docs/api-coverage.md) maps all 33 supplied operations to exact SDK and CLI wire assertions. Mocked tests exercise endpoint serialization, country differences, model validation, CLI output, and errors. `make check` enforces lint, formatting, typing, and 90% combined line/branch coverage. Separate `make e2e` tests use a local HTTPS server, temporary trusted certificates, and subprocess CLI calls; they require socket access and never contact Regrid.
 
 For a new endpoint, add its route and exact options, extend request validation, provide an appropriate typed response and facade method, then expose the CLI command. Add mocked request/response tests and update the README and changelog. Preserve raw access for upstream responses that are not yet modeled.
+
+## Field Catalog Maintenance
+
+The catalog is bundled package data. `scripts/generate_parcel_fields.py` produces static attributes for IDE/type-checker discovery; tests reject stale generated code. `ParcelProperties.typed_fields` validates on each explicit access, so raw mutable dictionaries remain authoritative. Query catalog checks are opt-in and US-only; the normal structural checks always apply. Unknown metadata remains unknown, and live coverage retrieval is separate.

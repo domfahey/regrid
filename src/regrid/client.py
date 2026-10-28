@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from typing import Any
 
 import httpx
 
 from .config import ClientSettings, TileRequest, validate_limit
 from .endpoints import EndpointsMixin
+from .grids import fetch_grid
 from .requests import safe_validate
 
 
@@ -125,7 +127,11 @@ class RegridClient(EndpointsMixin):
         self, method: str, path: str, params: dict[str, Any] | None = None, json: Any = None
     ) -> dict[str, Any]:
         params = dict(params or {})
-        if path.rsplit("/", 1)[-1] in {"point", "area", "address", "apn", "owner", "query"}:
+        if path in {
+            prefix + search
+            for prefix in ("/parcels/", "/ca/parcels/")
+            for search in ("point", "area", "address", "apn", "owner", "query")
+        }:
             limit = params.get("limit")
             if limit is None:
                 limit = 1 if path.endswith("/address") else self.default_limit
@@ -154,3 +160,9 @@ class RegridClient(EndpointsMixin):
         suffix = "@2x" if retina else ""
         url = f"{self._tiles_base_url}/api/v1/parcels/{z}/{x}/{y}{suffix}.{format}"
         return self._send("GET", url, params={}).content
+
+    def grid(
+        self, z: int, x: int, y: int, *, metadata: Mapping[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Fetch UTFGrid JSON using the endpoint advertised in raster TileJSON."""
+        return fetch_grid(self, z, x, y, metadata=metadata)

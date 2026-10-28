@@ -12,7 +12,6 @@ from regrid.requests import (
     GeometryInput,
     PointRequest,
     QueryRequest,
-    StrictRequest,
     TextInput,
     TokenRequest,
     safe_validate,
@@ -32,16 +31,54 @@ def client():
         yield sdk, calls
 
 
-def test_request_model_configuration():
-    assert StrictRequest.model_config["strict"] is True
-    assert StrictRequest.model_config["extra"] == "forbid"
-    assert StrictRequest.model_config["hide_input_in_errors"] is True
+def test_explicit_false_and_zero_options_survive_request_serialization(client):
+    sdk, calls = client
+    sdk.point(
+        0,
+        0,
+        radius=0,
+        offset_id=0,
+        limit=1,
+        return_count=False,
+        return_geometry=False,
+        return_parcels=False,
+    )
+    assert len(calls) == 1
+    assert dict(calls[0].url.params) == {
+        "lat": "0",
+        "lon": "0",
+        "radius": "0",
+        "offset_id": "0",
+        "limit": "1",
+        "return_count": "false",
+        "return_geometry": "false",
+        "return_parcels": "false",
+        "token": "placeholder",
+    }
 
 
-@pytest.mark.parametrize("value", [True, "2", 2.0, -1, 1001])
-def test_limits_are_strict_and_bounded(value):
-    with pytest.raises(ValueError):
-        validate_options({"limit": value}, {"limit"})
+@pytest.mark.parametrize(
+    "value,accepted",
+    [
+        (1, True),
+        (1000, True),
+        (True, False),
+        ("2", False),
+        (2.0, False),
+        (-1, False),
+        (1001, False),
+    ],
+)
+def test_limits_are_strict_and_bounded(client, value, accepted):
+    sdk, calls = client
+    if accepted:
+        assert sdk.owner("Smith", limit=value) == {"ok": True}
+        assert len(calls) == 1
+        assert calls[0].url.params["limit"] == str(value)
+    else:
+        with pytest.raises(ValueError):
+            sdk.owner("Smith", limit=value)
+        assert calls == []
 
 
 @pytest.mark.parametrize("value", [1, "true", [], {}])

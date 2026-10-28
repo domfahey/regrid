@@ -8,6 +8,16 @@ No releases have been tagged in this repository. `0.1.0` is the current package 
 
 ### Added
 
+- Opt-in `make live` smoke test with one-record lookup, local typed validation, before/after usage checks, and redacted status output.
+
+- Versioned catalog of 169 US parcel fields and generated opt-in `ParcelProperties.typed_fields`, preserving existing dictionary access.
+- Optional SDK/CLI query validation against documented field and operator metadata, with an explicit escape hatch for unknown fields.
+- Field interpretation guidance and reproducible model generation checked by tests.
+
+- UTFGrid retrieval through raster TileJSON discovery in raw/typed clients and CLI, with same-origin validation and metadata reuse.
+- Complete typed matched-address, enhanced-ownership, building, zoning, typeahead, and county properties; validated direct schema-map field access.
+- Exact SDK and CLI contract tests for all 33 supplied OpenAPI operations and their parameter profiles.
+
 - Synchronous SDK and CLI for the supplied US/Canada Parcel API endpoints, public schemas, usage, reports, temporary tokens, TileJSON, and tile downloads.
 - Opt-in `TypedRegridClient` with typed parcel, count, geometry, usage, metadata, schema, report, and token responses; `.raw` retains dictionary access on the shared transport.
 - Strict Pydantic v2 request and client-configuration models with endpoint-specific option validation.
@@ -21,6 +31,8 @@ No releases have been tagged in this repository. `0.1.0` is the current package 
 - Runtime dependencies now include `pydantic>=2.12,<3` alongside HTTPX.
 
 ### Fixed
+
+- Restrict default parcel-search limits to parcel routes so public address-schema requests carry no search parameters.
 
 - Reject non-finite upstream JSON numbers before response serialization can silently change them to null.
 

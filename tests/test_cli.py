@@ -8,6 +8,12 @@ import pytest
 from regrid import cli
 from regrid.client import RegridClient
 
+TILE_BYTES = b"\x00\xffparcel-tile\x80"
+RESPONSE = {
+    "parcels": {"features": []},
+    "county_extra": {"apn": "000123", "label": "Müller", "optional": None},
+}
+
 
 @pytest.fixture
 def requests(monkeypatch):
@@ -15,7 +21,9 @@ def requests(monkeypatch):
 
     def handle(request):
         seen.append(request)
-        return httpx.Response(200, json={"ok": True})
+        if request.url.path.endswith((".png", ".mvt")):
+            return httpx.Response(200, content=TILE_BYTES)
+        return httpx.Response(200, json=RESPONSE)
 
     monkeypatch.setenv("REGRID_TOKEN", "secret")
     monkeypatch.setattr(
@@ -25,36 +33,133 @@ def requests(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "argv,path",
+    "argv,host,path,method,params,body",
     [
-        (["point", "--lat", "30", "--lon", "-90"], "/parcels/point"),
+        (
+            ["point", "--lat", "30", "--lon", "-90"],
+            "app.regrid.com",
+            "/api/v2/parcels/point",
+            "GET",
+            {"lat": "30.0", "lon": "-90.0", "limit": "5", "return_parcels": "true"},
+            None,
+        ),
         (
             ["point", "--geojson", '{"type":"Point","coordinates":[0,0]}', "--method", "POST"],
-            "/parcels/point",
+            "app.regrid.com",
+            "/api/v2/parcels/point",
+            "POST",
+            {"limit": "5", "return_parcels": "true"},
+            {"geojson": {"type": "Point", "coordinates": [0, 0]}},
         ),
-        (["area", "--geojson", '{"type":"Polygon","coordinates":[]}'], "/parcels/area"),
-        (["address", "123 Main"], "/parcels/address"),
-        (["apn", "000123"], "/parcels/apn"),
-        (["owner", "Smith"], "/parcels/owner"),
-        (["query", "--fields", '{"geoid":{"eq":"123"}}'], "/parcels/query"),
+        (
+            ["area", "--geojson", '{"type":"Point","coordinates":[1,2]}'],
+            "app.regrid.com",
+            "/api/v2/parcels/area",
+            "GET",
+            {
+                "geojson": '{"type":"Point","coordinates":[1,2]}',
+                "limit": "5",
+                "return_parcels": "true",
+            },
+            None,
+        ),
+        (
+            ["address", "123 Main"],
+            "app.regrid.com",
+            "/api/v2/parcels/address",
+            "GET",
+            {"query": "123 Main", "limit": "1", "return_parcels": "true"},
+            None,
+        ),
+        (
+            ["apn", "000123"],
+            "app.regrid.com",
+            "/api/v2/parcels/apn",
+            "GET",
+            {"parcelnumb": "000123", "limit": "5", "return_parcels": "true"},
+            None,
+        ),
+        (
+            ["owner", "Smith"],
+            "app.regrid.com",
+            "/api/v2/parcels/owner",
+            "GET",
+            {"owner": "Smith", "limit": "5", "return_parcels": "true"},
+            None,
+        ),
+        (
+            ["query", "--fields", '{"geoid":{"eq":"123"}}'],
+            "app.regrid.com",
+            "/api/v2/parcels/query",
+            "GET",
+            {"fields[geoid][eq]": "123", "limit": "5", "return_parcels": "true"},
+            None,
+        ),
         (
             ["parcel", "00000000-0000-0000-0000-000000000000"],
-            "/parcels/00000000-0000-0000-0000-000000000000",
+            "app.regrid.com",
+            "/api/v2/parcels/00000000-0000-0000-0000-000000000000",
+            "GET",
+            {"return_parcels": "true"},
+            None,
         ),
-        (["parcel-path", "/us/test"], "/parcels/path"),
-        (["typeahead", "123 Main"], "/parcels/typeahead"),
-        (["client-token-typeahead", "--exp", "60"], "/client_token/typeahead"),
-        (["schema"], "/schemas/parcel"),
-        (["verse", "--country", "ca"], "/ca/verse"),
-        (["usage", "--detailed"], "/usage/detailed"),
-        (["report", "--comment", "wrong", "--details", '{"field":"owner"}'], "/report"),
-        (["tilejson"], "/api/v1/parcels"),
+        (
+            ["parcel-path", "/us/test"],
+            "app.regrid.com",
+            "/api/v2/parcels/path",
+            "GET",
+            {"path": "/us/test", "return_parcels": "true"},
+            None,
+        ),
+        (
+            ["typeahead", "123 Main"],
+            "app.regrid.com",
+            "/api/v2/parcels/typeahead",
+            "GET",
+            {"query": "123 Main"},
+            None,
+        ),
+        (
+            ["client-token-typeahead", "--exp", "60"],
+            "app.regrid.com",
+            "/api/v2/client_token/typeahead",
+            "GET",
+            {"exp": "60.0"},
+            None,
+        ),
+        (["schema"], "app.regrid.com", "/api/v2/schemas/parcel", "GET", {}, None),
+        (["verse", "--country", "ca"], "app.regrid.com", "/api/v2/ca/verse", "GET", {}, None),
+        (["usage", "--detailed"], "app.regrid.com", "/api/v2/usage/detailed", "GET", {}, None),
+        (
+            ["report", "--comment", "wrong", "--details", '{"field":"owner"}'],
+            "app.regrid.com",
+            "/api/v2/report",
+            "POST",
+            {"comment": "wrong", "details": '{"field":"owner"}'},
+            None,
+        ),
+        (["tilejson"], "tiles.regrid.com", "/api/v1/parcels", "GET", {"format": "mvt"}, None),
     ],
 )
-def test_commands(argv, path, requests, capsys):
+def test_commands(argv, host, path, method, params, body, requests, capsys):
     assert cli.main(argv) == 0
-    assert requests[0].url.path.endswith(path)
-    assert json.loads(capsys.readouterr().out) == {"ok": True}
+    assert len(requests) == 1
+    request = requests[0]
+    assert request.url.scheme == "https"
+    assert request.url.host == host
+    assert request.url.path == path
+    assert request.method == method
+    expected = params if argv[0] == "schema" else {**params, "token": "secret"}
+    assert dict(request.url.params) == expected
+    assert len(request.url.params.multi_items()) == len(expected)
+    if body is None:
+        assert request.content == b""
+    else:
+        assert json.loads(request.content) == body
+        assert request.headers["content-type"] == "application/json"
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == RESPONSE
+    assert captured.err == ""
 
 
 def test_file_inputs_options_timeout(requests, tmp_path, capsys):
@@ -76,7 +181,22 @@ def test_file_inputs_options_timeout(requests, tmp_path, capsys):
         )
         == 0
     )
-    assert requests[0].url.params["limit"] == "2"
+    assert len(requests) == 1
+    assert dict(requests[0].url.params) == {
+        "fields[geoid][eq]": "123",
+        "limit": "2",
+        "return_parcels": "true",
+        "token": "secret",
+    }
+    assert requests[0].extensions["timeout"] == {
+        "connect": 2.0,
+        "read": 2.0,
+        "write": 2.0,
+        "pool": 2.0,
+    }
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == RESPONSE
+    assert captured.err == ""
 
 
 def test_tile(requests, tmp_path, capsys):
@@ -85,8 +205,11 @@ def test_tile(requests, tmp_path, capsys):
         cli.main(["tile", "10", "0", "0", "--format", "png", "--retina", "--output", str(dest)])
         == 0
     )
-    assert dest.read_bytes()
-    assert requests[0].url.path.endswith("/10/0/0@2x.png")
+    assert len(requests) == 1
+    assert dest.read_bytes() == TILE_BYTES
+    assert requests[0].url.host == "tiles.regrid.com"
+    assert requests[0].url.path == "/api/v1/parcels/10/0/0@2x.png"
+    assert dict(requests[0].url.params) == {"token": "secret"}
     assert capsys.readouterr().out == ""
 
 
@@ -110,8 +233,14 @@ def test_invalid(argv, requests, capsys):
     assert not requests
 
 
-def test_bad_output(requests, tmp_path):
+def test_bad_output(requests, tmp_path, capsys):
     assert cli.main(["tile", "10", "0", "0", "--output", str(tmp_path)]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == "regrid: Invalid input or output file\n"
+    assert tmp_path.is_dir()
+    assert list(tmp_path.iterdir()) == []
+    assert len(requests) == 1
 
 
 @pytest.mark.parametrize("response", [httpx.Response(403), httpx.Response(200, text="broken")])
@@ -123,7 +252,14 @@ def test_http_error(monkeypatch, response, capsys):
         lambda **kw: RegridClient(**kw, transport=httpx.MockTransport(lambda req: response)),
     )
     assert cli.main(["usage"]) == 1
-    assert "secret" not in capsys.readouterr().err
+    captured = capsys.readouterr()
+    expected = (
+        "Regrid returned HTTP 403"
+        if response.status_code == 403
+        else "Regrid returned invalid JSON"
+    )
+    assert captured.err == f"regrid: {expected}\n"
+    assert captured.out == ""
 
 
 def test_parser_help_error(capsys):
@@ -133,11 +269,15 @@ def test_parser_help_error(capsys):
     assert "required" in capsys.readouterr().err
 
 
-def test_module_entry(monkeypatch, requests):
+def test_module_entry(monkeypatch, requests, capsys):
     monkeypatch.setattr(sys, "argv", ["regrid", "schema"])
     with pytest.raises(SystemExit) as exc:
         runpy.run_module("regrid", run_name="__main__")
     assert exc.value.code == 0
+    assert len(requests) == 1
+    assert requests[0].url.path == "/api/v2/schemas/parcel"
+    assert dict(requests[0].url.params) == {}
+    assert json.loads(capsys.readouterr().out) == RESPONSE
 
 
 def test_base_urls_and_report_text(requests):

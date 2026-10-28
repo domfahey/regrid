@@ -2,7 +2,7 @@
 UV ?= uv
 PYTHON ?= .venv/bin/python
 
-.PHONY: help install lint format format-check type typecheck test e2e check
+.PHONY: help install lint format format-check type typecheck test e2e live check
 
 help:
 	@echo "install       Install SDK, CLI, and development dependencies"
@@ -12,6 +12,7 @@ help:
 	@echo "typecheck     Check SDK and CLI types (alias: type)"
 	@echo "test          Run mocked tests with a 90% line/branch coverage gate"
 	@echo "e2e           Run local HTTPS and CLI subprocess tests"
+	@echo "live          Explicit live Regrid smoke test (may incur one parcel charge)"
 	@echo "check         Run lint, formatting check, typecheck, and test"
 
 install:
@@ -36,5 +37,8 @@ test:
 
 e2e:
 	$(PYTHON) -m pytest -m e2e
+
+live:
+	$(PYTHON) -m regrid.live
 
 check: lint format-check typecheck test

@@ -102,18 +102,27 @@ def test_count_is_nonnegative_integer(count):
         CountResponse.model_validate({"count": count})
 
 
-def test_typeahead_accepts_real_point_and_documented_polygon():
+@pytest.mark.parametrize(
+    "geometry",
+    [
+        {"type": "Point", "coordinates": [-97, 32]},
+        {"type": "Polygon", "coordinates": [[[-97, 32], [-96, 32], [-97, 33], [-97, 32]]]},
+    ],
+)
+def test_typeahead_accepts_real_point_and_documented_polygon(geometry):
     payload = {
         "parcel_centroids": {
             "features": [
                 {
-                    "geometry": {"type": "Point", "coordinates": [-97, 32]},
+                    "geometry": geometry,
                     "properties": {"address": "Main St"},
                 }
             ]
         }
     }
-    assert TypeaheadResponse.model_validate(payload).to_dict() == payload
+    result = TypeaheadResponse.model_validate(payload)
+    assert result.parcel_centroids.features[0].geometry.type == geometry["type"]
+    assert result.to_dict() == payload
 
 
 @pytest.mark.parametrize(
@@ -128,7 +137,13 @@ def test_typeahead_accepts_real_point_and_documented_polygon():
     ],
 )
 def test_schema_formats_preserve_fields(payload):
-    assert SchemaResponse.model_validate(payload).to_dict() == payload
+    result = SchemaResponse.model_validate(payload)
+    if "schema" in payload:
+        assert result.schema_["parcelnumb"].type == "text"
+        assert result.schema_["parcelnumb"].examples == ["0001"]
+    else:
+        assert result.model_extra["field_name"]["type"] == "text"
+    assert result.to_dict() == payload
 
 
 def test_usage_history_token_and_unknown_counters():
@@ -161,7 +176,10 @@ def test_detailed_usage():
             "full_history": [{"total": [], "counts": [{"date": "2026-01-01", "requests": 2}]}],
         }
     }
-    assert DetailedUsageResponse.model_validate(payload).to_dict() == payload
+    result = DetailedUsageResponse.model_validate(payload)
+    assert result.usage.cycle_usage[0].parcels == 5
+    assert result.usage.full_history[0].counts[0].requests == 2
+    assert result.to_dict() == payload
 
 
 @pytest.mark.parametrize(
@@ -172,7 +190,12 @@ def test_detailed_usage():
     ],
 )
 def test_metadata_feature_and_collection(payload):
-    assert VerseResponse.model_validate(payload).to_dict() == payload
+    result = VerseResponse.model_validate(payload)
+    if payload["type"] == "Feature":
+        assert result.properties.county == "Dallas"
+    else:
+        assert result.features[0].properties.admin2 == "Division 22"
+    assert result.to_dict() == payload
 
 
 @pytest.mark.parametrize(

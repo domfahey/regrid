@@ -1,10 +1,28 @@
+# Local Python environments and bytecode
 .venv/
+venv/
+env/
 __pycache__/
+*.py[cod]
+
+# Test, lint, type-check, and coverage artifacts
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage*
+htmlcov/
+coverage.xml
+
+# Packaging output
 dist/
+build/
 *.egg-info/
+.eggs/
+
+# Credentials and local configuration (keep the placeholder template)
 .env
 .env.*
 !.env.sample
@@ -12,8 +30,18 @@ dist/
 *.key
 credentials*.json
 secrets*.json
-.coverage*
-htmlcov/
-coverage.xml
+
+# Local research/tool output
+.firecrawl/
+
+# Editor and macOS metadata
+.DS_Store
+.AppleDouble/
+._*
+.idea/
+*.swp
+*.swo
+*~
+
 # Library dependencies are resolved locally by make install.
 uv.lock

@@ -24,32 +24,49 @@ def recording_client():
 
 
 @pytest.mark.parametrize(
-    ("method", "args", "options", "path", "expected"),
+    "method,args,options,path,params",
     [
         (
             "address",
             ("Main St",),
             {"country": "ca", "path": "/ca/mb"},
             "/ca/parcels/address",
-            {"query": "Main St", "path": "/ca/mb"},
+            {"query": "Main St", "path": "/ca/mb", "limit": "1"},
         ),
-        ("apn", ("0001-A",), {}, "/parcels/apn", {"parcelnumb": "0001-A"}),
-        ("apn", ("0001-A",), {"country": "ca"}, "/ca/parcels/apn", {"parcelnumb": "0001-A"}),
+        (
+            "apn",
+            ("0001-A",),
+            {},
+            "/parcels/apn",
+            {"parcelnumb": "0001-A", "limit": "5", "return_parcels": "true"},
+        ),
+        (
+            "apn",
+            ("0001-A",),
+            {"country": "ca"},
+            "/ca/parcels/apn",
+            {"parcelnumb": "0001-A", "limit": "5"},
+        ),
         (
             "owner",
             ("Smith, John",),
             {"path": "/us/tx/dallas"},
             "/parcels/owner",
-            {"owner": "Smith, John"},
+            {
+                "owner": "Smith, John",
+                "path": "/us/tx/dallas",
+                "limit": "5",
+                "return_parcels": "true",
+            },
         ),
-        ("parcel", (UUID,), {}, f"/parcels/{UUID}", {}),
+        ("parcel", (UUID,), {}, f"/parcels/{UUID}", {"return_parcels": "true"}),
         ("parcel", (UUID,), {"country": "ca"}, f"/ca/parcels/{UUID}", {}),
         (
             "parcel_path",
             ("/us/tx/dallas/example",),
             {},
             "/parcels/path",
-            {"path": "/us/tx/dallas/example"},
+            {"path": "/us/tx/dallas/example", "return_parcels": "true"},
         ),
         (
             "parcel_path",
@@ -71,14 +88,18 @@ def recording_client():
         ("usage", (), {"detailed": True}, "/usage/detailed", {}),
     ],
 )
-def test_endpoint_routes(recording_client, method, args, options, path, expected):
+def test_endpoint_routes(recording_client, method, args, options, path, params):
     client, requests = recording_client
     assert getattr(client, method)(*args, **options) == {"ok": True}
+    assert len(requests) == 1
     request = requests[0]
     assert request.method == "GET"
+    assert request.url.host == "app.regrid.com"
     assert request.url.path == "/api/v2" + path
-    for key, value in expected.items():
-        assert request.url.params[key] == value
+    expected = {**params, "token": "test-token"}
+    assert dict(request.url.params) == expected
+    assert len(request.url.params.multi_items()) == len(expected)
+    assert request.content == b""
 
 
 @pytest.mark.parametrize("endpoint", ["point", "area"])
@@ -131,7 +152,7 @@ def test_parcel_schema_premium_filter(recording_client):
     assert requests[0].url.params["premium_only"] == "false"
 
 
-def test_usage_preserves_filters_and_response_metadata(recording_client):
+def test_usage_preserves_filters(recording_client):
     client, requests = recording_client
     assert client.usage(
         begin_date="2026-10-01", end_date="2026-10-27", return_by_this_token=True

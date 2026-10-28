@@ -186,9 +186,13 @@ class EndpointsMixin:
         fields: Mapping[str, Mapping[str, Any]],
         *,
         country: str = "us",
+        validate_fields: bool = False,
+        allow_unknown_fields: bool = False,
         **options: Any,
     ) -> dict[str, Any]:
         """Query up to four fields, e.g. {'geoid': {'eq': '48113'}}."""
+        if type(validate_fields) is not bool or type(allow_unknown_fields) is not bool:
+            raise ValueError("Catalog validation flags must be booleans")
         prefix = _country(country)
         allowed = _parcel_options(country) | {
             "offset_id",
@@ -210,6 +214,15 @@ class EndpointsMixin:
                 for key, value in fields.items()
             }
         validated = safe_validate(QueryRequest, {"fields": fields}).fields
+        if validate_fields:
+            from .query_catalog import validate_catalog_filters
+
+            validate_catalog_filters(
+                validated,
+                country=country,
+                allow_unknown=allow_unknown_fields,
+                paging=params.get("offset_id") is not None,
+            )
         for field, operators in validated.items():
             for operator, value in operators.items():
                 if isinstance(value, (list, tuple, dict, bool)) or value is None:

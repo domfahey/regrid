@@ -57,6 +57,7 @@ def _parser() -> argparse.ArgumentParser:
         "schema": "Fetch public schema: parcel, building, address, enhanced_ownership, zoning, ca",
         "report": "Submit a data issue report (creates an external report)",
         "tile": "Download binary tile to a file",
+        "grid": "Fetch UTFGrid JSON using raster TileJSON metadata",
     }
     for name in (
         "point",
@@ -75,6 +76,7 @@ def _parser() -> argparse.ArgumentParser:
         "report",
         "tilejson",
         "tile",
+        "grid",
     ):
         sub = commands.add_parser(
             name, help=descriptions.get(name, name), description=descriptions.get(name)
@@ -110,6 +112,16 @@ def _parser() -> argparse.ArgumentParser:
             sub.add_argument(positional[name])
         if name == "query":
             sub.add_argument(
+                "--validate-fields",
+                action="store_true",
+                help="Validate against the US field catalog",
+            )
+            sub.add_argument(
+                "--allow-unknown-fields",
+                action="store_true",
+                help="Allow fields absent from the queryability snapshot",
+            )
+            sub.add_argument(
                 "--fields",
                 required=True,
                 help='JSON object or @file: {"field":{"operator":"value"}}',
@@ -135,9 +147,12 @@ def _parser() -> argparse.ArgumentParser:
             details.add_argument("--details-text", help="Plain text report details")
         if name in {"tile", "tilejson"}:
             sub.add_argument("--format", choices=["mvt", "png"], default="mvt")
-        if name == "tile":
+        if name in {"tile", "grid"}:
             for field in ("z", "x", "y"):
                 sub.add_argument(field, type=int)
+        if name == "grid":
+            sub.add_argument("--metadata", help="Raster TileJSON object as JSON or @file")
+        if name == "tile":
             sub.add_argument("--retina", action="store_true")
             sub.add_argument("--output", required=True, help="Destination for binary tile bytes")
     return parser
@@ -157,7 +172,7 @@ def main(argv: list[str] | None = None) -> int:
     output = args.pop("output", None)
     try:
         options = _object(args.pop("options", "{}"))
-        for name in ("geojson", "fields", "details"):
+        for name in ("geojson", "fields", "details", "metadata"):
             if args.get(name) is not None:
                 args[name] = _object(args[name])
         details_text = args.pop("details_text", None)

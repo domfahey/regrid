@@ -1,5 +1,6 @@
 """Typed-client contract, compatibility, and safe failure tests."""
 
+import json
 import traceback
 
 import httpx
@@ -33,15 +34,36 @@ PARCELS = {"parcels": {"type": "FeatureCollection", "features": []}}
         (
             "address",
             ("Main St",),
-            {"country": "ca"},
+            {"country": "ca", "path": "/ca/mb", "limit": 2},
             PARCELS,
             ParcelResponse,
             "/ca/parcels/address",
         ),
-        ("apn", ("0001-A",), {}, PARCELS, ParcelResponse, "/parcels/apn"),
-        ("owner", ("Smith",), {}, PARCELS, ParcelResponse, "/parcels/owner"),
-        ("query", ({"geoid": {"eq": "48113"}},), {}, PARCELS, ParcelResponse, "/parcels/query"),
-        ("parcel", (UUID,), {}, PARCELS, ParcelResponse, f"/parcels/{UUID}"),
+        (
+            "apn",
+            ("0001-A",),
+            {"limit": 3, "return_custom": True},
+            PARCELS,
+            ParcelResponse,
+            "/parcels/apn",
+        ),
+        (
+            "owner",
+            ("Smith",),
+            {"path": "/us/tx/dallas", "limit": 4},
+            PARCELS,
+            ParcelResponse,
+            "/parcels/owner",
+        ),
+        (
+            "query",
+            ({"geoid": {"eq": "48113"}},),
+            {"offset_id": 42, "limit": 2},
+            PARCELS,
+            ParcelResponse,
+            "/parcels/query",
+        ),
+        ("parcel", (UUID,), {"return_custom": True}, PARCELS, ParcelResponse, f"/parcels/{UUID}"),
         ("parcel_path", ("/us/tx/dallas/example",), {}, PARCELS, ParcelResponse, "/parcels/path"),
         (
             "typeahead",
@@ -106,11 +128,51 @@ def test_typed_methods_return_models(method, args, kwargs, payload, model, path)
         result = getattr(client, method)(*args, **kwargs)
     assert isinstance(result, model)
     assert result.to_dict() == payload
-    assert seen[0].url.path.endswith(path)
-    if method == "schema":
-        assert "token" not in seen[0].url.params
+    assert len(seen) == 1  # Conversion must not refetch data.
+    request = seen[0]
+    assert request.method == ("POST" if method in {"area", "report"} else "GET")
+    assert request.url.host == ("tiles.regrid.com" if method == "tilejson" else "app.regrid.com")
+    assert request.url.path == (path if method == "tilejson" else "/api/v2" + path)
+    expected = {
+        "point": {"lat": "40.5", "lon": "-105.2", "limit": "5", "return_parcels": "true"},
+        "area": {"limit": "5", "return_parcels": "true"},
+        "address": {"query": "Main St", "path": "/ca/mb", "limit": "2"},
+        "apn": {
+            "parcelnumb": "0001-A",
+            "limit": "3",
+            "return_custom": "true",
+            "return_parcels": "true",
+        },
+        "owner": {
+            "owner": "Smith",
+            "path": "/us/tx/dallas",
+            "limit": "4",
+            "return_parcels": "true",
+        },
+        "query": {
+            "fields[geoid][eq]": "48113",
+            "offset_id": "42",
+            "limit": "2",
+            "return_parcels": "true",
+        },
+        "parcel": {"return_custom": "true", "return_parcels": "true"},
+        "parcel_path": {"path": "/us/tx/dallas/example", "return_parcels": "true"},
+        "typeahead": {"query": "Main St"},
+        "client_token_typeahead": {"exp": "300"},
+        "schema": {},
+        "verse": {},
+        "usage": {},
+        "report": {"comment": "Please check", "path": "/us/tx/dallas/example"},
+        "tilejson": {},
+    }[method]
+    if method != "schema":
+        expected = {**expected, "token": "test-auth-token"}
+    assert dict(request.url.params) == expected
+    assert len(request.url.params.multi_items()) == len(expected)
+    if method == "area":
+        assert json.loads(request.content) == {"geojson": POINT}
     else:
-        assert seen[0].url.params["token"] == "test-auth-token"
+        assert request.content == b""
 
 
 @pytest.mark.parametrize(
@@ -123,12 +185,21 @@ def test_typed_methods_return_models(method, args, kwargs, payload, model, path)
 )
 def test_count_responses_are_not_swallowed_as_empty_parcels(method, args):
     payload = {"count": 7, "area": {"acres": 4.5}}
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json=payload)
+
     with TypedRegridClient(
         "test-auth-token",
-        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=payload)),
+        transport=httpx.MockTransport(handler),
     ) as client:
         result = getattr(client, method)(*args, return_count=True)
     assert isinstance(result, CountResponse)
+    assert len(seen) == 1
+    assert seen[0].url.params["return_count"] == "true"
+    assert seen[0].url.params["limit"] == "5"
     assert result.count == 7
     assert result.to_dict() == payload
 
@@ -238,9 +309,20 @@ def test_tile_bytes_and_close_lifecycle():
             super().close()
 
     data = b"\x00\xfftile\x80"
-    transport = ClosingTransport(lambda request: httpx.Response(200, content=data))
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        assert request.url.path == "/api/v1/parcels/10/2/3@2x.png"
+        assert dict(request.url.params) == {"token": "test-auth-token"}
+        return httpx.Response(200, content=data)
+
+    transport = ClosingTransport(handler)
     with TypedRegridClient("test-auth-token", transport=transport) as client:
-        assert client.tile(10, 0, 0) == data
+        assert client.tile(10, 2, 3, format="png", retina=True) == data
         assert not transport.closed
     assert transport.closed
     client.close()  # Closing twice is safe.
+    with pytest.raises(RuntimeError, match="client has been closed"):
+        client.raw.usage()
+    assert len(seen) == 1
