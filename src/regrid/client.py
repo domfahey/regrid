@@ -7,7 +7,9 @@ from typing import Any
 
 import httpx
 
+from .config import ClientSettings, TileRequest, validate_limit
 from .endpoints import EndpointsMixin
+from .requests import safe_validate
 
 
 class RegridError(Exception):
@@ -28,12 +30,15 @@ class RegridDecodeError(RegridError):
     """An endpoint returned an invalid JSON response."""
 
 
-def _integer(value: Any, name: str, minimum: int, maximum: int) -> int:
-    if isinstance(value, bool) or not isinstance(value, int):
-        raise TypeError(f"{name} must be an integer")
-    if not minimum <= value <= maximum:
-        raise ValueError(f"{name} must be between {minimum} and {maximum}")
-    return value
+def _finite_float(value: str) -> float:
+    result = float(value)
+    if not math.isfinite(result):
+        raise ValueError("Non-finite JSON number")
+    return result
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError("Nonstandard JSON number")
 
 
 class RegridClient(EndpointsMixin):
@@ -50,22 +55,25 @@ class RegridClient(EndpointsMixin):
         default_limit: int = 5,
         max_limit: int = 1000,
     ):
-        self.max_limit = _integer(max_limit, "max_limit", 1, 1000)
-        self.default_limit = _integer(default_limit, "default_limit", 1, self.max_limit)
-        if token is not None and (not isinstance(token, str) or not token.strip()):
-            raise ValueError("token must be a nonempty string")
-        if isinstance(timeout, bool) or not math.isfinite(timeout) or timeout <= 0:
-            raise ValueError("timeout must be finite and positive")
-        for url in (base_url, tiles_base_url):
-            parsed = httpx.URL(url)
-            if parsed.scheme != "https" or not parsed.host or parsed.query or parsed.fragment:
-                raise ValueError("base URLs must be HTTPS URLs without queries or fragments")
-            if parsed.username or parsed.password:
-                raise ValueError("base URLs must not contain credentials")
-        self._token = token
-        self._base_url = base_url.rstrip("/")
-        self._tiles_base_url = tiles_base_url.rstrip("/")
-        self._http = httpx.Client(timeout=timeout, transport=transport, follow_redirects=False)
+        settings = safe_validate(
+            ClientSettings,
+            {
+                "token": token,
+                "base_url": base_url,
+                "tiles_base_url": tiles_base_url,
+                "timeout": timeout,
+                "default_limit": default_limit,
+                "max_limit": max_limit,
+            },
+        )
+        self.max_limit = settings.max_limit
+        self.default_limit = settings.default_limit
+        self._token = settings.token
+        self._base_url = settings.base_url
+        self._tiles_base_url = settings.tiles_base_url
+        self._http = httpx.Client(
+            timeout=settings.timeout, transport=transport, follow_redirects=False
+        )
 
     def __enter__(self) -> RegridClient:
         return self
@@ -91,7 +99,7 @@ class RegridClient(EndpointsMixin):
         if not public:
             if self._token is None:
                 raise AuthenticationError(401)
-            params["token"] = self._token
+            params["token"] = self._token.get_secret_value()
         try:
             response = self._http.request(method, url, params=params, json=json)
         except httpx.HTTPError:
@@ -104,7 +112,7 @@ class RegridClient(EndpointsMixin):
     @staticmethod
     def _decode(response: httpx.Response) -> dict[str, Any]:
         try:
-            data = response.json()
+            data = response.json(parse_float=_finite_float, parse_constant=_reject_json_constant)
         except (ValueError, UnicodeError):
             raise RegridDecodeError("Regrid returned invalid JSON") from None
         if not isinstance(data, dict):
@@ -121,7 +129,7 @@ class RegridClient(EndpointsMixin):
             limit = params.get("limit")
             if limit is None:
                 limit = 1 if path.endswith("/address") else self.default_limit
-            params["limit"] = _integer(limit, "limit", 1, self.max_limit)
+            params["limit"] = validate_limit(limit, self.max_limit)
         response = self._send(
             method,
             self._base_url + path,
@@ -142,15 +150,7 @@ class RegridClient(EndpointsMixin):
 
     def tile(self, z: int, x: int, y: int, *, format: str = "mvt", retina: bool = False) -> bytes:
         """Fetch a tile without decoding it. Empty successful responses return b''."""
-        _integer(z, "z", 10, 21)
-        _integer(x, "x", 0, 2**z - 1)
-        _integer(y, "y", 0, 2**z - 1)
-        if format not in {"mvt", "png"}:
-            raise ValueError("format must be mvt or png")
-        if not isinstance(retina, bool):
-            raise TypeError("retina must be boolean")
-        if retina and format != "png":
-            raise ValueError("retina is supported only for png tiles")
+        safe_validate(TileRequest, {"z": z, "x": x, "y": y, "format": format, "retina": retina})
         suffix = "@2x" if retina else ""
         url = f"{self._tiles_base_url}/api/v1/parcels/{z}/{x}/{y}{suffix}.{format}"
         return self._send("GET", url, params={}).content

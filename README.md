@@ -1,6 +1,13 @@
 # Regrid SDK
 
-A synchronous Python SDK and command-line client for the Regrid Parcel and Tileserver APIs, built on HTTPX. JSON responses remain dictionaries because endpoint response shapes vary. Tile requests return bytes.
+A synchronous Python SDK and command-line client for the Regrid Parcel and Tileserver APIs, built on HTTPX and Pydantic v2. `RegridClient` keeps dictionary responses for compatibility; `TypedRegridClient` validates responses into models. Both validate request parameters strictly. Tile requests return bytes.
+
+## Documentation
+
+- [Architecture](architecture.md): components, request flow, validation boundaries, and extension points.
+- [Contributor guidelines](AGENTS.md): repository layout, conventions, commands, and PR expectations.
+- [Changelog](changelog.md): user-visible changes and release status.
+- [API reference](REFERENCE.md): the supplied Regrid API documentation summary.
 
 ## Installation
 
@@ -37,6 +44,7 @@ uv add /absolute/path/to/regrid-sdk
 | `make test` | Run mocked tests and require at least 90% combined line and branch coverage |
 | `make e2e` | Run subprocess and real local HTTPS tests |
 | `make check` | Run lint, format-check, typecheck, and the coverage-gated mocked suite |
+| `uv build` | Build wheel and source archives into `dist/` |
 
 Coverage includes every SDK and CLI module; XML output is written to ignored `coverage.xml`. E2E tests are separate from `make check`: they require `openssl` and permission to bind a localhost port, generate temporary TLS keys, and verify TLS using a temporary trusted certificate. They do not contact Regrid or incur API charges. Run `make check && make e2e` for the full suite. Override `PYTHON` if using a virtual environment other than `.venv`.
 
@@ -93,6 +101,42 @@ with RegridClient(os.environ["REGRID_TOKEN"]) as client:
 
 Keep APNs as strings to preserve leading zeros and alphanumeric identifiers. Check the public schema for field names and the API documentation for supported operators.
 
+## Typed responses with Pydantic v2
+
+Use `TypedRegridClient` for typed response attributes and validation at the API boundary:
+
+```python
+import os
+from regrid import TypedRegridClient
+from regrid.models import CountResponse
+
+with TypedRegridClient(os.environ["REGRID_TOKEN"]) as client:
+    result = client.address("123 Main St, Dallas, TX", limit=1)
+    if result.parcels is not None:
+        for parcel in result.parcels.features:
+            if parcel.properties is not None:
+                print(parcel.properties.headline, parcel.properties.fields)
+
+    data = result.to_dict()  # JSON-compatible dictionary; no second API request
+
+    count = client.point(32.7767, -96.7970, return_count=True)
+    if isinstance(count, CountResponse):
+        print(count.count)
+
+    # Explicit raw retrieval shares the same transport and lifetime:
+    raw_usage = client.raw.usage()
+```
+
+Both clients have the same endpoint arguments. `TypedRegridClient` returns parcel/count, usage, metadata, schema, typeahead, report, temporary-token, and TileJSON models. Import model types from `regrid.models`. The original `RegridClient` and the CLI continue returning unchanged JSON dictionaries; adopting typed responses is opt-in.
+
+Request validation uses strict types and endpoint-specific models with forbidden extra options. For example, `limit="5"`, `limit=True`, and `return_count="true"` are rejected rather than coerced. Numeric coordinate inputs must be finite and within range; APNs remain strings. Endpoint models are cached and reused. Invalid SDK inputs raise sanitized `ValueError` (some existing argument checks use `TypeError`).
+
+Response models validate known fields strictly, accept unknown fields with `extra="allow"`, and retain arbitrary county attributes in `properties.fields`. `.to_dict()` preserves unknown fields, original aliases, and the distinction between omitted and explicitly null fields. Geometry types use a discriminated union; topology and polygon area remain server-validated. Building, zoning, and typeahead feature properties remain dynamic dictionaries; direct schema maps are preserved as extras, while enveloped `schema` fields are typed. This avoids inventing contracts where the supplied specification is incomplete.
+
+Malformed known fields in typed responses raise `RegridDecodeError`. SDK request and typed-response validation errors omit input values and do not retain the underlying Pydantic validation exception. Non-finite upstream JSON numbers are rejected before model serialization can change them.
+
+Account tokens are held as `SecretStr` internally. Temporary-token response models mask their token in representations and ordinary `model_dump()` output. Calling `ClientTokenResponse.to_dict()` or `token.get_secret_value()` explicitly reveals that temporary token; handle the result as a credential.
+
 ## Methods
 
 | Method | API resource |
@@ -128,16 +172,16 @@ Tokens are sent as query parameters. Keep them server-side and redact request UR
 
 ## Reference status
 
-Implemented from the OpenAPI specification and supporting guides supplied on October 27, 2026. Live service behavior, account entitlements, prices, and billing have not been verified. The source specification contains inconsistencies around defaults, geometry descriptions, examples, types, and nullability; dictionary responses avoid claiming strict response validation.
+Implemented from the OpenAPI specification and supporting guides supplied on October 27, 2026. Live service behavior, account entitlements, prices, and billing have not been verified. The source specification contains inconsistencies around defaults, geometry descriptions, examples, types, and nullability; raw responses remain available when upstream behavior differs from the opt-in response models.
 
 See [REFERENCE.md](REFERENCE.md) for the supplied condensed reference, [Regrid API documentation](https://support.regrid.com/api), and the [documentation index](https://support.regrid.com/llms.txt) for upstream guidance.
 
 ## Errors and validation
 
-Catch `RegridError` for SDK failures, `RegridHTTPError` for non-success HTTP status codes, `AuthenticationError` for missing credentials or HTTP 401/403, and `RegridDecodeError` for invalid JSON responses. HTTP errors expose `status_code`; exception messages omit upstream bodies and request URLs. Transport failures are not retried. Redirects are not followed.
+Catch `RegridError` for SDK failures, `RegridHTTPError` for non-success HTTP status codes, `AuthenticationError` for missing credentials or HTTP 401/403, and `RegridDecodeError` for invalid JSON or failed typed-response validation. HTTP errors expose `status_code`; exception messages omit upstream bodies and request URLs. Transport failures are not retried. Redirects are not followed.
 
 Invalid local arguments raise `ValueError` or `TypeError`. The client checks limits, coordinate ranges, supported options, and tile indices. Geometry topology, polygon area, valid server-side query fields/operators, and account permissions remain server-validated. Response dictionaries preserve unexpected and county-specific fields.
 
-## Local verification
+## Verification status
 
-The mocked suite has 153 passing tests and 98.77% combined line and branch coverage, including 100% CLI coverage. Lint, formatting, and type checks pass. Four HTTPS E2E cases are implemented but could not execute in the authoring sandbox because localhost socket binding is denied. No live Regrid account or billing tests have been performed.
+The mocked suite has 275 passing tests and 99.23% combined line and branch coverage, including 100% CLI and typed-client coverage. Validation was run on Python 3.12 with Pydantic 2.12.5. Lint, formatting, and type checks pass. Four HTTPS E2E cases are implemented but could not execute in the authoring sandbox because localhost socket binding is denied. No live Regrid account or billing tests have been performed.

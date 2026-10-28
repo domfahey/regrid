@@ -7,11 +7,21 @@ Only options documented for the selected endpoint are accepted.
 from __future__ import annotations
 
 import json
-import math
-import re
 from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
+
+from .requests import (
+    CountryInput,
+    GeometryInput,
+    MethodInput,
+    PointRequest,
+    QueryRequest,
+    TextInput,
+    TokenRequest,
+    safe_validate,
+    validate_options,
+)
 
 _COMMON = {"return_custom", "return_field_labels", "return_stacked"}
 _PREMIUM = {
@@ -32,54 +42,35 @@ _SCHEMA_NAMES = {"parcel", "building", "address", "enhanced_ownership", "zoning"
 
 
 def _country(country: str) -> str:
-    if not isinstance(country, str) or country.lower() not in {"us", "ca"}:
-        raise ValueError("country must be 'us' or 'ca'")
-    return "" if country.lower() == "us" else "/ca"
+    value = country.lower() if isinstance(country, str) else country
+    country = safe_validate(CountryInput, {"value": value}).value
+    return "" if country == "us" else "/ca"
 
 
 def _text(value: str, name: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{name} must be a nonempty string")
-    return value
+    return safe_validate(TextInput, {"value": value}).value
 
 
 def _json(value: Any) -> str:
-    return json.dumps(value, separators=(",", ":"), allow_nan=False)
+    try:
+        return json.dumps(value, separators=(",", ":"), allow_nan=False)
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError("Invalid Regrid JSON request") from None
 
 
 def _geometry(value: Mapping[str, Any] | str) -> dict[str, Any]:
     if isinstance(value, str):
         try:
             value = json.loads(value)
-        except (ValueError, TypeError) as exc:
-            raise ValueError("geojson must be valid JSON") from exc
-    if not isinstance(value, Mapping) or "type" not in value:
-        raise ValueError("geojson must be an object with a type")
-    result = dict(value)
-    _json(result)  # Reject NaN/Infinity before transport.
-    return result
+        except (ValueError, TypeError):
+            raise ValueError("Invalid Regrid GeoJSON request") from None
+    if isinstance(value, Mapping):
+        value = dict(value)
+    return safe_validate(GeometryInput, {"geojson": value}).geojson
 
 
 def _options(options: dict[str, Any], allowed: set[str]) -> dict[str, Any]:
-    unknown = options.keys() - allowed
-    if unknown:
-        raise ValueError("Unsupported options: " + ", ".join(sorted(unknown)))
-    result = {key: value for key, value in options.items() if value is not None}
-    if "return_parcels" in allowed:
-        # The supplied contract disagrees on this default; make it explicit.
-        result.setdefault("return_parcels", True)
-    for key, value in result.items():
-        if key.startswith("return_") and not isinstance(value, bool):
-            raise ValueError(f"{key} must be a boolean")
-    if "radius" in result:
-        radius = result["radius"]
-        if isinstance(radius, bool) or not isinstance(radius, int) or not 0 <= radius <= 32000:
-            raise ValueError("radius must be an integer from 0 through 32000 meters")
-    if "offset_id" in result:
-        cursor = result["offset_id"]
-        if isinstance(cursor, bool) or not isinstance(cursor, int) or cursor < 0:
-            raise ValueError("offset_id must be a nonnegative integer")
-    return result
+    return validate_options(options, allowed)
 
 
 def _parcel_options(country: str) -> set[str]:
@@ -111,35 +102,25 @@ class EndpointsMixin:
     ) -> dict[str, Any]:
         """Find parcels at coordinates or GeoJSON points; POST requires GeoJSON."""
         prefix = _country(country)
-        method = method.upper()
-        if method not in {"GET", "POST"}:
-            raise ValueError("method must be GET or POST")
+        method = safe_validate(
+            MethodInput, {"value": method.upper() if isinstance(method, str) else method}
+        ).value
         allowed = _parcel_options(country) | {"radius", "limit", "return_count"}
         if not prefix:
             allowed.add("return_custom_id")
         if method == "GET":
             allowed |= {"offset_id", "return_geometry"}
         params = _options(options, allowed)
-        if geojson is None and (lat is None or lon is None):
-            raise ValueError("provide both lat and lon, or geojson")
-        for name, value, bound in (("lat", lat, 90), ("lon", lon, 180)):
-            if value is not None:
-                if (
-                    isinstance(value, bool)
-                    or not isinstance(value, (int, float))
-                    or not math.isfinite(value)
-                    or not -bound <= value <= bound
-                ):
-                    raise ValueError(f"{name} is outside its coordinate range")
-                params[name] = value
-        if method == "POST" and geojson is None:
-            raise ValueError("POST point requires geojson")
+        geometry = _geometry(geojson) if geojson is not None else None
+        point = safe_validate(
+            PointRequest, {"lat": lat, "lon": lon, "geojson": geometry, "method": method}
+        )
+        if point.lat is not None:
+            params["lat"] = point.lat
+        if point.lon is not None:
+            params["lon"] = point.lon
         body = None
-        if geojson is not None:
-            geometry = _geometry(geojson)
-            shape = geometry.get("geometry") if geometry.get("type") == "Feature" else geometry
-            if not isinstance(shape, Mapping) or shape.get("type") not in {"Point", "MultiPoint"}:
-                raise ValueError("point accepts Point or MultiPoint geometry")
+        if geometry is not None:
             if method == "POST":
                 body = {"geojson": geometry}
             else:
@@ -156,9 +137,9 @@ class EndpointsMixin:
     ) -> dict[str, Any]:
         """Search geometry using GET query JSON or a POST JSON body."""
         prefix = _country(country)
-        method = method.upper()
-        if method not in {"GET", "POST"}:
-            raise ValueError("method must be GET or POST")
+        method = safe_validate(
+            MethodInput, {"value": method.upper() if isinstance(method, str) else method}
+        ).value
         allowed = _parcel_options(country) | {
             "radius",
             "offset_id",
@@ -223,20 +204,16 @@ class EndpointsMixin:
         params = _options(options, allowed)
         if "geojson" in params:
             params["geojson"] = _json(_geometry(params["geojson"]))
-        if not isinstance(fields, Mapping) or not 1 <= len(fields) <= 4:
-            raise ValueError("fields must contain one through four field names")
-        for field, operators in fields.items():
-            if not isinstance(field, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", field):
-                raise ValueError("invalid field name")
-            if not isinstance(operators, Mapping) or not operators:
-                raise ValueError("each field requires an operator mapping")
+        if isinstance(fields, Mapping):
+            fields = {
+                key: dict(value) if isinstance(value, Mapping) else value
+                for key, value in fields.items()
+            }
+        validated = safe_validate(QueryRequest, {"fields": fields}).fields
+        for field, operators in validated.items():
             for operator, value in operators.items():
-                if not isinstance(operator, str) or not re.fullmatch(r"[a-z_]+", operator):
-                    raise ValueError("invalid field operator")
                 if isinstance(value, (list, tuple, dict, bool)) or value is None:
                     value = _json(value)
-                elif isinstance(value, float) and not math.isfinite(value):
-                    raise ValueError("field values must be finite")
                 params[f"fields[{field}][{operator}]"] = value
         return self._request("GET", f"{prefix}/parcels/query", params=params)
 
@@ -245,8 +222,8 @@ class EndpointsMixin:
         params = _options(options, _parcel_options(country))
         try:
             parcel_id = str(UUID(_text(ll_uuid, "ll_uuid")))
-        except (ValueError, AttributeError) as exc:
-            raise ValueError("ll_uuid must be a valid UUID") from exc
+        except (ValueError, AttributeError):
+            raise ValueError("ll_uuid must be a valid UUID") from None
         return self._request("GET", f"{_country(country)}/parcels/{parcel_id}", params=params)
 
     def parcel_path(self, path: str, *, country: str = "us", **options: Any) -> dict[str, Any]:
@@ -263,16 +240,7 @@ class EndpointsMixin:
 
     def client_token_typeahead(self, exp: float | None = None) -> dict[str, Any]:
         """Create a temporary typeahead-only token; exp is a duration in seconds."""
-        params: dict[str, Any] = {}
-        if exp is not None:
-            if (
-                isinstance(exp, bool)
-                or not isinstance(exp, (int, float))
-                or not math.isfinite(exp)
-                or exp <= 0
-            ):
-                raise ValueError("exp must be a positive finite number of seconds")
-            params["exp"] = exp
+        params = safe_validate(TokenRequest, {"exp": exp}).model_dump(exclude_none=True)
         return self._request("GET", "/client_token/typeahead", params=params)
 
     def schema(self, name: str = "parcel", **options: Any) -> dict[str, Any]:
@@ -280,8 +248,6 @@ class EndpointsMixin:
         if name not in _SCHEMA_NAMES:
             raise ValueError("Unknown schema name")
         params = _options(options, {"premium_only"} if name == "parcel" else set())
-        if "premium_only" in params and not isinstance(params["premium_only"], bool):
-            raise ValueError("premium_only must be a boolean")
         return self._request("GET", f"/schemas/{name}", params=params)
 
     def verse(self, *, country: str = "us", **options: Any) -> dict[str, Any]:

@@ -7,9 +7,11 @@ from .client import (
     RegridError,
     RegridHTTPError,
 )
+from .typed import TypedRegridClient
 
 __all__ = [
     "RegridClient",
+    "TypedRegridClient",
     "RegridError",
     "RegridHTTPError",
     "AuthenticationError",
