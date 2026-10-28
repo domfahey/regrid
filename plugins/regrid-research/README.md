@@ -16,7 +16,7 @@ its references. Setup is separate from research; choose only one connection.
 | `regrid-property-research-skill-0.4.0.zip` | Standalone research skill for an already configured Regrid connector |
 
 The two plugin packages have the same plugin name and skills; install one variant
-per host rather than enabling both. The old `0.1.0` and `0.2.0` archives are superseded.
+per host rather than enabling both. The `0.1.0`, `0.2.0`, and `0.3.0` archives are superseded.
 
 ## Connect in Cowork
 
@@ -90,6 +90,21 @@ The bundled stdlib-only `scripts/workflow.py` helper validates handoffs and
 supports explicit checkpoint saving and resume planning without network access.
 No checkpoints are written automatically, and optional downstream skills are
 not required for a direct answer.
+
+From the repository root, after preparing a real version `1.0` result envelope
+and receiving a requested save destination:
+
+```sh
+python3 plugins/regrid-research/skills/property-research/scripts/workflow.py validate /path/to/result.json
+python3 plugins/regrid-research/skills/property-research/scripts/workflow.py save /path/to/result.json /path/to/checkpoint.json
+python3 plugins/regrid-research/skills/property-research/scripts/workflow.py pending /path/to/checkpoint.json
+```
+
+Use Python 3.10+ and substitute your actual paths. Fix the reported structural
+field/invariant and revalidate before resuming. Saving validates before writing;
+existing destinations require an explicitly requested update with `--replace`.
+`pending` lists eligible input IDs; it does not retrieve parcels. The synthetic
+example is a format guide, not real property evidence.
 
 ## Behavior and limits
 

@@ -134,7 +134,8 @@ Run a fresh model session with the staged directory as its working directory and
 `prompt.json` as its request. Use explicit model IDs for every intended Claude
 model, record the CLI version, and capture verbose stream-json output outside the
 workspace. Configure the harness with no MCP servers, no inherited settings,
-network access, external directories, or session persistence. Restrict tools to
+research-tool network access, external directories, or session persistence.
+The Claude inference process itself requires network access. Restrict tools to
 Read, Glob and Grep for navigation trials. Helper execution requires a separately
 confined Python runner; a read-only trial must report that execution was unavailable.
 Staging itself is not an operating-system sandbox and does not establish those
@@ -150,7 +151,9 @@ python3 plugins/regrid-research/evals/discovery.py compare \
 
 Records retain requested/observed model IDs, CLI version, file hashes, read paths,
 tool inputs and raw trace events. Comparison requires the same case, requested
-model and CLI version, and reports observations without assigning a quality score.
+model and CLI version. It rejects differing observed model IDs or shared input
+hashes, and marks missing model/input evidence incomplete. It reports observations
+without assigning a quality score.
 Grade both variants independently against `discovery-rubric.json`; compare semantic
 outcomes and necessary/unnecessary reads. A missing trace, model run, helper
 execution or grade is **not run/not observed**, never a pass. Actual Haiku, Sonnet,
@@ -184,3 +187,25 @@ A completed CLI result is ungraded, not a passed evaluation. Read paths represen
 **requested reads**: successful access requires matching tool-result evidence in
 the trace. This read-only runner explicitly cannot execute checkpoint helpers;
 helper execution and Cowork acceptance remain separate gates.
+
+
+Each attempted trial writes `prompt.json`, `trace.jsonl`, `stderr.txt`, and
+`record.json` under `<model>-<case>-<variant>/`; `summary.json` includes all
+24 planned trials, including skipped ones. Exit 0 means every CLI trial completed,
+not that semantic grading passed. Exit 1 means at least one trial did not complete;
+configuration/output-directory errors exit 2. Existing output directories are
+never overwritten.
+
+Compare a completed pair before grading, for example:
+
+```sh
+python3 plugins/regrid-research/evals/discovery.py compare \
+  --skill /tmp/regrid-discovery-results/haiku-existing-evidence-skill/record.json \
+  --baseline /tmp/regrid-discovery-results/haiku-existing-evidence-baseline/record.json
+```
+
+The [0.4.0 acceptance report](results/authoring-0.4.0-report.json) records the latest
+attempt: authentication failed before model output, so no Claude trial or baseline
+comparison was completed. Historical packet reports are separate simulated-agent
+evidence, not Claude or Cowork acceptance. Preserve those reports when recording
+new trials and independent grades.

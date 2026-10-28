@@ -215,7 +215,11 @@ Invalid local arguments raise `ValueError` or `TypeError`. The client checks lim
 
 ## Verification status
 
-At commit `05fd61f`, `make check` passed **630 mocked tests** with **98.27% combined line and branch coverage**, including 100% CLI and typed-client coverage. The required coverage threshold is 90%. Validation was run on Python 3.12 with Pydantic 2.12.5. Lint, formatting, and type checks pass. Four HTTPS E2E cases are implemented but could not execute in the authoring sandbox because localhost socket binding is denied. `make live` was invoked but stopped before network access because no token was configured. Live Regrid responses and billing remain unverified.
+The implementation committed in `f89a133` passed **692 tests** with **98.16% combined line and branch coverage** for `src/regrid` on Python 3.12. Lint, formatting, and type checks passed. The 90% coverage gate covers the SDK/CLI, not the bundled skill scripts. The suite includes 29 workflow-helper tests, 16 discovery/runner tests, and seven packaging tests. Four local HTTPS E2E tests were excluded from this skill-focused run.
+
+Both extracted plugin variants and the standalone skill passed Claude's strict structural validator. Actual Haiku/Sonnet/Opus evaluations remain blocked by an expired Claude CLI login; Cowork import and authenticated lookup remain unverified because Desktop inspection was unavailable. See the [0.4.0 acceptance report](plugins/regrid-research/evals/results/authoring-0.4.0-report.json). These are recorded results, not a fresh authentication check.
+
+The [MCP reference](plugins/regrid-research/skills/property-research/references/mcp-tools.md) separately records a successful authenticated usage-only request. That does not establish Cowork connectivity, parcel lookup behavior, or billing. The older `05fd61f` SDK check passed 630 tests; its live smoke attempt stopped before network access because no token was configured.
 
 A targeted test-quality audit replaced route-only, truthiness, and configuration-inspection assertions with full request contracts, exact binary output, timeout forwarding, explicit false/zero preservation, and typed attribute checks. Seven controlled mutations that survived the previous assertions were caught by their replacements; this was a focused regression check, not a whole-project mutation score.
 
@@ -223,9 +227,10 @@ A targeted test-quality audit replaced route-only, truthiness, and configuration
 
 Set `REGRID_TOKEN` locally, then run `make live`. The default test address is `24 pennbrook dr haddonfield nj 08033`; optionally set `REGRID_LIVE_ADDRESS` to override it. An unset or blank override uses the default. `make live` and `make doctor` load your ignored `.env` through uv; exported environment values take precedence. For authenticated CLI calls use `uv run --env-file .env --no-sync regrid usage`; for SDK scripts use `uv run --env-file .env --no-sync python your_script.py`. Doctor checks configuration presence only, not token validity with Regrid. Loader errors are suppressed to avoid exposing credentials; failures return a generic diagnostic. Never paste tokens into reports or commit populated environment files.
 
-After loading your local environment:
+Check local configuration, then run the explicitly authenticated smoke test:
 
 ```sh
+make doctor
 make live
 # Optional: use another known complete US address
 REGRID_LIVE_ADDRESS="your complete US property address" make live
@@ -233,7 +238,7 @@ REGRID_LIVE_ADDRESS="your complete US property address" make live
 
 The runner fetches the public parcel schema, records usage, looks up one address with `limit=1` and premium datasets disabled, validates the same response using Pydantic and opt-in parcel fields, then checks usage again. It makes at most four requests with no retries, pagination, or expanded searches. A parcel lookup may incur a charge. A single result is not proof of an exact address match, and usage can lag or include concurrent clients. Schema type drift is reported as a count.
 
-Output contains only status and aggregate counts, not credentials, addresses, owners, response bodies, or exception details. HTTP logging is disabled in the runner process. A missing or placeholder token exits with status 2 before any network request; failed requests or validation exit with status 1; success exits with status 0. If lookup or validation fails, final usage is still attempted. Tiles and premium datasets are not tested. This target runs separately from ordinary checks and local HTTPS E2E tests.
+Output contains only status and aggregate counts, not credentials, addresses, owners, response bodies, or exception details. HTTP logging is disabled in the runner process. The underlying `regrid.live` module exits 2 for a missing or placeholder token before any network request, 1 for request/validation failures, and 0 on success. The Makefile recipe wraps any nonzero module or environment-loader result in a generic failure; do not rely on the module's exit code propagating through `make live`. If lookup or validation fails, final usage is still attempted. Tiles and premium datasets are not tested. This target runs separately from ordinary checks and local HTTPS E2E tests.
 
 ## Claude plugin
 
@@ -257,12 +262,23 @@ records observed MCP schemas and a successful authenticated usage-only call.
 using synthetic saved responses. Neither proves Cowork import or account-specific
 header availability; those remain unverified. No credentials enter the packages.
 
-Regrid Research 0.3.0 adds a versioned structured handoff, separate lookup/match
-statuses, shared budgets, supplied-evidence reuse, and explicitly requested
-resumable checkpoints. See the [composition guide](plugins/regrid-research/skills/property-research/references/composition.md).
+Regrid Research 0.4.0 includes versioned handoffs, separate lookup/match statuses,
+shared budgets, evidence reuse, and explicitly requested checkpoints. It adds
+metadata-first discovery/baseline evaluations, direct resource links, qualified
+MCP tool names, and actionable validation. See the
+[composition guide](plugins/regrid-research/skills/property-research/references/composition.md)
+and [checkpoint commands](plugins/regrid-research/skills/property-research/references/batch.md#optional-offline-helper).
+The helper needs Python 3.10+ and no third-party packages.
 
-Regrid Research 0.4.0 adds metadata-first discovery/baseline evaluations, direct
-resource links, qualified MCP tool names, and actionable offline validation.
-Save validated checkpoints with `workflow.py save INPUT.json DESTINATION.json`;
-Python 3.10+ is required, with no third-party packages. Actual Claude model and
-Cowork acceptance gates are tracked separately from local tests.
+To resume model acceptance testing after refreshing the separate Claude login:
+
+```sh
+claude auth login
+python3 plugins/regrid-research/evals/run_discovery_claude.py --output /tmp/regrid-discovery-results
+```
+
+Use a new output directory for each run. The runner attempts 24 trials across
+Haiku, Sonnet, and Opus, with a default USD 0.25 CLI budget per trial. It never
+loads `.env` or enables Regrid tools. Completed trials still require independent
+[rubric grading](plugins/regrid-research/evals/README.md#reproducible-claude-cli-runner);
+they do not establish Cowork acceptance.
