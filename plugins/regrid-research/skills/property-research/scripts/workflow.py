@@ -34,6 +34,63 @@ def _keys(value: Any, expected: set[str], message: str) -> None:
     _require(isinstance(value, dict) and set(value) == expected, message)
 
 
+def _number(value: Any) -> bool:
+    return type(value) in {int, float}
+
+
+def _validate_request(request: Any, version: str) -> None:
+    _require(isinstance(request, dict), "Invalid requested query")
+    if "query_type" not in request:
+        _keys(request, {"address", "parcel_id", "scope"}, "Invalid requested fields")
+        _require(all(v is None or _text(v) for v in request.values()), "Invalid requested value")
+        _require(bool(request["address"] or request["parcel_id"]), "Missing requested identity")
+        return
+    _require(version == "1.1", "Typed requested query requires schema 1.1")
+    kind = request["query_type"]
+    if kind == "owner":
+        _keys(request, {"query_type", "owner", "scope"}, "Invalid owner query fields")
+        _require(_text(request["owner"]) and _text(request["scope"]), "Owner scope required")
+    elif kind == "point":
+        _keys(request, {"query_type", "lat", "lon", "radius"}, "Invalid point query fields")
+        _require(
+            _number(request["lat"])
+            and -90 <= request["lat"] <= 90
+            and _number(request["lon"])
+            and -180 <= request["lon"] <= 180
+            and _number(request["radius"])
+            and request["radius"] > 0,
+            "Invalid point coordinates or radius",
+        )
+    elif kind == "area":
+        _keys(request, {"query_type", "bbox"}, "Invalid area query fields")
+        box = request["bbox"]
+        _require(
+            isinstance(box, list) and len(box) == 4 and all(_number(x) for x in box),
+            "Invalid bounding box",
+        )
+        west, south, east, north = box
+        _require(
+            -180 <= west < east <= 180 and -90 <= south < north <= 90, "Invalid bounding box bounds"
+        )
+    elif kind == "filter":
+        _keys(request, {"query_type", "scope", "filters"}, "Invalid filter query fields")
+        filters = request["filters"]
+        _require(
+            _text(request["scope"]) and isinstance(filters, dict) and bool(filters),
+            "Scoped filters required",
+        )
+        for field, operators in filters.items():
+            _require(
+                _text(field)
+                and isinstance(operators, dict)
+                and bool(operators)
+                and all(_text(operator) for operator in operators),
+                "Invalid filter fields or operators",
+            )
+    else:
+        raise ValidationError("Invalid requested query type")
+
+
 def validate(document: Document) -> None:
     """Check identity, evidence, status, and ledger invariants without changing data."""
     path = "$"
@@ -44,16 +101,18 @@ def validate(document: Document) -> None:
     def keys(value: Any, expected: set[str], message: str) -> None:
         require(isinstance(value, dict) and set(value) == expected, message)
 
+    version = document.get("schema_version") if isinstance(document, dict) else None
     keys(
         document,
-        {"schema_version", "workflow_id", "results", "budget", "attempts"},
+        {"schema_version", "workflow_id", "results", "budget", "attempts"}
+        | ({"reconciliations"} if version == "1.1" else set()),
         "Invalid handoff fields",
     )
     try:
         json.dumps(document, allow_nan=False)
     except (TypeError, ValueError) as exc:
         raise ValidationError("$: Handoff must contain finite JSON values") from exc
-    require(document.get("schema_version") == "1.0", "Unsupported schema version", "schema_version")
+    require(version in ("1.0", "1.1"), "Unsupported schema version", "schema_version")
     require(_text(document.get("workflow_id")), "Missing workflow ID", "workflow_id")
     rows = document.get("results")
     require(isinstance(rows, list), "Invalid results", "results")
@@ -79,10 +138,10 @@ def validate(document: Document) -> None:
         require(_text(key) and key not in ids, "Invalid or duplicate input ID", "input_id")
         ids.add(key)
         request = row.get("requested")
-        require(isinstance(request, dict), "Invalid requested identity")
-        require(set(request) == {"address", "parcel_id", "scope"}, "Invalid requested fields")
-        require(all(v is None or _text(v) for v in request.values()), "Invalid requested value")
-        require(bool(request["address"] or request["parcel_id"]), "Missing requested identity")
+        try:
+            _validate_request(request, version)
+        except ValidationError as exc:
+            raise ValidationError(f"{path}.requested: {exc}") from exc
         lookup, match = row.get("lookup_status"), row.get("match_status")
         require(
             isinstance(lookup, str) and lookup in {"success", "error", "not_attempted"},
@@ -182,15 +241,20 @@ def validate(document: Document) -> None:
         path = f"$.attempts[{attempt_index}]"
         keys(
             attempt,
-            {"attempt_id", "input_ids", "state", "record_limit", "returned_records"},
+            {"attempt_id", "input_ids", "state", "record_limit", "returned_records"}
+            | ({"kind"} if version == "1.1" else set()),
             "Invalid attempt ledger entry",
         )
         key = attempt.get("attempt_id")
         require(_text(key) and key not in attempt_ids, "Invalid attempt ID", "attempt_id")
         attempt_ids.add(key)
         inputs = attempt.get("input_ids")
+        kind = attempt.get("kind", "lookup")
+        require(kind in ("lookup", "diagnostic"), "Invalid attempt kind")
         require(
-            isinstance(inputs, list) and bool(inputs) and all(_text(x) for x in inputs),
+            isinstance(inputs, list)
+            and (bool(inputs) or kind == "diagnostic")
+            and all(_text(x) for x in inputs),
             "Invalid attempt input IDs",
         )
         require(len(set(inputs)) == len(inputs) and set(inputs) <= ids, "Unknown attempt input IDs")
@@ -202,12 +266,67 @@ def validate(document: Document) -> None:
         )
         limit, returned = attempt.get("record_limit"), attempt.get("returned_records")
         require(_integer(limit), "Invalid record reservation")
+        if kind == "diagnostic":
+            require(
+                not inputs and limit == 0 and returned in (None, 0),
+                "Diagnostic must have no property inputs or records",
+            )
         if state in {"pending", "uncertain"}:
             require(returned is None, "Uncertain result cannot claim known consumption")
             uncertain += limit
         else:
             require(_integer(returned), "Settled result requires known consumption")
             consumed += returned
+    if version == "1.1":
+        path = "$.reconciliations"
+        entries = document["reconciliations"]
+        require(isinstance(entries, list), "Invalid reconciliation ledger")
+        reconciled: set[str] = set()
+        by_id = {a["attempt_id"]: a for a in attempts}
+        receipts: set[tuple[str, str]] = set()
+        for index, entry in enumerate(entries):
+            path = f"$.reconciliations[{index}]"
+            keys(entry, {"attempt_id", "proof"}, "Invalid reconciliation fields")
+            key = entry["attempt_id"]
+            require(
+                _text(key) and key in by_id and key not in reconciled,
+                "Unknown or already reconciled attempt",
+            )
+            attempt = by_id[key]
+            require(attempt["state"] == "uncertain", "Only uncertain attempts can be reconciled")
+            proof = entry["proof"]
+            keys(
+                proof,
+                {
+                    "provider",
+                    "evidence_id",
+                    "retrieved_at",
+                    "attempt_id",
+                    "returned_records",
+                    "source_url",
+                },
+                "Invalid reconciliation proof",
+            )
+            require(
+                all(_text(proof[f]) for f in ("provider", "evidence_id", "retrieved_at")),
+                "Missing reconciliation proof provenance",
+            )
+            require(
+                proof["attempt_id"] == key and _integer(proof["returned_records"]),
+                "Reconciliation proof attempt or count mismatch",
+            )
+            require(
+                proof["source_url"] is None or _text(proof["source_url"]),
+                "Invalid reconciliation proof source",
+            )
+            receipt = (proof["provider"], proof["evidence_id"])
+            require(receipt not in receipts, "Reconciliation receipt already used")
+            receipts.add(receipt)
+            if attempt.get("kind") == "diagnostic":
+                require(proof["returned_records"] == 0, "Diagnostic cannot return property records")
+            reconciled.add(key)
+            uncertain -= attempt["record_limit"]
+            consumed += proof["returned_records"]
     path = "$.budget"
     for field, expected in (
         ("attempted_requests", len(attempts)),
@@ -224,12 +343,13 @@ def new_workflow(
     max_records: int,
     *,
     input_ids: list[str] | None = None,
+    schema_version: str = "1.0",
 ) -> Document:
     """Keep caller IDs, or assign positional IDs once and retain them on every handoff."""
     if input_ids is not None:
         _require(len(input_ids) == len(requests), "Input ID count does not match requests")
     document = {
-        "schema_version": "1.0",
+        "schema_version": schema_version,
         "workflow_id": workflow_id,
         "results": [],
         "budget": {
@@ -241,6 +361,8 @@ def new_workflow(
         },
         "attempts": [],
     }
+    if schema_version == "1.1":
+        document["reconciliations"] = []
     for index, requested in enumerate(requests, 1):
         document["results"].append(
             {
@@ -256,6 +378,45 @@ def new_workflow(
         )
     validate(document)
     return document
+
+
+def upgrade_workflow(document: Document) -> Document:
+    """Explicitly migrate a legacy checkpoint; preserve its inputs, evidence and accounting."""
+    validate(document)
+    result = deepcopy(document)
+    if result["schema_version"] == "1.0":
+        result["schema_version"] = "1.1"
+        result["reconciliations"] = []
+        for attempt in result["attempts"]:
+            attempt["kind"] = "lookup"
+    validate(result)
+    return result
+
+
+def reconcile_attempt(
+    document: Document, attempt_id: str, proof: Document, *, evidence_verified: bool = False
+) -> Document:
+    """Record a caller-verified per-attempt receipt, retaining the original uncertain attempt.
+
+    The caller must authenticate the authoritative receipt; structural validation cannot do so.
+    No network call, retry, result replacement, or automatic version upgrade occurs here.
+    """
+    validate(document)
+    _require(document["schema_version"] == "1.1", "Reconciliation requires explicit schema upgrade")
+    _require(evidence_verified is True, "Authoritative per-attempt proof must be verified")
+    result = deepcopy(document)
+    result["reconciliations"].append({"attempt_id": attempt_id, "proof": deepcopy(proof)})
+    # Validate proof and uniqueness before calculating counters, using the validator as authority.
+    attempt = next((a for a in result["attempts"] if a["attempt_id"] == attempt_id), None)
+    _require(attempt is not None, "Unknown reconciliation attempt")
+    _require(
+        isinstance(proof, dict) and _integer(proof.get("returned_records")),
+        "Missing reconciliation proof count",
+    )
+    result["budget"]["uncertain_records"] -= attempt["record_limit"]
+    result["budget"]["returned_records"] += proof["returned_records"]
+    validate(result)
+    return result
 
 
 def pending_input_ids(document: Document) -> list[str]:
@@ -285,12 +446,29 @@ def tighten_budget(document: Document, *, max_requests: int, max_records: int) -
 
 
 def reserve_attempt(
-    document: Document, input_ids: list[str], record_limit: int, *, authorized_retry: bool = False
+    document: Document,
+    input_ids: list[str],
+    record_limit: int,
+    *,
+    authorized_retry: bool = False,
+    kind: str = "lookup",
 ) -> Document:
     """Reserve before dispatch. Persist this copy before a call when checkpoints are requested."""
     validate(document)
     _require(_integer(record_limit), "Invalid record limit")
-    _require(bool(input_ids) and len(set(input_ids)) == len(input_ids), "Invalid input IDs")
+    _require(kind in ("lookup", "diagnostic"), "Invalid attempt kind")
+    _require(
+        kind == "lookup" or document["schema_version"] == "1.1",
+        "Diagnostic requires explicit schema upgrade",
+    )
+    _require(
+        (bool(input_ids) or kind == "diagnostic") and len(set(input_ids)) == len(input_ids),
+        "Invalid input IDs",
+    )
+    _require(
+        kind != "diagnostic" or (not input_ids and record_limit == 0),
+        "Diagnostic must have no property inputs or records",
+    )
     allowed = (
         {row["input_id"] for row in document["results"]}
         if authorized_retry
@@ -320,6 +498,8 @@ def reserve_attempt(
     )
     result["budget"]["attempted_requests"] += 1
     result["budget"]["uncertain_records"] += record_limit
+    if result["schema_version"] == "1.1":
+        result["attempts"][-1]["kind"] = kind
     validate(result)
     return result
 

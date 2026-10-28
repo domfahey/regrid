@@ -1,9 +1,13 @@
 # Reusable research results
 
-Use [result.schema.json](result.schema.json) version `1.0` for structured handoffs
-and requested checkpoints. [result-example.json](result-example.json) is synthetic.
-Prose answers need not expose JSON, but preserve the same distinctions. This is
-a portable contract, not a requirement to install another skill or write a file.
+For prose from supplied evidence, this guide is sufficient: evaluate identity,
+uncertainty, conflicts, and provenance without loading the schema or example and
+without making a request. Load [result.schema.json](result.schema.json) only for
+a structured handoff, requested checkpoint, or contract validation. The
+[synthetic example](result-example.json) is optional when an example is needed.
+The contract is portable; it does not require another skill or a saved file.
+Legacy version `1.0` remains supported; explicitly use version `1.1` for tagged
+owner, point, area, or filter queries and reconciliation records.
 
 ## Envelope and identity
 
@@ -12,6 +16,16 @@ The envelope contains `schema_version`, `workflow_id`, `results`, `budget`, and
 Each result retains its unique `input_id` and original `requested` address,
 parcel ID, and geographic scope. Use caller IDs unchanged, or assign stable row
 IDs once. Keep duplicate input rows even when one retrieval serves both.
+
+Version `1.1` can describe searches directly in `requested` instead of inventing
+an address: `query_type: owner` uses `owner` and `scope`; `point` uses `lat`, `lon`,
+and positive `radius` in meters; `area` uses `bbox` as west/south/east/north;
+`filter` uses `scope` and a nonempty `filters` mapping of field → operator →
+JSON value. Preserve nested values; the live endpoint schema, not the handoff
+contract, determines supported operators.
+Use the schema for exact bounds. Legacy address/parcel requests remain accepted.
+For a search, evaluate whether each returned parcel satisfies its actual query;
+do not imply that a multi-parcel owner or area search identifies one property.
 
 `lookup_status` describes the evidence operation: `success`, `error`, or
 `not_attempted`. `match_status` describes property identity: `confirmed`,
@@ -63,7 +77,10 @@ data. Explain any evidence-based selection instead of silently resolving it.
 A consumer inherits the same workflow budget; it does not receive a new allowance.
 A narrower caller limit wins. If a new limit is below consumption, stop retrieval
 and report the over-limit state without rewriting history. Formatting itself uses
-no API budget. Missing optional skills do not block a plain answer or portable
+no API budget. Offline/no-network instructions pass to every stage, including
+setup: they prohibit remote docs/schema discovery and API diagnostics as well as
+parcel retrieval. API diagnostics use the same finite request allowance; no
+consumer or setup invocation creates a hidden allowance. Missing optional skills do not block a plain answer or portable
 result. Never claim a downstream action happened merely because a handoff exists.
 
 ## Validation and compatibility
@@ -71,9 +88,18 @@ result. Never claim a downstream action happened merely because a handoff exists
 Before handoff or resume, validate structural fields against the schema and ledger
 arithmetic using the workflow helper when available. Fix reported fields, rerun
 validation, and repeat until it passes before saving or making resumed requests.
-Then review match evidence and provenance separately; passing structure is not
+For supplied-evidence prose, review these distinctions directly; no structural
+validation or JSON conversion is required. Then review match evidence and provenance separately; passing structure is not
 proof of source truth. Unknown schema versions must not be silently
 coerced. Duplicate IDs, invalid status pairs, invented provenance, and budget
 resets invalidate a handoff. The schema cannot prove source truth or address
 identity; the research rules still apply. Consumers may present fewer fields,
 but must not discard the original evidence needed by later stages.
+
+Version `1.1` adds `reconciliations` and explicit lookup/diagnostic attempt kinds.
+Upgrade legacy envelopes through `upgrade_workflow`, which preserves evidence
+and consumption and tags existing attempts as lookups. Reconciliation needs an
+independently verified authoritative receipt tied to one attempt; see
+[batch and resume](batch.md). An aggregate usage counter or structurally valid
+proof cannot establish that receipt's authenticity. Append the proof without
+rewriting the uncertain attempt; reconciliation never creates a retry allowance.

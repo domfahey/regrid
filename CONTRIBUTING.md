@@ -10,6 +10,10 @@ Read [AGENTS.md](AGENTS.md) for repository conventions and
 Install Python 3.10+ and uv, fork the repository, and create a branch:
 
 ```sh
+# After forking on GitHub, substitute your GitHub username below.
+git clone https://github.com/YOUR_USERNAME/regrid.git
+cd regrid
+git switch -c describe-your-change
 make install
 make format
 make check

@@ -209,3 +209,32 @@ attempt: authentication failed before model output, so no Claude trial or baseli
 comparison was completed. Historical packet reports are separate simulated-agent
 evidence, not Claude or Cowork acceptance. Preserve those reports when recording
 new trials and independent grades.
+
+
+## Composability regressions (0.5.0)
+
+`composability-regressions.json` contains eight blinded decision scenarios;
+`composability-rubric.json` remains grader-only. They cover conditional resource
+loading, scoped owner handoffs, offline/exhausted setup, consumed diagnostics,
+and verified versus unverified reconciliation receipts. Give only the scenario
+file and selected skill resources to a fresh evaluator. Return each requested
+record and a complete handoff for the owner case; proposed actions must not run.
+
+The [0.5.0 report](results/composability-0.5.0-report.json) retains baseline,
+exploratory, updated, and setup-retest transcripts. These are smaller OpenAI-model
+subagent decisions, not Claude acceptance or tool-execution traces. The initial
+owner fixture omitted scope support and was corrected; final paired runs use the
+same corrected fixture. A timeout-status error was fixed and retested separately.
+Read paths are self-reported. Do not turn these observations into claims about
+actual Cowork behavior or a complete executed multi-call workflow.
+
+Runtime TDD separately verified 1.0 compatibility, explicit 1.1 upgrades, scoped
+queries, shared diagnostic allowance, receipt rejection/replay, unchanged evidence,
+and overshoot accounting. Run the focused regressions with:
+
+```sh
+.venv/bin/python -m pytest tests/test_regrid_workflow.py tests/test_regrid_workflow_composition.py
+```
+
+`jsonschema` is a development dependency used to test the portable contract;
+the shipped helper still requires only Python 3.10+ and the standard library.

@@ -1,0 +1,69 @@
+{
+  "observations": [
+    {
+      "id": "offline_setup_zero_budget",
+      "resource_paths_read": [
+        "plugins/regrid-research/skills/setup/SKILL.md"
+      ],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": {
+        "tools_available": "verified",
+        "documentation_reachable": "not_attempted",
+        "authenticated_access_verified": "not_attempted",
+        "requests_used": 2,
+        "blocker": "Offline constraint and zero remaining request allowance; documentation and authenticated access cannot be checked. The packet lists the Regrid tools, but they are inert and were not invoked."
+      }
+    },
+    {
+      "id": "setup_used_request_no_retry",
+      "resource_paths_read": [
+        "plugins/regrid-research/skills/setup/SKILL.md"
+      ],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": {
+        "workflow_id": "synthetic-setup-uncertain-01",
+        "tools_available": "verified",
+        "documentation_reachable": "not_attempted",
+        "authenticated_access_verified": "unknown",
+        "requests_used": 1,
+        "blocker": "The usage diagnostic was dispatched and timed out, leaving its outcome uncertain. Preserve the consumed attempt and do not retry."
+      }
+    },
+    {
+      "id": "setup_single_diagnostic_consumed",
+      "resource_paths_read": [
+        "plugins/regrid-research/skills/setup/SKILL.md"
+      ],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": {
+        "workflow_id": "synthetic-setup-usage-01",
+        "tools_available": "verified",
+        "documentation_reachable": "not_attempted",
+        "authenticated_access_verified": "verified",
+        "requests_used": 1,
+        "blocker": null
+      }
+    },
+    {
+      "id": "unverified_receipt_reconciliation",
+      "resource_paths_read": [
+        "plugins/regrid-research/skills/setup/SKILL.md",
+        "plugins/regrid-research/skills/property-research/references/composition.md",
+        "plugins/regrid-research/skills/property-research/references/batch.md"
+      ],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": {
+        "workflow_id": "synthetic-unverified-receipt-01",
+        "tools_available": "verified",
+        "documentation_reachable": "not_attempted",
+        "authenticated_access_verified": "unknown",
+        "requests_used": 1,
+        "blocker": "The diagnostic timed out. The supplied receipt is not independently verified, so do not reconcile it or change the uncertain attempt; no retry is authorized."
+      }
+    }
+  ]
+}

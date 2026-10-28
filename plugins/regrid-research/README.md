@@ -11,16 +11,16 @@ its references. Setup is separate from research; choose only one connection.
 
 | Package in `dist/` | Use |
 | --- | --- |
-| `regrid-research-cowork-0.4.0.zip` | Cowork plugin with a remote HTTP connector declaration; credentials configured in Claude |
-| `regrid-research-claude-code-0.4.0.zip` | Claude Code plugin with the local `mcp-remote` bridge and environment placeholder |
-| `regrid-property-research-skill-0.4.0.zip` | Standalone research skill for an already configured Regrid connector |
+| `regrid-research-cowork-0.5.0.zip` | Cowork plugin with a remote HTTP connector declaration; credentials configured in Claude |
+| `regrid-research-claude-code-0.5.0.zip` | Claude Code plugin with the local `mcp-remote` bridge and environment placeholder |
+| `regrid-property-research-skill-0.5.0.zip` | Standalone research skill for an already configured Regrid connector |
 
 The two plugin packages have the same plugin name and skills; install one variant
-per host rather than enabling both. The `0.1.0`, `0.2.0`, and `0.3.0` archives are superseded.
+per host rather than enabling both. Archives through `0.4.0` are superseded.
 
 ## Connect in Cowork
 
-Upload `regrid-research-cowork-0.4.0.zip` under Customize > Plugins > Add > Upload
+Upload `regrid-research-cowork-0.5.0.zip` under Customize > Plugins > Add > Upload
 plugin. Its connector declaration contains only the remote URL, not a local
 process or credential. Add/connect Regrid from the plugin's Connectors tab, or
 configure the same URL through Customize > Connectors:
@@ -35,7 +35,7 @@ configure the same URL through Customize > Connectors:
    without retrieving parcels; public documentation access alone does not verify auth.
 6. Run `/regrid-research:setup`, then ask who owns a specific address once
    authenticated access is verified. If using the standalone skill instead of
-   the plugin, upload `regrid-property-research-skill-0.4.0.zip` through Claude's
+   the plugin, upload `regrid-property-research-skill-0.5.0.zip` through Claude's
    skill interface and ask for the same lookup with your connected Regrid tools.
 
 **Request-header authentication is a limited beta.** If the section is absent,
@@ -57,7 +57,7 @@ been verified in this account.
 
 ## Connect in Claude Code
 
-`regrid-research-claude-code-0.4.0.zip` contains the research and setup skills plus a local
+`regrid-research-claude-code-0.5.0.zip` contains the research and setup skills plus a local
 stdio bridge using `npx -y mcp-remote`, the Regrid MCP URL, and the
 `x-regrid-token: ${REGRID_TOKEN}` header. Node/npx and the host environment token
 are required. Do not enable this bridge alongside an equivalent active connector.
@@ -106,6 +106,22 @@ existing destinations require an explicitly requested update with `--replace`.
 `pending` lists eligible input IDs; it does not retrieve parcels. The synthetic
 example is a format guide, not real property evidence.
 
+## Contract compatibility
+
+Version 0.5.0 keeps version `1.0` handoffs readable and adds explicit `1.1`
+query types for scoped owner searches, points, bounding-box areas, and filters.
+Existing workflows stay at `1.0` unless explicitly upgraded. The synthetic example
+still demonstrates `1.0`; use the schema and composition guide for `1.1` shapes.
+
+Setup inherits offline constraints and shared request limits. Diagnostic API calls
+consume that same allowance without marking property inputs attempted. Reconciliation
+requires a caller-verified receipt for the specific uncertain attempt, preserves
+its original history, and does not retry it. The offline helper validates receipt
+structure and linkage; it cannot authenticate provider evidence.
+
+Simple evidence-based prose loads composition guidance only; schema, example, and
+raw tool catalogs are conditional resources. See the skill's resource map.
+
 ## Behavior and limits
 
 Single-property lookups start with one result, validate the address, and report
@@ -115,6 +131,15 @@ account limits and permissions still apply. Returned records consume API usage.
 Regrid requires disabling model training/data sharing before using its data with AI.
 
 ## Validation and acceptance
+
+For 0.5.0, `make check` passed 727 tests with no skips, including 64 workflow
+helper tests and JSON Schema compatibility. Ruff formatting/lint and mypy passed;
+SDK/CLI coverage remains 98.16%. The helper uses only the standard library;
+`jsonschema` is needed only for development checks. See the
+[0.5.0 regression report](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/results/composability-0.5.0-report.json)
+for red/green evidence and smaller-model offline decisions. Those model runs do
+not establish Claude/Cowork acceptance. Local HTTPS tests were unchanged and not
+rerun for this helper/docs update; publication CI results below are historical.
 
 Build all three artifacts from the repository root:
 
@@ -133,7 +158,7 @@ a general secret scanner. Never place a real credential in the source tree.
 
 Version 0.4.0 adds metadata-first filesystem discovery trials, without-skill
 baselines, distractor skills, model/CLI identifiers, and read traces. See the
-[discovery evaluation instructions](evals/README.md). Checkpoint diagnostics now
+[discovery evaluation instructions](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/README.md). Checkpoint diagnostics now
 identify structural paths without exposing values; `workflow.py save INPUT DEST`
 validates before writing and requires `--replace` to overwrite. Python 3.10+
 and the standard library are sufficient.
@@ -148,17 +173,20 @@ Validation gates are separate:
 - Live MCP tool-schema evidence and offline behavior evaluations do not prove
   Cowork's account-specific header beta or header-name approval is available.
 
-For 0.4.0, `make check` passes 692 tests, including 29 helper tests and 16
+Historical 0.4.0 verification: `make check` passed 692 tests, including 29 helper tests and 16
 discovery/runner tests. SDK coverage is 98.16% (it excludes bundled scripts).
 Both extracted plugins and the standalone skill pass strict Claude structural
-validation. The four local HTTPS E2E tests were not run for this skill change.
+validation. The historical skill report excluded HTTPS E2E tests; the later
+[publication CI](https://github.com/domfahey/regrid/actions/runs/40680206321) passed
+`make check`, all four local HTTPS tests, plugin packaging, and package builds on
+Python 3.10 and 3.12. Local HTTPS tests also passed before publication.
 
-The [0.4.0 acceptance report](evals/results/authoring-0.4.0-report.json) records
+The [0.4.0 acceptance report](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/results/authoring-0.4.0-report.json) records
 the current external blockers: Claude CLI OAuth has expired and cannot refresh;
 Claude Desktop inspection failed with `cgWindowNotFound`. No new Claude model
 trial, baseline comparison, Cowork import, or authenticated Cowork lookup is
 claimed. After local `claude auth login`, use the discovery runner documented in
-[evals/README.md](evals/README.md), then grade each retained trace.
+[evals/README.md](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/README.md), then grade each retained trace.
 
 Historical 0.3.0 verification: `make check` passed 671 tests, including 24 workflow-helper regressions
 and seven packaging tests. The SDK coverage gate remains 98.16%; that percentage
@@ -175,7 +203,7 @@ python3 plugins/regrid-research/evals/run.py packet --suite all
 Fixture validation checks the inputs, not model behavior. The separate blinded
 evaluation retains transcripts and semantic grading under `evals/results/`.
 The final 0.3.0 run passed all 19 scenarios and 63 criteria; see the repository's
-[final report](evals/results/final-report.json). It validates five handoffs, one
+[final report](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/results/final-report.json). It validates five handoffs, one
 proposed checkpoint, and three proposed calls. An initial missing explanation
 about authorization after budget exhaustion was retained, corrected, and retested.
 These are offline simulated decisions, not live downstream app writes or Cowork
@@ -184,7 +212,7 @@ acceptance tests, and no baseline comparison was run.
 Historical 0.2.0 verification (October 27, 2026): `make check` passed 646 tests with 98.16% combined
 line/branch coverage; both extracted plugin variants passed strict Claude
 validation. Direct MCP header authentication passed a usage-only request without
-retrieving parcels. The [blinded offline evaluation report](evals/results/forward-report.json)
+retrieving parcels. The [blinded offline evaluation report](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/results/forward-report.json)
 records 13/13 scenarios and 40/40 criteria passed, with the evaluator transcript
 and content hashes retained. These evaluations use a synthetic tool double; the
 20-address case checks the first request and continuation plan, not a full live

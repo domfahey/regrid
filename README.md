@@ -1,6 +1,6 @@
 # Regrid SDK
 
-A synchronous Python SDK and command-line client for the Regrid Parcel and Tileserver APIs, built on HTTPX and Pydantic v2. `RegridClient` keeps dictionary responses for compatibility; `TypedRegridClient` validates responses into models. Both validate request parameters strictly. Tile requests return bytes.
+A synchronous Python SDK and command-line client for the [Regrid](https://regrid.com/) Parcel and Tileserver APIs, built on HTTPX and Pydantic v2. `RegridClient` keeps dictionary responses for compatibility; `TypedRegridClient` validates responses into models. Both validate request parameters strictly. Tile requests return bytes.
 
 ## Documentation
 
@@ -15,22 +15,42 @@ A synchronous Python SDK and command-line client for the Regrid Parcel and Tiles
 
 ## Installation
 
-Requires Python 3.10 or later and [uv](https://docs.astral.sh/uv/). From this directory:
+Requires Python 3.10 or later, Git, Make, and [uv](https://docs.astral.sh/uv/).
+Clone the source and try the CLI without credentials or API calls:
 
 ```sh
+git clone https://github.com/domfahey/regrid.git
+cd regrid
 make install
-cp .env.sample .env
-# Edit .env locally with your Regrid token, then load it into your shell:
-set -a
-. ./.env
-set +a
+.venv/bin/regrid --help
 ```
 
-`.env` is not loaded automatically by the SDK or CLI. Keep real tokens only in your local environment or secret manager. `.env` and `.env.*` are ignored by Git; `.env.sample` contains only a placeholder. Never commit credentials, private keys, or populated environment files.
+The editable installation provides `.venv/bin/regrid`. Activate `.venv` to use
+`regrid` directly, or run `uv run regrid`. Public schema commands do not require
+a token. Development dependencies resolve locally; `uv.lock` is not tracked.
 
-The editable installation provides `.venv/bin/regrid`. Activate `.venv` to use `regrid` directly, or run `uv run regrid`. Public schema commands do not require a token. This library resolves development dependencies locally; `uv.lock` is not tracked.
+### Optional authenticated setup
 
-To install into another project:
+Only configure a token when calling authenticated Regrid endpoints. Create `.env`
+from `.env.sample` if it does not already exist, then edit it privately:
+
+```sh
+# First-time setup only; do not overwrite an existing .env.
+cp -n .env.sample .env
+# Edit .env locally, then check configuration without contacting Regrid.
+make doctor
+# Explicit authenticated usage request; does not retrieve parcels.
+uv run --env-file .env --no-sync regrid usage
+```
+
+The SDK and CLI do not automatically load `.env`. Use `uv run --env-file .env`
+for authenticated commands or SDK scripts; it loads credentials into the child
+process. Keep tokens in local configuration or a secret manager. `.env` and
+`.env.*` are ignored; `.env.sample` is placeholder-only. Never commit credentials,
+private keys, or populated environment files. Later direct CLI/Python examples
+assume `REGRID_TOKEN` is already available in their process environment.
+
+To add a source checkout to another uv project:
 
 ```sh
 uv add /absolute/path/to/regrid
@@ -216,7 +236,9 @@ Invalid local arguments raise `ValueError` or `TypeError`. The client checks lim
 
 ## Verification status
 
-The implementation committed in `f89a133` passed **692 tests** with **98.16% combined line and branch coverage** for `src/regrid` on Python 3.12. Lint, formatting, and type checks passed. The 90% coverage gate covers the SDK/CLI, not the bundled skill scripts. The suite includes 29 workflow-helper tests, 16 discovery/runner tests, and seven packaging tests. Four local HTTPS E2E tests were excluded from this skill-focused run.
+At publication commit `a197265`, local formatting, lint, type checks, **692 mocked tests**, and **four local HTTPS E2E tests** passed. SDK/CLI combined line and branch coverage was **98.16%** on Python 3.12; the coverage gate excludes bundled skill scripts. The mocked suite includes 29 workflow-helper tests, 16 discovery/runner tests, and seven packaging tests.
+
+[Publication CI](https://github.com/domfahey/regrid/actions/runs/40680206321) passed on Python 3.10 and 3.12, including `make check`, `make e2e`, plugin packaging, and wheel/source builds. These offline checks do not establish live Regrid behavior or Cowork acceptance. Historical verification reports remain unchanged.
 
 Both extracted plugin variants and the standalone skill passed Claude's strict structural validator. Actual Haiku/Sonnet/Opus evaluations remain blocked by an expired Claude CLI login; Cowork import and authenticated lookup remain unverified because Desktop inspection was unavailable. See the [0.4.0 acceptance report](plugins/regrid-research/evals/results/authoring-0.4.0-report.json). These are recorded results, not a fresh authentication check.
 
@@ -246,9 +268,9 @@ Output contains only status and aggregate counts, not credentials, addresses, ow
 The [Regrid Research guide](plugins/regrid-research/README.md) covers separate
 Cowork and Claude Code packages built from one canonical research skill:
 
-- `dist/regrid-research-cowork-0.4.0.zip`: remote connector declaration and skills.
-- `dist/regrid-research-claude-code-0.4.0.zip`: local bridge and skills.
-- `dist/regrid-property-research-skill-0.4.0.zip`: standalone skill with references.
+- `dist/regrid-research-cowork-0.5.0.zip`: remote connector declaration and skills.
+- `dist/regrid-research-claude-code-0.5.0.zip`: local bridge and skills.
+- `dist/regrid-property-research-skill-0.5.0.zip`: standalone skill with references.
 
 Build with `.venv/bin/python scripts/build_claude_plugins.py`. For Cowork,
 configure `x-regrid-token` privately in the custom web connector's Request headers
@@ -263,7 +285,7 @@ records observed MCP schemas and a successful authenticated usage-only call.
 using synthetic saved responses. Neither proves Cowork import or account-specific
 header availability; those remain unverified. No credentials enter the packages.
 
-Regrid Research 0.4.0 includes versioned handoffs, separate lookup/match statuses,
+Regrid Research 0.5.0 includes versioned handoffs, separate lookup/match statuses,
 shared budgets, evidence reuse, and explicitly requested checkpoints. It adds
 metadata-first discovery/baseline evaluations, direct resource links, qualified
 MCP tool names, and actionable validation. See the
@@ -291,3 +313,8 @@ affiliated with or endorsed by Regrid. Project code is available under the
 [MIT license](LICENSE). Regrid trademarks, service access, and parcel data remain
 subject to their respective owners' terms; this license does not grant API or
 data access. See [CONTRIBUTING.md](CONTRIBUTING.md) to participate.
+
+Version 0.5.0 additionally supports explicit `1.1` query handoffs, evidence-backed
+reconciliation, and setup diagnostics within the same request budget. Version
+`1.0` checkpoints remain readable. Schema/example files load only when needed;
+see the [plugin compatibility guide](plugins/regrid-research/README.md#contract-compatibility).

@@ -1,0 +1,60 @@
+{
+  "observations": [
+    {
+      "id": "supplied_evidence_prose",
+      "resource_paths_read": ["plugins/regrid-research/skills/property-research/references/composition.md"],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": "The supplied record lists Example Holdings LLC as the recorded owner of 12 Example Avenue, Haddonfield NJ 08033. Its last sale was for $615,000 on December 3, 2024."
+    },
+    {
+      "id": "live_schema_discovery",
+      "resource_paths_read": ["plugins/regrid-research/skills/property-research/references/mcp-tools.md"],
+      "proposed_calls": [{"tool": "regrid_request", "arguments": {"endpoint": "address", "parameters": {"query": "12 Example Avenue, Haddonfield NJ 08033", "limit": 1, "return_stacked": false}}}],
+      "proposed_writes": [],
+      "answer": "Use the session's authoritative schema to request one address result and disable stacked results. No request has been made, so the recorded owner is not yet known from this session."
+    },
+    {
+      "id": "offline_setup_zero_budget",
+      "resource_paths_read": [],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": "Setup status from the packet: connector configuration is reported as present; documentation reachability and authenticated access are not verified. Both requests in the stated allowance have been attempted and none remain; honoring the offline constraint, no discovery or API request is proposed."
+    },
+    {
+      "id": "setup_used_request_no_retry",
+      "resource_paths_read": ["plugins/regrid-research/skills/setup/SKILL.md"],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": "The usage diagnostic timed out after dispatch, so its outcome remains uncertain and authentication is not verified. The only request is consumed, the parcel lookup remains not attempted, and no retry is proposed."
+    },
+    {
+      "id": "setup_single_diagnostic_consumed",
+      "resource_paths_read": ["plugins/regrid-research/skills/setup/SKILL.md"],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": "The supplied successful usage response verifies authenticated access, and the tool is listed in the session. Documentation reachability was not checked; the sole request was consumed by the diagnostic, so no parcel lookup is proposed."
+    },
+    {
+      "id": "scoped_owner_handoff",
+      "resource_paths_read": ["plugins/regrid-research/skills/property-research/references/composition.md", "plugins/regrid-research/skills/property-research/references/result.schema.json"],
+      "proposed_calls": [{"tool": "regrid_request", "arguments": {"endpoint": "query", "parameters": {"query": "Example Holdings", "limit": 5}}}],
+      "proposed_writes": [{"destination": "versioned handoff (no file destination specified)", "workflow_id": "synthetic-owner-query-01", "schema_version": "1.1", "preserve": ["original owner query", "Haddonfield NJ 08033 scope", "input_id owner-query-1", "shared request and record budget"]}],
+      "answer": "Propose the scoped owner query only, with a maximum of five records and the original Haddonfield NJ 08033 scope retained. Keep this as an unattempted version 1.1 handoff under workflow synthetic-owner-query-01; no result is available yet, and the search must not be broadened."
+    },
+    {
+      "id": "uncertain_evidence_reconciliation",
+      "resource_paths_read": ["plugins/regrid-research/skills/property-research/references/composition.md", "plugins/regrid-research/skills/property-research/references/result.schema.json", "plugins/regrid-research/skills/property-research/references/batch.md"],
+      "proposed_calls": [],
+      "proposed_writes": [{"destination": "in-memory versioned workflow checkpoint; no file destination specified", "workflow_id": "synthetic-reconcile-01", "action": "append reconciliation proof for attempt-1 from the supplied independently verified receipt; preserve the original uncertain attempt", "ledger_effect": {"attempted_requests": 1, "returned_records": 0, "uncertain_records": 0}}],
+      "answer": "The identity of parcel TEST_1 at the requested address is confirmed, but the recorded owner is disputed: the prior Regrid observation says Example Holdings LLC and the county observation says Example County Trust. The county source refresh date is later (2026-10-20 versus 2026-09-17), but the supplied evidence says no source adjudication was performed, so do not select a single owner. The independently verified receipt tied to attempt-1 reconciles that uncertain attempt to zero returned records; preserve the attempt and do not retry."
+    },
+    {
+      "id": "unverified_receipt_reconciliation",
+      "resource_paths_read": ["plugins/regrid-research/skills/property-research/references/composition.md", "plugins/regrid-research/skills/property-research/references/result.schema.json", "plugins/regrid-research/skills/property-research/references/batch.md"],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": "The supplied receipt has not been independently verified, so it cannot reconcile attempt-diagnostic-1. Preserve the diagnostic as uncertain with its one-request consumption and zero returned-record reservation; the usage count remains unknown, and no further request is proposed."
+    }
+  ]
+}

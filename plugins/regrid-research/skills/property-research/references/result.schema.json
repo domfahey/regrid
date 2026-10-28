@@ -12,7 +12,10 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "1.0"
+      "enum": [
+        "1.0",
+        "1.1"
+      ]
     },
     "workflow_id": {
       "type": "string",
@@ -32,6 +35,12 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/attempt"
+      }
+    },
+    "reconciliations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reconciliation"
       }
     }
   },
@@ -68,58 +77,6 @@
           "minimum": 0
         }
       }
-    },
-    "requested": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "address",
-        "parcel_id",
-        "scope"
-      ],
-      "properties": {
-        "address": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "pattern": "\\S"
-        },
-        "parcel_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "pattern": "\\S"
-        },
-        "scope": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "pattern": "\\S"
-        }
-      },
-      "anyOf": [
-        {
-          "properties": {
-            "address": {
-              "type": "string",
-              "minLength": 1,
-              "pattern": "\\S"
-            }
-          }
-        },
-        {
-          "properties": {
-            "parcel_id": {
-              "type": "string",
-              "minLength": 1,
-              "pattern": "\\S"
-            }
-          }
-        }
-      ]
     },
     "provenance": {
       "type": "object",
@@ -399,7 +356,6 @@
             "minLength": 1,
             "pattern": "\\S"
           },
-          "minItems": 1,
           "uniqueItems": true
         },
         "state": {
@@ -420,6 +376,12 @@
             "null"
           ],
           "minimum": 0
+        },
+        "kind": {
+          "enum": [
+            "lookup",
+            "diagnostic"
+          ]
         }
       },
       "allOf": [
@@ -449,8 +411,350 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "const": "diagnostic"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "input_ids": {
+                "maxItems": 0
+              },
+              "record_limit": {
+                "const": 0
+              },
+              "returned_records": {
+                "enum": [
+                  null,
+                  0
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "input_ids": {
+                "minItems": 1
+              }
+            }
+          }
         }
       ]
+    },
+    "legacy_requested": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "address",
+        "parcel_id",
+        "scope"
+      ],
+      "properties": {
+        "address": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "\\S"
+        },
+        "parcel_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "\\S"
+        },
+        "scope": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "\\S"
+        }
+      },
+      "anyOf": [
+        {
+          "properties": {
+            "address": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          }
+        },
+        {
+          "properties": {
+            "parcel_id": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          }
+        }
+      ]
+    },
+    "owner_query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query_type",
+        "owner",
+        "scope"
+      ],
+      "properties": {
+        "query_type": {
+          "const": "owner"
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      }
+    },
+    "point_query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query_type",
+        "lat",
+        "lon",
+        "radius"
+      ],
+      "properties": {
+        "query_type": {
+          "const": "point"
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "radius": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "area_query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query_type",
+        "bbox"
+      ],
+      "properties": {
+        "query_type": {
+          "const": "area"
+        },
+        "bbox": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "prefixItems": [
+            {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            },
+            {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            },
+            {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            }
+          ]
+        }
+      }
+    },
+    "filter_query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query_type",
+        "scope",
+        "filters"
+      ],
+      "properties": {
+        "query_type": {
+          "const": "filter"
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "filters": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "\\S"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": {
+              "pattern": "\\S"
+            }
+          }
+        }
+      }
+    },
+    "requested": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/legacy_requested"
+        },
+        {
+          "$ref": "#/$defs/owner_query"
+        },
+        {
+          "$ref": "#/$defs/point_query"
+        },
+        {
+          "$ref": "#/$defs/area_query"
+        },
+        {
+          "$ref": "#/$defs/filter_query"
+        }
+      ]
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "evidence_id",
+        "retrieved_at",
+        "attempt_id",
+        "returned_records",
+        "source_url"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "evidence_id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "retrieved_at": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "returned_records": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "\\S"
+        }
+      }
+    },
+    "reconciliation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempt_id",
+        "proof"
+      ],
+      "properties": {
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "proof": {
+          "$ref": "#/$defs/receipt"
+        }
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": "1.1"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "reconciliations"
+        ],
+        "properties": {
+          "attempts": {
+            "items": {
+              "required": [
+                "kind"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "reconciliations": false,
+          "results": {
+            "items": {
+              "properties": {
+                "requested": {
+                  "$ref": "#/$defs/legacy_requested"
+                }
+              }
+            }
+          },
+          "attempts": {
+            "items": {
+              "properties": {
+                "kind": false
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "description": "Versions 1.0 and 1.1. Runtime validation additionally enforces cross-field invariants: unique IDs, ordered bounding boxes, matching attempt references, immutable observation consistency, receipt uniqueness, and exact ledger-derived counters. Receipts require caller verification of authoritative per-attempt evidence; this schema does not authenticate providers."
 }

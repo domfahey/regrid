@@ -1,0 +1,84 @@
+{
+  "plugin_version": "0.5.0",
+  "date": "2026-10-28",
+  "runtime_tdd": {
+    "red": "Worker observed 24 failures before implementation; filter preservation refinement separately failed before fix.",
+    "green": {
+      "helper_tests": 64,
+      "make_check_tests": 727,
+      "skipped": 0,
+      "sdk_coverage_percent": 98.16
+    },
+    "schema_validator": "jsonschema now required in development group; schema compatibility test no longer skips"
+  },
+  "evaluators": {
+    "model": "gpt-6-luna",
+    "type": "OpenAI subagents with fresh contexts; not Claude",
+    "baseline": "HEAD skill snapshot before current changes",
+    "live_api_calls": 0
+  },
+  "semantic_observations": [
+    {
+      "case": "supplied_evidence_prose",
+      "baseline": "FAIL: loaded large schema for prose",
+      "updated": "PASS: composition only; no schema/example/batch"
+    },
+    {
+      "case": "live_schema_discovery",
+      "baseline": "PASS under rubric",
+      "updated": "PASS: bounded supported address call; no saved raw schemas"
+    },
+    {
+      "case": "offline_setup_zero_budget",
+      "baseline": "PASS: no requests",
+      "updated": "PASS: no requests; checks not attempted"
+    },
+    {
+      "case": "setup_used_request_no_retry",
+      "baseline": "PASS: unverified, no retry",
+      "updated_initial": "FAIL: timeout incorrectly labeled not_attempted",
+      "fix": "Setup explicitly distinguishes unknown after a dispatched timeout from not_attempted",
+      "retest": "PASS: unknown, one consumed request, no retry"
+    },
+    {
+      "case": "setup_single_diagnostic_consumed",
+      "baseline": "PASS: no further request",
+      "updated": "PASS: authentication verified from supplied usage, no fresh allowance"
+    },
+    {
+      "case": "scoped_owner_handoff",
+      "baseline": "Returned supplied1.1 envelope inline despite old instructions only supporting1.0; no evidence of legacy helper accepting it",
+      "updated": "PASS: complete handoff validated with runtime, exact scope in proposed call, no file write"
+    },
+    {
+      "case": "uncertain_evidence_reconciliation",
+      "baseline": "FAIL: proposed mutating uncertain attempt to success instead of preserving history",
+      "updated": "PASS at proposal level: append matching proof, preserve original attempt/results; deterministic tests verify accounting/evidence"
+    },
+    {
+      "case": "unverified_receipt_reconciliation",
+      "baseline": "PASS: no reconciliation/retry",
+      "updated": "PASS: no reconciliation/retry"
+    }
+  ],
+  "fixture_validation": {
+    "versioned_handoffs": 5,
+    "status": "passed"
+  },
+  "limits": [
+    "Resource paths are agent-reported observations, not a captured filesystem trace.",
+    "Actions are offline proposals, not executed MCP calls or full downstream workflows.",
+    "Exploratory owner fixture omitted a scope parameter; it was corrected before the final paired runs. Exploratory outputs are not comparable to final runs.",
+    "Final setup wording was retested on four setup cases separately; no claim of a single all-green final full model run.",
+    "No Claude model or Cowork acceptance run was performed; earlier authentication/Desktop blockers remain unverified.",
+    "Caller attestation is required for reconciliation; the helper cannot authenticate provider receipts."
+  ],
+  "source_sha256": {
+    "skills/property-research/SKILL.md": "d4e2dafd06f28e351632c229005c341886083601f53ba969a50e1599c015b364",
+    "skills/setup/SKILL.md": "a4c20292a3ff549122397b82a60a5cf020eb888cb1cc60444a2a6a46b4fa8b36",
+    "skills/property-research/scripts/workflow.py": "c0ad003045b2c20a5a3577cc1290eb17130538ff9721428038d47251940e2c71",
+    "skills/property-research/references/result.schema.json": "2078a3513acf2e62b165b114a3396eecf5912388cd16a971b8386cb56de764b5",
+    "evals/composability-regressions.json": "c288bb0286f7e18d2ce6fb9f3ff60e257469c978a4f0ffd3caea52e4c761c3ec",
+    "evals/composability-rubric.json": "0b48f739a641a8452a33a3fd4d92a5cbe4a67793aa49f13ba1a70737367a0b55"
+  }
+}

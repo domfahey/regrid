@@ -1,0 +1,89 @@
+{
+  "response_contract": "Each case contains id, resource_paths_read, proposed_calls, proposed_writes, and answer. Actions are proposals only; no live calls or writes were made.",
+  "cases": [
+    {
+      "id": "supplied_evidence_prose",
+      "resource_paths_read": [
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/property-research/SKILL.md",
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/property-research/references/composition.md",
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/property-research/references/result.schema.json"
+      ],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": "The supplied confirmed record lists Example Holdings LLC as the recorded owner of 12 Example Avenue, Haddonfield NJ 08033. Its last recorded sale was $615,000 on 2024-12-03; the source was refreshed 2026-09-17."
+    },
+    {
+      "id": "live_schema_discovery",
+      "resource_paths_read": [
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/property-research/SKILL.md"
+      ],
+      "proposed_calls": [
+        {"tool":"regrid_request","arguments":{"endpoint":"address","parameters":{"query":"12 Example Avenue, Haddonfield NJ 08033","limit":1}}}
+      ],
+      "proposed_writes": [],
+      "answer": "I cannot state the recorded owner from the information supplied: there is no property evidence yet. The session-provided live schema authorizes an address request with query and limit; using the schema already discovered, I would make the single bounded request shown."
+    },
+    {
+      "id": "offline_setup_zero_budget",
+      "resource_paths_read": [
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/setup/SKILL.md"
+      ],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": "Setup status from this packet: connector/tools are listed and connection_configured is true; documentation reachability is unverified; authenticated access is unverified. The request allowance is exhausted (2 of 2 attempted), so no discovery or usage request can be made in this offline check."
+    },
+    {
+      "id": "setup_used_request_no_retry",
+      "resource_paths_read": [
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/setup/SKILL.md"
+      ],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": "Tools are listed, but documentation reachability is not established by this checkpoint. The usage request timed out after dispatch, so its outcome is uncertain and authenticated access remains unverified; the attempt and full reservation must remain recorded. No retry is authorized, and no property lookup was attempted."
+    },
+    {
+      "id": "setup_single_diagnostic_consumed",
+      "resource_paths_read": [
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/setup/SKILL.md"
+      ],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": "The request tool is listed. Documentation reachability remains unverified because no documentation discovery result is supplied. Authenticated access is verified by the successful usage response; the single request is consumed (1 of 1), and no further request or parcel lookup is proposed."
+    },
+    {
+      "id": "scoped_owner_handoff",
+      "resource_paths_read": [
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/property-research/SKILL.md",
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/property-research/references/composition.md",
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/property-research/references/result.schema.json"
+      ],
+      "proposed_calls": [
+        {"tool":"regrid_request","arguments":{"endpoint":"query","parameters":{"query":"Example Holdings","scope":"Haddonfield NJ 08033","limit":5}}}
+      ],
+      "proposed_writes": [],
+      "answer": "Proposed bounded owner search, retaining the requested owner and geography exactly; no call or file write has occurred. Full versioned handoff:\n{\"workflow_id\":\"synthetic-owner-query-01\",\"schema_version\":\"1.1\",\"budget\":{\"max_requests\":1,\"max_records\":5,\"attempted_requests\":0,\"returned_records\":0,\"uncertain_records\":0},\"results\":[{\"input_id\":\"owner-query-1\",\"requested\":{\"query_type\":\"owner\",\"owner\":\"Example Holdings\",\"scope\":\"Haddonfield NJ 08033\"},\"lookup_status\":\"not_attempted\",\"match_status\":\"not_assessed\",\"candidates\":[],\"missing_fields\":[],\"error\":null,\"notes\":[]}],\"attempts\":[],\"reconciliations\":[]}"
+    },
+    {
+      "id": "uncertain_evidence_reconciliation",
+      "resource_paths_read": [
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/property-research/SKILL.md",
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/property-research/references/composition.md",
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/property-research/references/batch.md"
+      ],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": "Do not repeat the timed-out lookup. The independently verified receipt is tied to attempt-1 and proves that attempt returned zero records, so reconcile that attempt from uncertain to success with returned_records 0 and uncertain_records 0; retain attempted_requests 1 and returned_records 0. Parcel identity remains confirmed for TEST_1, but the owner observations conflict: Regrid reports Example Holdings LLC (source refreshed 2026-09-17) while the county extract reports Example County Trust (2026-10-20). No single owner can be selected from the supplied evidence."
+    },
+    {
+      "id": "unverified_receipt_reconciliation",
+      "resource_paths_read": [
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/property-research/SKILL.md",
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/property-research/references/composition.md",
+        "/var/folders/ny/sgsj847n58xbb1d4rxgbxzw80000gn/T/regrid-composability-baseline-b6623gfv/skills/property-research/references/batch.md"
+      ],
+      "proposed_calls": [],
+      "proposed_writes": [],
+      "answer": "The usage attempt remains uncertain: the supplied receipt is not independently verified or proven to belong to the dispatched attempt, so it cannot reconcile the ledger. Preserve attempt-diagnostic-1 as uncertain with returned_records null, attempted_requests 1, returned_records 0, and uncertain_records 0 under the supplied counters; do not issue another request."
+    }
+  ]
+}

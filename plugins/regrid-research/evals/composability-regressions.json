@@ -1,0 +1,519 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "response_contract": {
+    "instructions": "For each case return an observation record with id, resource_paths_read, proposed_calls, proposed_writes, and answer. resource_paths_read lists local reference paths actually consulted; proposed_calls and proposed_writes list intended actions only. This is an offline evaluation: do not execute calls or writes and do not claim proposed actions happened. For scoped_owner_handoff include a handoff field containing the full result envelope, not a description of a future write.",
+    "fields": [
+      "id",
+      "resource_paths_read",
+      "proposed_calls",
+      "proposed_writes",
+      "answer"
+    ]
+  },
+  "cases": [
+    {
+      "id": "supplied_evidence_prose",
+      "user_request": "From the supplied record, tell me the recorded owner and last sale in two sentences. Keep it in prose.",
+      "context": "Synthetic evidence is complete for the requested facts. No refresh was requested.",
+      "available_tools": [],
+      "available_resources": [
+        "skills/property-research/references/result.schema.json",
+        "skills/property-research/references/result-example.json",
+        "skills/property-research/references/composition.md"
+      ],
+      "tool_history": [],
+      "supplied_evidence": {
+        "address": "12 Example Avenue, Haddonfield NJ 08033",
+        "match_status": "confirmed",
+        "recorded_owner": "Example Holdings LLC",
+        "sale_price": 615000,
+        "sale_date": "2024-12-03",
+        "source_refreshed_at": "2026-09-17"
+      }
+    },
+    {
+      "id": "live_schema_discovery",
+      "user_request": "Find the recorded owner of 12 Example Avenue, Haddonfield NJ 08033. Use the tool schema discovered in this session.",
+      "context": "The current session already completed live tool discovery. The discovered schema below is authoritative; saved raw schema files are available only as fallback references.",
+      "available_tools": [
+        {
+          "name": "regrid_request",
+          "description": "Synthetic read-only request tool.",
+          "inputSchema": {
+            "type": "object",
+            "required": [
+              "endpoint",
+              "parameters"
+            ],
+            "properties": {
+              "endpoint": {
+                "enum": [
+                  "address",
+                  "usage"
+                ]
+              },
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "return_stacked": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      ],
+      "available_resources": [
+        "skills/property-research/references/tools.json",
+        "skills/property-research/references/endpoints.json",
+        "skills/property-research/references/mcp-tools.md"
+      ],
+      "tool_history": [],
+      "supplied_evidence": null
+    },
+    {
+      "id": "offline_setup_zero_budget",
+      "user_request": "Check whether setup is ready using only the information already in this packet. Stay offline and do not make any requests.",
+      "context": "This is an offline setup check. The remaining request allowance is zero. Tool descriptions below are inert fixtures, not callable during this check.",
+      "available_tools": [
+        {
+          "name": "regrid_discover",
+          "description": "Returns public MCP documentation and current tool schemas."
+        },
+        {
+          "name": "regrid_request",
+          "description": "Read-only API request; credentials injected externally."
+        }
+      ],
+      "available_resources": [],
+      "tool_history": [],
+      "supplied_evidence": {
+        "connection_configured": true,
+        "documentation_reachable": null,
+        "authenticated_access_verified": null,
+        "budget": {
+          "max_requests": 2,
+          "attempted_requests": 2,
+          "remaining_requests": 0
+        }
+      }
+    },
+    {
+      "id": "setup_used_request_no_retry",
+      "user_request": "Check setup status from this checkpoint. Do not retry a request whose outcome is uncertain.",
+      "context": "Synthetic setup checkpoint. The usage request was already dispatched once and timed out; no further request is authorized in this stage.",
+      "available_tools": [
+        {
+          "name": "regrid_discover",
+          "description": "Returns public MCP documentation and current tool schemas."
+        },
+        {
+          "name": "regrid_request",
+          "description": "Read-only API request; credentials injected externally."
+        }
+      ],
+      "available_resources": [],
+      "tool_history": [
+        {
+          "tool": "regrid_request",
+          "arguments": {
+            "endpoint": "usage",
+            "parameters": {}
+          },
+          "result": {
+            "isError": true,
+            "outcome_uncertain": true,
+            "message": "Synthetic timeout after dispatch."
+          }
+        }
+      ],
+      "supplied_evidence": {
+        "schema_version": "1.1",
+        "workflow_id": "synthetic-setup-uncertain-01",
+        "results": [
+          {
+            "input_id": "setup-check-1",
+            "requested": {
+              "address": "12 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "not_attempted",
+            "match_status": "not_assessed",
+            "candidates": [],
+            "missing_fields": [],
+            "error": null,
+            "notes": []
+          }
+        ],
+        "budget": {
+          "max_requests": 1,
+          "max_records": 1,
+          "attempted_requests": 1,
+          "returned_records": 0,
+          "uncertain_records": 0
+        },
+        "attempts": [
+          {
+            "attempt_id": "setup-usage-1",
+            "kind": "diagnostic",
+            "input_ids": [],
+            "state": "uncertain",
+            "record_limit": 0,
+            "returned_records": null
+          }
+        ],
+        "reconciliations": []
+      }
+    },
+    {
+      "id": "setup_single_diagnostic_consumed",
+      "user_request": "Report setup status from this checkpoint. The usage check has already completed; do not make another request or use a parcel lookup.",
+      "context": "Synthetic versioned setup checkpoint. The single authorized API request was used for an account usage diagnostic and returned a successful result.",
+      "available_tools": [
+        {
+          "name": "regrid_request",
+          "description": "Read-only API request; credentials injected externally."
+        }
+      ],
+      "available_resources": [],
+      "tool_history": [
+        {
+          "tool": "regrid_request",
+          "arguments": {
+            "endpoint": "usage",
+            "parameters": {}
+          },
+          "result": {
+            "isError": false,
+            "authenticated": true,
+            "message": "Synthetic usage response."
+          }
+        }
+      ],
+      "supplied_evidence": {
+        "schema_version": "1.1",
+        "workflow_id": "synthetic-setup-usage-01",
+        "results": [
+          {
+            "input_id": "setup-check-1",
+            "requested": {
+              "address": "12 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "not_attempted",
+            "match_status": "not_assessed",
+            "candidates": [],
+            "missing_fields": [],
+            "error": null,
+            "notes": []
+          }
+        ],
+        "budget": {
+          "max_requests": 1,
+          "max_records": 1,
+          "attempted_requests": 1,
+          "returned_records": 0,
+          "uncertain_records": 0
+        },
+        "attempts": [
+          {
+            "attempt_id": "setup-usage-1",
+            "kind": "diagnostic",
+            "input_ids": [],
+            "state": "success",
+            "record_limit": 0,
+            "returned_records": 0
+          }
+        ],
+        "reconciliations": []
+      }
+    },
+    {
+      "id": "scoped_owner_handoff",
+      "user_request": "Search for the recorded owner of parcels in Haddonfield NJ 08033 matching the name Example Holdings. Keep the original query and geography in a versioned handoff. Do not broaden the search. Return the full versioned handoff JSON in your response alongside the proposed call; do not propose or write a file.",
+      "context": "Synthetic scoped owner-name search. No results have been returned yet. The synthetic query tool supports the query, scope, and limit parameters shown.",
+      "available_tools": [
+        {
+          "name": "regrid_request",
+          "description": "Synthetic read-only request tool.",
+          "inputSchema": {
+            "type": "object",
+            "required": [
+              "endpoint",
+              "parameters"
+            ],
+            "properties": {
+              "endpoint": {
+                "enum": [
+                  "query",
+                  "usage"
+                ]
+              },
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "scope": {
+                    "type": "string",
+                    "description": "Required geographic restriction for this owner query."
+                  }
+                },
+                "required": [
+                  "query",
+                  "scope",
+                  "limit"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      ],
+      "available_resources": [
+        "skills/property-research/references/result.schema.json",
+        "skills/property-research/references/composition.md"
+      ],
+      "tool_history": [],
+      "supplied_evidence": {
+        "workflow_id": "synthetic-owner-query-01",
+        "schema_version": "1.1",
+        "budget": {
+          "max_requests": 1,
+          "max_records": 5,
+          "attempted_requests": 0,
+          "returned_records": 0,
+          "uncertain_records": 0
+        },
+        "results": [
+          {
+            "input_id": "owner-query-1",
+            "requested": {
+              "query_type": "owner",
+              "owner": "Example Holdings",
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "not_attempted",
+            "match_status": "not_assessed",
+            "candidates": [],
+            "missing_fields": [],
+            "error": null,
+            "notes": []
+          }
+        ],
+        "attempts": [],
+        "reconciliations": []
+      }
+    },
+    {
+      "id": "uncertain_evidence_reconciliation",
+      "user_request": "Reconcile the supplied observations and report what can be concluded. Do not repeat the uncertain lookup or change the workflow limits.",
+      "context": "Synthetic versioned checkpoint. One request timed out after dispatch. A supplied county observation and a prior Regrid observation refer to the same parcel but disagree on owner. An independently verified authoritative receipt is supplied for the timed-out attempt.",
+      "available_tools": [
+        {
+          "name": "regrid_request",
+          "description": "Synthetic read-only request tool."
+        }
+      ],
+      "available_resources": [
+        "skills/property-research/references/result.schema.json",
+        "skills/property-research/references/composition.md",
+        "skills/property-research/references/batch.md"
+      ],
+      "tool_history": [
+        {
+          "tool": "regrid_request",
+          "arguments": {
+            "endpoint": "address",
+            "parameters": {
+              "query": "12 Example Avenue, Haddonfield NJ 08033",
+              "limit": 1
+            }
+          },
+          "result": {
+            "isError": true,
+            "outcome_uncertain": true,
+            "message": "Synthetic timeout after dispatch."
+          }
+        }
+      ],
+      "supplied_evidence": {
+        "schema_version": "1.1",
+        "workflow_id": "synthetic-reconcile-01",
+        "results": [
+          {
+            "input_id": "owner-row-1",
+            "requested": {
+              "address": "12 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": "TEST_1",
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "success",
+            "match_status": "confirmed",
+            "candidates": [
+              {
+                "parcel_id": "TEST_1",
+                "address": "12 Example Avenue, Haddonfield NJ 08033",
+                "facts": {
+                  "recorded_owner": "Example Holdings LLC"
+                },
+                "provenance": {
+                  "provider": "Regrid",
+                  "retrieved_at": "2026-10-27T18:00:00Z",
+                  "source_refreshed_at": "2026-09-17",
+                  "source_url": null,
+                  "evidence_id": "regrid-prior"
+                }
+              },
+              {
+                "parcel_id": "TEST_1",
+                "address": "12 Example Avenue, Haddonfield NJ 08033",
+                "facts": {
+                  "recorded_owner": "Example County Trust"
+                },
+                "provenance": {
+                  "provider": "County extract",
+                  "retrieved_at": "2026-10-27T18:00:00Z",
+                  "source_refreshed_at": "2026-10-20",
+                  "source_url": null,
+                  "evidence_id": "county-current"
+                }
+              }
+            ],
+            "missing_fields": [],
+            "error": null,
+            "notes": [
+              "Supplied owner observations disagree; no source adjudication has been performed. The later refresh request timed out after dispatch."
+            ]
+          }
+        ],
+        "budget": {
+          "max_requests": 1,
+          "max_records": 1,
+          "attempted_requests": 1,
+          "returned_records": 0,
+          "uncertain_records": 0
+        },
+        "attempts": [
+          {
+            "attempt_id": "attempt-1",
+            "kind": "lookup",
+            "input_ids": [
+              "owner-row-1"
+            ],
+            "state": "uncertain",
+            "record_limit": 1,
+            "returned_records": null
+          }
+        ],
+        "reconciliations": [
+          {
+            "attempt_id": "attempt-1",
+            "proof": {
+              "provider": "Regrid",
+              "evidence_id": "receipt-attempt-1",
+              "retrieved_at": "2026-10-28T12:00:00Z",
+              "attempt_id": "attempt-1",
+              "returned_records": 0,
+              "source_url": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "unverified_receipt_reconciliation",
+      "user_request": "Reconcile this usage count using the supplied receipt. Do not issue another request.",
+      "context": "Synthetic versioned checkpoint. The usage diagnostic timed out. The receipt is supplied for review but its source and association with the attempt have not been independently verified.",
+      "available_tools": [
+        {
+          "name": "regrid_request",
+          "description": "Synthetic read-only request tool."
+        }
+      ],
+      "available_resources": [
+        "skills/property-research/references/composition.md",
+        "skills/property-research/references/batch.md"
+      ],
+      "tool_history": [
+        {
+          "tool": "regrid_request",
+          "arguments": {
+            "endpoint": "usage",
+            "parameters": {}
+          },
+          "result": {
+            "isError": true,
+            "outcome_uncertain": true,
+            "message": "Synthetic timeout after dispatch."
+          }
+        }
+      ],
+      "supplied_evidence": {
+        "workflow_id": "synthetic-unverified-receipt-01",
+        "schema_version": "1.1",
+        "results": [
+          {
+            "input_id": "setup-check-1",
+            "requested": {
+              "address": "12 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "not_attempted",
+            "match_status": "not_assessed",
+            "candidates": [],
+            "missing_fields": [],
+            "error": null,
+            "notes": []
+          }
+        ],
+        "budget": {
+          "max_requests": 1,
+          "max_records": 1,
+          "attempted_requests": 1,
+          "returned_records": 0,
+          "uncertain_records": 0
+        },
+        "attempts": [
+          {
+            "attempt_id": "attempt-diagnostic-1",
+            "kind": "diagnostic",
+            "input_ids": [],
+            "state": "uncertain",
+            "record_limit": 0,
+            "returned_records": null
+          }
+        ],
+        "reconciliations": []
+      },
+      "unverified_receipt": {
+        "provider": "Regrid",
+        "evidence_id": "receipt-unverified",
+        "retrieved_at": "2026-10-28T12:00:00Z",
+        "attempt_id": "attempt-diagnostic-1",
+        "returned_records": 0,
+        "source_url": null
+      },
+      "receipt_independently_verified": false
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+[
+  {
+    "id": "supplied_evidence_prose",
+    "resource_paths_read": [
+      "plugins/regrid-research/skills/property-research/references/composition.md"
+    ],
+    "proposed_calls": [],
+    "proposed_writes": [],
+    "answer": "The supplied record lists Example Holdings LLC as the recorded owner of 12 Example Avenue, Haddonfield NJ 08033. The last sale was $615,000 on 2024-12-03."
+  },
+  {
+    "id": "live_schema_discovery",
+    "resource_paths_read": [],
+    "proposed_calls": [
+      {
+        "tool": "regrid_request",
+        "arguments": {
+          "endpoint": "address",
+          "parameters": {
+            "query": "12 Example Avenue, Haddonfield NJ 08033",
+            "limit": 1,
+            "return_stacked": false
+          }
+        }
+      }
+    ],
+    "proposed_writes": [],
+    "answer": "Proposed one bounded address lookup using the already-discovered live schema. The result is not yet available, so the owner and match status remain unknown pending the simulated call."
+  },
+  {
+    "id": "offline_setup_zero_budget",
+    "resource_paths_read": [],
+    "proposed_calls": [],
+    "proposed_writes": [],
+    "answer": "Tools are listed as available in the packet, but this offline check cannot establish live tool availability. Documentation reachability and authenticated access are not_attempted; the request allowance is exhausted (2 of 2 used, 0 remaining), so no probe or discovery call is proposed."
+  },
+  {
+    "id": "setup_used_request_no_retry",
+    "resource_paths_read": [],
+    "proposed_calls": [],
+    "proposed_writes": [],
+    "answer": "The usage request timed out after dispatch, so its outcome is uncertain and its one-request allowance remains consumed; do not retry. Tools are listed in the packet, but no live availability check is performed; documentation reachability and authenticated access are not_attempted, and the lookup remains not_attempted/not_assessed."
+  },
+  {
+    "id": "setup_single_diagnostic_consumed",
+    "resource_paths_read": [],
+    "proposed_calls": [],
+    "proposed_writes": [],
+    "answer": "The checkpoint reports a successful authenticated usage response, so authenticated access is verified by the supplied result. Tools are listed in the packet, while documentation reachability is not_attempted; the only authorized request is already consumed, and no parcel lookup or further request is proposed."
+  },
+  {
+    "id": "scoped_owner_handoff",
+    "resource_paths_read": [
+      "plugins/regrid-research/skills/property-research/references/result.schema.json",
+      "plugins/regrid-research/skills/property-research/references/composition.md"
+    ],
+    "proposed_calls": [
+      {
+        "tool": "regrid_request",
+        "arguments": {
+          "endpoint": "query",
+          "parameters": {
+            "query": "Example Holdings",
+            "scope": "Haddonfield NJ 08033",
+            "limit": 5
+          }
+        }
+      }
+    ],
+    "proposed_writes": [],
+    "answer": "The proposed query preserves the exact owner name and Haddonfield NJ 08033 scope, with a five-record cap. It has not been executed; the input remains not_attempted/not_assessed. Full versioned handoff follows.",
+    "handoff": {
+      "schema_version": "1.1",
+      "workflow_id": "synthetic-owner-query-01",
+      "budget": {
+        "max_requests": 1,
+        "max_records": 5,
+        "attempted_requests": 0,
+        "returned_records": 0,
+        "uncertain_records": 0
+      },
+      "results": [
+        {
+          "input_id": "owner-query-1",
+          "requested": {
+            "query_type": "owner",
+            "owner": "Example Holdings",
+            "scope": "Haddonfield NJ 08033"
+          },
+          "lookup_status": "not_attempted",
+          "match_status": "not_assessed",
+          "candidates": [],
+          "missing_fields": [],
+          "error": null,
+          "notes": []
+        }
+      ],
+      "attempts": [],
+      "reconciliations": []
+    }
+  },
+  {
+    "id": "uncertain_evidence_reconciliation",
+    "resource_paths_read": [
+      "plugins/regrid-research/skills/property-research/references/result.schema.json",
+      "plugins/regrid-research/skills/property-research/references/composition.md",
+      "plugins/regrid-research/skills/property-research/references/batch.md"
+    ],
+    "proposed_calls": [],
+    "proposed_writes": [
+      {
+        "target": "in-memory handoff synthetic-reconcile-01",
+        "operation": "append reconciliation record; preserve existing attempt and results",
+        "value": {
+          "attempt_id": "attempt-1",
+          "proof": {
+            "provider": "Regrid",
+            "evidence_id": "receipt-attempt-1",
+            "retrieved_at": "2026-10-28T12:00:00Z",
+            "attempt_id": "attempt-1",
+            "returned_records": 0,
+            "source_url": null
+          }
+        }
+      }
+    ],
+    "answer": "Keep both observations for confirmed parcel TEST_1: Regrid lists Example Holdings LLC (source refreshed 2026-09-17), while the county extract lists Example County Trust (2026-10-20). The owner conflict is unresolved; do not select one based only on the later refresh date. The timed-out lookup remains an uncertain attempt, but its independently verified authoritative receipt reports zero returned records, so append reconciliation for attempt-1 with that proof, retain the original attempt and result, and do not retry."
+  },
+  {
+    "id": "unverified_receipt_reconciliation",
+    "resource_paths_read": [
+      "plugins/regrid-research/skills/property-research/references/composition.md",
+      "plugins/regrid-research/skills/property-research/references/batch.md"
+    ],
+    "proposed_calls": [],
+    "proposed_writes": [],
+    "answer": "Do not accept the supplied receipt: it is not independently verified, so it cannot reconcile attempt-diagnostic-1. Preserve the usage diagnostic as uncertain with its reservation (zero records), keep the property lookup not_attempted/not_assessed, and do not issue another request."
+  }
+]

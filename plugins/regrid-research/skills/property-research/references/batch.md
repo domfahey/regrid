@@ -6,8 +6,9 @@
 - [Resume without duplicate retrieval](#resume-without-duplicate-retrieval)
 - [Optional offline helper](#optional-offline-helper)
 
-Use the same version `1.0` envelope from [composition](composition.md) for a batch,
-handoff, or checkpoint. The ledger accounts for this workflow's requests; account
+Use the envelope from [composition](composition.md) for a batch, handoff, or
+checkpoint: legacy `1.0` remains supported; explicitly select `1.1` for tagged
+search queries or reconciliation. The ledger accounts for this workflow's requests; account
 usage counters can include other clients and cannot replace it.
 
 ## One allowance across stages
@@ -16,6 +17,14 @@ usage counters can include other clients and cannot replace it.
 `returned_records`, and `uncertain_records`. Limits are finite nonnegative
 integers. A finite list defaults to one bounded one-result lookup per distinct
 input; a supplied lower limit wins. Do not count reused evidence as a new lookup.
+Count every API executor invocation against `max_requests`: parcel lookups,
+count-only queries, usage/authentication diagnostics, and failed or uncertain
+attempts. A non-billable diagnostic still consumes one request; a usage-only
+diagnostic reserves zero parcel records. Local tool listing/schema inspection
+and documentation-only discovery are not API executor calls and do not consume
+API requests. Remote discovery still obeys offline/no-network instructions. Pass
+the same remaining allowance and constraints to setup or other consumers.
+
 For open-ended searches, use count-only queries when supported to estimate scope,
 then paginate only within the remaining allowance. A list of addresses does not
 authorize a broader owner search. Honor the endpoint's actual parameter schema;
@@ -38,8 +47,10 @@ lag and is not enough by itself to reconcile a specific attempt.
 The counters must agree with the ledger:
 
 - `attempted_requests` equals the number of attempts.
-- `returned_records` sums known counts from resolved attempts.
-- `uncertain_records` sums `record_limit` for pending/uncertain attempts.
+- `returned_records` sums known counts from resolved attempts and authoritative
+  counts from version `1.1` reconciliation records.
+- `uncertain_records` sums `record_limit` for pending/uncertain attempts without
+  an accepted reconciliation.
 - Remaining requests are `max_requests - attempted_requests`.
 - Available records are `max_records - returned_records - uncertain_records`.
 
@@ -47,6 +58,25 @@ If the server returns more than the requested limit, preserve the actual count,
 stop further retrieval, and report the overshoot; never clamp facts to make the
 ledger appear compliant. New authorization may change limits, never consumption.
 These are conservative workflow limits, not guaranteed billing caps.
+
+In version `1.1`, reserve setup/usage diagnostics with
+`reserve_attempt(..., input_ids=[], record_limit=0, kind="diagnostic")`; ordinary
+lookup attempts use `kind="lookup"`. A diagnostic consumes a request without
+pretending to evaluate a property row. Use `1.1` when diagnostics need to be
+represented in a legacy workflow; upgrade it without replacing its history.
+
+Reconcile an uncertain attempt only from an authoritative, per-attempt receipt
+whose evidence the caller independently verifies. Use
+`reconcile_attempt(document, attempt_id, proof, evidence_verified=True)` with
+proof fields `provider`, `evidence_id`, `retrieved_at`, `attempt_id`,
+`returned_records`, and nullable `source_url`. The proof must identify that exact
+attempt; aggregate account usage is insufficient. The helper validates structure
+and accounting but cannot authenticate the provider or receipt; never set the
+verification flag merely because a document parses. Reconciliation appends a
+record and preserves the original uncertain attempt and evidence. It replaces
+the reservation with the proven count, preserves attempted-request consumption,
+and does not retry the request or silently change input results. Preserve an
+overshoot and stop if the proven count exceeds the allowance.
 
 ## Resume without duplicate retrieval
 
@@ -79,8 +109,12 @@ only the standard library, so no package installation is required. It performs
 no API calls or credential reads. Execute it for validation and persistence;
 read its source only when integrating its functions into a batch runner.
 
-After the user requests a checkpoint destination, prepare a complete version `1.0`
-envelope using the result schema and synthetic example linked from `SKILL.md`.
+After the user requests a checkpoint destination, prepare a complete envelope
+using the result schema linked from `SKILL.md`; consult the synthetic example
+only if needed. Use the helper's default `1.0` for legacy address/parcel requests,
+or explicitly pass `schema_version="1.1"` to `new_workflow` for tagged queries.
+Use `upgrade_workflow` to migrate an existing `1.0` envelope without resetting
+rows, evidence, attempts, or consumed budget; do not simply rewrite its version.
 Validate it, fix reported field/invariant errors, and repeat validation until it
 passes. Save to the requested destination, then validate the saved file before
 resuming. The `save` command also validates before writing atomically:

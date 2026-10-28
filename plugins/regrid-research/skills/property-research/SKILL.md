@@ -15,21 +15,26 @@ Public documentation access does not establish authenticated parcel access.
 
 Load supporting resources only for the relevant task:
 
-- Structured output, supplied evidence, or skill handoffs: [composition](references/composition.md),
-  [versioned result schema](references/result.schema.json), and
-  [synthetic result example](references/result-example.json).
+- Supplied-evidence prose or reuse by another skill: [composition](references/composition.md)
+  alone. Do not load a schema merely to answer from supplied evidence.
+- Structured handoffs, requested checkpoints, or contract validation: additionally
+  load the [versioned result schema](references/result.schema.json). Consult the
+  [synthetic result example](references/result-example.json) only if an example is needed.
 - Multiple inputs, shared budgets, or requested checkpoints: [batch and resume](references/batch.md).
 - Offline validation or saving: run [workflow.py](scripts/workflow.py) as described in
   the batch reference; requires Python 3.10+ and only the standard library.
-- Tool discovery or a schema mismatch: [MCP tool guide](references/mcp-tools.md),
-  [raw tool schemas](references/tools.json), and [endpoint parameters](references/endpoints.json).
+- First live lookup: [MCP tool guide](references/mcp-tools.md) and relevant live tool
+  schema. Load [raw tool schemas](references/tools.json) and
+  [endpoint parameters](references/endpoints.json) only when the live schema is
+  unavailable or a mismatch needs investigation.
 
 Keep direct single-property answers short; do not create files without a reason.
 
 ## When the connection is unavailable
 
 If tools are missing or authentication fails, state the specific blocker. Use
-the setup skill if installed, otherwise direct the user to their Regrid connector
+the setup skill if installed, carrying the caller's offline/no-network constraint
+and the same remaining request budget; setup grants no new requests. Otherwise direct the user to their Regrid connector
 settings and [Claude's connector setup guide](https://claude.com/docs/connectors/custom/add-unlisted).
 This research skill also works standalone; it does not require a setup skill.
 Credentials belong in host/connector configuration, never chat, tool arguments,
@@ -48,7 +53,9 @@ failure, or silently switch data sources.
    observations instead of silently choosing or merging them. Missing provenance
    must remain unknown, and an explicit refresh still requires retrieval.
    When needed, select the matching endpoint through the tools' current schemas or Regrid
-   documentation discovery. Keep requests read-only. Do not submit issue reports
+   documentation discovery. Preserve the geographic scope in the actual tool
+   arguments, not just the handoff. If the exposed tool cannot express it, stop
+   and report that limitation; never issue an unscoped substitute. Keep requests read-only. Do not submit issue reports
    or other external changes as part of research.
 3. For one-property research start with `limit=1`. Explicitly disable stacked
    results and premium datasets when the selected endpoint supports those flags
@@ -102,6 +109,9 @@ shared attempt ledger across stages, reserve possible records before dispatch,
 and retain reservations for unknown outcomes. Never reset consumption or
 automatically retry a potentially billable uncertain request. Stop at budget,
 auth/permission failure, or exhaustion; these workflow limits are not billing caps.
+Count every API executor call, including usage/count diagnostics and failed calls,
+against the shared request cap; non-API tool/schema discovery uses no API request
+allowance but still obeys offline/no-network constraints.
 Report partial counts and per-input statuses, identify unfinished input IDs, and
 explain when continuing requires authorization beyond the cap. Never omit them.
 

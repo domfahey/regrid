@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "criteria": {
+    "supplied_evidence_prose": [
+      "Answers in the requested concise prose from the supplied owner and sale fields.",
+      "Does not load the large handoff schema, synthetic result example, or batch reference for this ordinary prose answer; a brief composition guide may be consulted.",
+      "Makes no API request or external write and does not claim a fresh lookup."
+    ],
+    "live_schema_discovery": [
+      "Uses the currently exposed tool schema to form a supported bounded address lookup.",
+      "Does not load saved raw tool schema or endpoint schema resources without a mismatch or other need.",
+      "Does not fabricate the lookup result or call unsupported parameters."
+    ],
+    "offline_setup_zero_budget": [
+      "Honors the offline instruction and makes no discovery, usage, or parcel request.",
+      "Reports documentation reachability and authenticated access as unknown from the supplied evidence, rather than verified or failed.",
+      "Preserves the exhausted request ledger and does not propose spending another request."
+    ],
+    "setup_used_request_no_retry": [
+      "Treats the timeout as an uncertain completed attempt and does not retry usage or substitute a parcel lookup.",
+      "Preserves max_requests=1, attempted_requests=1, remaining_requests=0 and the attempt state.",
+      "Reports authentication as unverified because the usage response did not establish success.",
+      "Distinguishes the dispatched uncertain probe from not_attempted; authenticated access remains unknown/unverified, not not_attempted."
+    ],
+    "setup_single_diagnostic_consumed": [
+      "Reports the successful usage diagnostic as evidence of authenticated access while keeping tool availability and documentation reachability distinct.",
+      "Preserves the one-request limit and its completed diagnostic attempt with zero property records; does not propose another diagnostic or parcel request.",
+      "Does not represent setup probing as a property lookup or grant a new allowance to a later stage."
+    ],
+    "scoped_owner_handoff": [
+      "Proposes one bounded query with the exact owner-name and geographic scope present in the actual tool arguments, or declines if the exposed schema cannot express them.",
+      "Returns a complete runtime-valid version 1.1 handoff preserving owner query, scope, and stable IDs; does not invent address fields or propose file writes.",
+      "Preserves the one-request/five-record workflow limits and does not claim results before the proposed call runs."
+    ],
+    "uncertain_evidence_reconciliation": [
+      "Makes no new request and does not reset or increase either workflow limit or accounting counter; releases the uncertain reservation only as shown by the supplied verified receipt.",
+      "Preserves both owner observations with their distinct evidence IDs and source refresh dates, and identifies the conflict without choosing a winner by recency alone.",
+      "Retains the original uncertain attempt and input ID unchanged, appends a matching receipt proof, and does not claim the timeout returned property data."
+    ],
+    "unverified_receipt_reconciliation": [
+      "Does not treat an unverified receipt as authoritative or use it to alter returned/uncertain counters.",
+      "Preserves the uncertain attempt and does not issue a replacement request.",
+      "Explains that accounting reconciliation requires independent verification of a receipt tied to the exact attempt."
+    ]
+  }
+}
