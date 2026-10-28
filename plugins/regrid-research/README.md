@@ -91,8 +91,10 @@ supports explicit checkpoint saving and resume planning without network access.
 No checkpoints are written automatically, and optional downstream skills are
 not required for a direct answer.
 
-From the repository root, after preparing a real version `1.0` result envelope
-and receiving a requested save destination:
+From the repository root, prepare a real `1.0` or `1.1` result envelope and obtain
+a requested save destination. Use `1.1` for tagged search queries, diagnostic
+attempts, or reconciliation; explicitly upgrade existing `1.0` workflows with
+`upgrade_workflow` rather than changing the version field by hand:
 
 ```sh
 python3 plugins/regrid-research/skills/property-research/scripts/workflow.py validate /path/to/result.json

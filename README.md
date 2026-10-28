@@ -236,6 +236,18 @@ Invalid local arguments raise `ValueError` or `TypeError`. The client checks lim
 
 ## Verification status
 
+For the 0.5.0 implementation in `b4b7e94`, local `make check` passed **727 tests**
+with no skips, including **64 workflow-helper tests** and required JSON Schema
+compatibility checks. Lint, formatting, and type checks passed; SDK/CLI coverage
+remained **98.16%**, excluding skill helpers. All three extracted 0.5.0 archives
+passed Claude's strict structural validator. See the
+[0.5.0 regression report](plugins/regrid-research/evals/results/composability-0.5.0-report.json)
+for runtime red/green evidence and offline model decisions, including corrected
+failures and a separate setup retest. These are not actual Claude/Cowork acceptance
+runs. Local HTTPS tests were unchanged and not rerun for that helper/docs update.
+
+The publication checks below describe the earlier baseline, not a fresh run:
+
 At publication commit `a197265`, local formatting, lint, type checks, **692 mocked tests**, and **four local HTTPS E2E tests** passed. SDK/CLI combined line and branch coverage was **98.16%** on Python 3.12; the coverage gate excludes bundled skill scripts. The mocked suite includes 29 workflow-helper tests, 16 discovery/runner tests, and seven packaging tests.
 
 [Publication CI](https://github.com/domfahey/regrid/actions/runs/40680206321) passed on Python 3.10 and 3.12, including `make check`, `make e2e`, plugin packaging, and wheel/source builds. These offline checks do not establish live Regrid behavior or Cowork acceptance. Historical verification reports remain unchanged.

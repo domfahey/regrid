@@ -1,5 +1,12 @@
 # Reusable research results
 
+## Contents
+
+- [Envelope and identity](#envelope-and-identity)
+- [Supplied evidence and conflicts](#supplied-evidence-and-conflicts)
+- [Handoff rules](#handoff-rules)
+- [Validation and compatibility](#validation-and-compatibility)
+
 For prose from supplied evidence, this guide is sufficient: evaluate identity,
 uncertainty, conflicts, and provenance without loading the schema or example and
 without making a request. Load [result.schema.json](result.schema.json) only for
@@ -12,7 +19,10 @@ owner, point, area, or filter queries and reconciliation records.
 ## Envelope and identity
 
 The envelope contains `schema_version`, `workflow_id`, `results`, `budget`, and
-`attempts`. One workflow ID and shared ledger follow the work through all stages.
+`attempts` in both supported versions. Version `1.1` also requires a
+`reconciliations` array (empty until a receipt is accepted) and `kind` on each
+attempt (`lookup` or `diagnostic`). Version `1.0` has neither field. One workflow
+ID and shared ledger follow the work through all stages.
 Each result retains its unique `input_id` and original `requested` address,
 parcel ID, and geographic scope. Use caller IDs unchanged, or assign stable row
 IDs once. Keep duplicate input rows even when one retrieval serves both.

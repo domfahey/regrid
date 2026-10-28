@@ -93,7 +93,24 @@ replacement instruction, not silently reuse another property's result.
 Skip completed `success` rows, including ambiguous and unmatched rows, and reuse
 their evidence for presentation. Skip `error` rows unless the user authorizes a
 specific retry that fits the remaining budget. Pending attempts after interruption
-are unresolved: treat them like uncertain outcomes and do not reissue their calls.
+are unresolved: retain their reservations and do not reissue their calls.
+Once the interrupted dispatcher is no longer active and its outcome cannot be
+recovered, explicitly mark that pending attempt uncertain before reconciliation:
+
+```python
+# workflow is the imported packaged helper; document is a validated checkpoint.
+document = workflow.complete_attempt(document, attempt_id, "uncertain")
+# This transition preserves the reservation and attempted-request count.
+document = workflow.upgrade_workflow(document)  # Explicitly enables 1.1 if needed.
+# Only after independently verifying an authoritative receipt for this attempt:
+document = workflow.reconcile_attempt(document, attempt_id, proof, evidence_verified=True)
+```
+
+For an attempt already marked `uncertain`, skip `complete_attempt`; it accepts
+only pending attempts. Without a verified receipt, stop after recording uncertainty
+and retain the reservation. Do not transition a still-running request or infer
+zero consumption from a crash. These helper calls neither retry nor save a file.
+
 Proceed only with genuinely `not_attempted` inputs not covered by unresolved
 attempts. A caller's explicit refresh/retry creates a new attempt and preserves
 the old evidence and accounting. Resolve ambiguity only within authorized scope.
