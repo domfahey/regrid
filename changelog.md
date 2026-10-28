@@ -2,7 +2,7 @@
 
 User-visible changes are grouped by release using the categories from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version numbering follows [Semantic Versioning](https://semver.org/); the current `0.x` API remains under development.
 
-No releases have been tagged in this repository. `0.1.0` is the current package metadata version, not evidence of a published release. Keep pending changes under Unreleased until an actual release is prepared.
+No releases have been tagged in this repository. The Python SDK/CLI metadata version is `0.1.0`; the independently versioned Regrid Research plugin is `0.4.0`. These metadata versions do not establish published releases. Keep pending changes under Unreleased until an actual release is prepared.
 
 ## Unreleased
 
@@ -24,7 +24,7 @@ No releases have been tagged in this repository. `0.1.0` is the current package 
 
 ### Changed
 
-- Regrid Research 0.4.0 adds metadata-first discovery trials with without-skill baselines and trace/model recording, direct resource links, qualified MCP names, safer actionable validation diagnostics, and an explicit checkpoint save CLI. Real Claude model and Cowork acceptance gates remain separate from offline tests.
+- Regrid Research 0.4.0 adds metadata-first discovery trials with without-skill baselines and trace/model recording, direct resource links, qualified MCP names, safer actionable validation diagnostics, and an explicit checkpoint save CLI. The helper requires Python 3.10+ with only the standard library; `workflow.py save INPUT DEST` validates before saving and refuses existing destinations unless an explicitly requested update uses `--replace`. The [0.4.0 acceptance report](plugins/regrid-research/evals/results/authoring-0.4.0-report.json) records Claude model evaluations blocked by expired CLI authentication and Cowork import/authenticated lookup unverified because Desktop inspection was unavailable. Passing local tests and structural validation does not establish those acceptance gates.
 
 - Regrid Research 0.3.0 adds composable structured results with independent lookup/match statuses, shared request/record budgets, supplied-evidence provenance, flexible presentation, and explicitly requested checkpoint/resume helpers. Adds downstream handoff evaluations and includes the offline helper in all package variants.
 
@@ -50,4 +50,9 @@ No releases have been tagged in this repository. `0.1.0` is the current package 
 
 ## Release Maintenance
 
-At release time, move pending entries into a version heading dated `YYYY-MM-DD`, synchronize `pyproject.toml` and `src/regrid/__init__.py`, and start a fresh Unreleased section. Describe user-facing changes rather than copying commit logs. Add repository comparison links when a remote and release tags exist; do not invent release dates or links.
+SDK/CLI and plugin versions are independent. At release time, move only the relevant pending entries into a component-specific version heading dated `YYYY-MM-DD`; retain other pending work under Unreleased.
+
+- For an SDK/CLI release, synchronize `pyproject.toml` and `src/regrid/__init__.py`.
+- For a plugin release, update `plugins/regrid-research/.claude-plugin/plugin.json` and the documented archive names. Run `.venv/bin/python scripts/build_claude_plugins.py` to rebuild the Cowork, Claude Code, and standalone skill ZIPs in ignored `dist/`; all three archive versions derive from the plugin manifest. Validate the rebuilt artifacts and record model/Cowork acceptance separately from structural checks.
+
+Describe user-facing changes rather than copying commit logs. Add repository comparison links when a remote and release tags exist; do not invent release dates or links.
