@@ -5,7 +5,8 @@ A synchronous Python SDK and command-line client for the Regrid Parcel and Tiles
 ## Documentation
 
 - [Architecture](architecture.md): components, request flow, validation boundaries, and extension points.
-- [Contributor guidelines](AGENTS.md): repository layout, conventions, commands, and PR expectations.
+- [Contributing](CONTRIBUTING.md): setup, tests, and pull request workflow.
+- [Security policy](SECURITY.md) and [code of conduct](CODE_OF_CONDUCT.md).
 - [Changelog](changelog.md): user-visible changes and release status.
 - [API reference](REFERENCE.md): the supplied Regrid API documentation summary.
 - [Operation coverage](docs/api-coverage.md): all 33 supplied OpenAPI operations and parameter profiles.
@@ -282,3 +283,11 @@ Haiku, Sonnet, and Opus, with a default USD 0.25 CLI budget per trial. It never
 loads `.env` or enables Regrid tools. Completed trials still require independent
 [rubric grading](plugins/regrid-research/evals/README.md#reproducible-claude-cli-runner);
 they do not establish Cowork acceptance.
+
+## License and project status
+
+This community-maintained project is not an official Regrid SDK and is not
+affiliated with or endorsed by Regrid. Project code is available under the
+[MIT license](LICENSE). Regrid trademarks, service access, and parcel data remain
+subject to their respective owners' terms; this license does not grant API or
+data access. See [CONTRIBUTING.md](CONTRIBUTING.md) to participate.

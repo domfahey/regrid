@@ -8,6 +8,8 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 
 ### Added
 
+- MIT license, public contribution/security/conduct guides, issue and PR templates, pinned GitHub Actions CI, and dependency-update configuration.
+
 - Claude Regrid Research plugin with a bounded property-research skill, setup diagnostics, and a token-free MCP bridge configuration; includes import instructions and acceptance checks.
 
 - `make doctor` checks local `.env` presence and token configuration without revealing credentials or making API calls. Both `make doctor` and `make live` explicitly load `.env` through uv.
