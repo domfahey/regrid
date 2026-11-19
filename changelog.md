@@ -8,8 +8,51 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 
 ### Added
 
-- Regrid Research 0.8.0 and SDK 0.3.0 (batches 2-4 ship together on top of 0.7.0 / 0.2.0): paid-dataset guidance for the `return_*` options; an offline parcel field catalog (`fields.py`, `regrid fields explain|search`); refresh by Regrid path and the newly documented endpoints; address-suggestion guidance; county freshness (`freshness.py`, `regrid freshness`, cached `/verse` response); opt-in neighbouring outlines (`map.py render --neighbours`, `regrid address-map --neighbours`, default 100 m radius and 25 records); CSV and GeoJSON export (`map.py export`, `regrid export`); `regrid: requests made: N` on stderr for every API command and a public `RegridClient.request_count`; `--max-records` paging on `point`, `area` and `query`; full CLI path guidance in the skill; and a Windows CI job for the offline helper tests. `regrid freshness` prints the stored `verse_retrieved_at` (not a computed cache age). `--max-records` output keeps the first page's top-level keys, de-duplicates features by id and includes a `complete` flag that is true only when results ended or N records were reached (a failure or malformed page on page 2 or later prints the partial result with `complete: false` and exits 1); paging stops when a page adds no new features. `regrid freshness` refetches a `/verse` cache older than 30 days (`--max-age-days N`) or stored for another base URL. `regrid map` accepts `--neighbours FILE` and refuses an output path equal to its input files; the SDK copy of the field helper falls back to the packaged catalog. `address-map --neighbours` still renders the subject map if the neighbours request fails. Not run: the live geometry check, the Claude Code/Claude apps/Cowork map checks, the live paging cursor check (the `offset_id` cursor field is unverified against the live API), and the Windows CI job (runs only once pushed).
-- `regrid map RESPONSE OUTPUT` renders a saved US parcel response as a satellite map page offline, and `regrid address-map ADDRESS OUTPUT` makes one address request, saves the response beside the page (`OUTPUT` with a `.json` suffix, or `--save-response`) and renders it. `address-map` reports `regrid: requests made: N` on stderr. `make live` now also reports whether the parcel geometry was present, null or absent. The live geometry check has not been run (awaiting user: not run).
+- Regrid Research 0.8.0 and SDK 0.3.0 ship batches 2-4 together on top of 0.7.0 / 0.2.0:
+  - CLI commands:
+    - `regrid fields explain|search` reads an offline catalog of the 169 US parcel fields.
+    - `regrid freshness --path /us/<state>/<county>` reports county pull dates from `/verse`.
+      It reports dates only and never labels data stale. It prints the stored
+      `verse_retrieved_at`, not a computed cache age.
+      - The response is cached atomically. The cache is refetched after 30 days
+        (`--max-age-days N`) or when it was stored for another base URL.
+    - `regrid export RESPONSE --csv/--geojson [--all-fields]` writes CSV and GeoJSON
+      offline from a saved response.
+    - `regrid address-map --neighbours` adds one point search (100 m, up to 25 records)
+      and draws neighbouring outlines. If that search fails, the subject map still renders.
+    - `regrid map --neighbours FILE` does the same from saved files.
+  - `--max-records N` pages `point` (GET), `area` and `query` within a request cap:
+    - It needs an explicit `limit`.
+    - It keeps the first page's top-level keys and removes duplicate features by id.
+    - It stops when a page adds nothing new.
+    - It adds a `complete` flag, which is true only when results ended or N records were
+      reached. A failure on page 2 or later prints the partial result with
+      `complete: false` and exits 1.
+  - SDK:
+    - Public `RegridClient.request_count` counts requests actually sent.
+    - New standard-library `regrid.offline` package (`map`, `fields`, `freshness`). It is
+      the source of the skill's bundled helpers, which are kept byte-identical by
+      `scripts/sync_skill_helpers.py`.
+  - Skill: guidance for:
+    - paid datasets (`premium.md`)
+    - the bundled field catalog (`fields.py`, `fields.json`)
+    - refresh by Regrid path, and address suggestions (typeahead, then path; Enterprise only)
+    - opt-in neighbours with request-budget accounting
+    - export, count before pulling, and paging
+    - a full CLI path for Claude Code (`references/cli.md`)
+
+    `endpoints.json` adds `/parcels/path`, `/parcels/typeahead`, `/verse`, `/schemas/*`
+    and `/usage/detailed`.
+  - A Windows CI job runs the offline helper tests and the offline/freshness CLI tests, and it passes.
+  - Verification:
+    - The map page passed a render check in a plain browser (Chromium via Playwright, synthetic
+      data; `evals/results/map-hosts-0.8.0.json`). This is not a check inside a Claude host.
+    - Not run:
+      - the live geometry check
+      - the Claude Code, Claude apps and Cowork map host checks
+      - the live paging cursor (the `offset_id` cursor field is unverified against the live API)
+      - model and Cowork acceptance evaluations
+- SDK 0.2.0: `regrid map RESPONSE OUTPUT` renders a saved US parcel response as a satellite map page offline, and `regrid address-map ADDRESS OUTPUT` makes one address request, saves the response beside the page (`OUTPUT` with a `.json` suffix, or `--save-response`) and renders it. `address-map` reports `regrid: requests made: N` on stderr. `make live` now also reports whether the parcel geometry was present, null or absent. The live geometry check has not been run (awaiting user: not run).
 
 - Regrid Research 0.7.0 adds the `/regrid-research:address-map` command (Claude Code and Cowork archives only): one address request, the response saved verbatim, rendered with `scripts/map.py`, summarised and presented per the map guide. No neighbouring parcels. Host checks in Claude Code, the Claude apps and Cowork are recorded in `evals/results/map-hosts-0.7.0.json` and are all not run (awaiting user). The SDK is `0.2.0`.
 
@@ -32,6 +75,10 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 - Contributor, architecture, API coverage, parcel interpretation, and UTFGrid documentation; placeholder-only `.env.sample`.
 
 ### Changed
+
+- SDK 0.3.0: every CLI command that calls the API now ends stderr with `regrid: requests made: N`; `address-map` and `freshness` print it before their error lines. Stdout JSON is unchanged, but tools that compare stderr exactly will see the new line.
+- The coverage gate for `make test` and `make check` rises from 90% to 95% (`pyproject.toml` and the Makefile).
+- CI uses `actions/checkout` 7.0.1 and `actions/setup-python` 7.1.0, pinned by commit.
 
 - Regrid Research 0.8.0 reverses the satellite-map design's non-goal of GIS export files, by owner decision: `map.py export` and `regrid export` write CSV and GeoJSON from a saved response.
 
@@ -74,6 +121,10 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 
 ### Security
 
+- CSV export prefixes `'` to cells, including the header, that start with `=`, `+`, `-`, `@`, tab or carriage return, so spreadsheets don't run them as formulas. Plain numbers such as `-75.03` are left unchanged.
+- The `/verse` cache is written atomically to a private directory and never stores the token or request URLs. The cache-write warning omits the path.
+- `regrid map`, `map.py render` and `export` refuse to write over their own input files, so a saved paid response can't be destroyed. Export checks every target before writing anything.
+- Record text from neighbouring parcels is escaped in the map page, the same way as the subject parcel's.
 - Store account tokens as `SecretStr` and mask temporary-token models unless explicitly exported.
 - Sanitize request and response-validation failures without retaining input-bearing Pydantic exceptions.
 - Transport, JSON-decode, and JSON/GeoJSON input errors, including CLI JSON arguments, no longer retain the original exception as `__context__`, which could hold a token-bearing URL, the response body, or raw input.

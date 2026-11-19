@@ -11,7 +11,7 @@ help:
 	@echo "format        Format Python source and tests"
 	@echo "format-check  Check formatting without modifying files"
 	@echo "typecheck     Check SDK and CLI types (alias: type)"
-	@echo "test          Run mocked tests with a 90% line/branch coverage gate"
+	@echo "test          Run mocked tests with a 95% line/branch coverage gate"
 	@echo "e2e           Run local HTTPS and CLI subprocess tests"
 	@echo "live          Explicit live Regrid smoke test (may incur one parcel charge)"
 	@echo "doctor        Check local .env and token configuration without API calls"
@@ -35,7 +35,7 @@ typecheck:
 	$(PYTHON) -m mypy src
 
 test:
-	$(PYTHON) -m pytest -m "not e2e" --cov=regrid --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=90
+	$(PYTHON) -m pytest -m "not e2e" --cov=regrid --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=95
 
 e2e:
 	$(PYTHON) -m pytest -m e2e
