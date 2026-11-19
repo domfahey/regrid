@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import errno
 import html
 import io
 import json
@@ -89,8 +90,16 @@ def same_file_key(path: Path | str) -> str:
     """
     try:
         resolved = unicodedata.normalize("NFC", str(Path(path).resolve()))
-    except (RuntimeError, OSError) as exc:
+        # Python 3.13+ resolve() no longer raises on a loop, so probe explicitly.
+        os.stat(path)
+    except RuntimeError as exc:  # Python <= 3.12 resolve() on a symlink loop
         raise MapError("Path contains a symlink loop") from exc
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        if exc.errno == errno.ELOOP or getattr(exc, "winerror", None) == 1921:
+            raise MapError("Path contains a symlink loop") from exc
+        raise MapError(f"Cannot resolve path: {exc.strerror or type(exc).__name__}") from exc
     return os.path.normcase(resolved).casefold()
 
 
@@ -730,11 +739,14 @@ def _csv_cell(value: object) -> str:
 def _core_value(feature: dict, name: str) -> Any:
     if name == "ll_uuid":
         properties = feature.get("properties")
+        empty = None
         for source in (properties, _fields(feature)):
             value = source.get("ll_uuid") if isinstance(source, dict) else None
-            if value is not None and value != "":
+            if value == "":
+                empty = value
+            elif value is not None:
                 return value
-        return None
+        return empty
     properties = feature.get("properties")
     source = properties if name in _PROPERTY_COLUMNS and isinstance(properties, dict) else None
     return (source if source is not None else _fields(feature)).get(name)

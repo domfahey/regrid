@@ -1185,3 +1185,43 @@ def test_same_file_key_symlink_loop(tmp_path):
     (tmp_path / "b").symlink_to(tmp_path / "a")
     with pytest.raises(MapError, match="symlink loop"):
         parcel_map.same_file_key(tmp_path / "a")
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlinks need privilege on Windows")
+def test_same_file_key_dangling_output_through_loop(tmp_path):
+    (tmp_path / "a").symlink_to(tmp_path / "b")
+    (tmp_path / "b").symlink_to(tmp_path / "a")
+    with pytest.raises(MapError, match="symlink loop"):
+        parcel_map.same_file_key(tmp_path / "a" / "out.html")
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlinks need privilege on Windows")
+def test_same_file_key_detects_loop_when_resolve_is_silent(tmp_path, monkeypatch):
+    # Python 3.13+ non-strict resolve no longer raises on a loop.
+    (tmp_path / "a").symlink_to(tmp_path / "b")
+    (tmp_path / "b").symlink_to(tmp_path / "a")
+    monkeypatch.setattr(Path, "resolve", lambda self, strict=False: self)
+    with pytest.raises(MapError, match="symlink loop"):
+        parcel_map.same_file_key(tmp_path / "a")
+
+
+def test_same_file_key_missing_output_is_fine(tmp_path):
+    assert parcel_map.same_file_key(tmp_path / "nope" / "out.html")
+
+
+def test_same_file_key_other_oserror_is_not_labelled_a_loop(tmp_path, monkeypatch):
+    def boom(self, strict=False):
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(Path, "resolve", boom)
+    with pytest.raises(MapError, match="Cannot resolve path: Permission denied") as info:
+        parcel_map.same_file_key(tmp_path / "x")
+    assert "loop" not in str(info.value)
+
+
+def test_core_value_keeps_empty_ll_uuid_as_given():
+    core = parcel_map._core_value
+    assert core({"properties": {"ll_uuid": "", "fields": {"ll_uuid": ""}}}, "ll_uuid") == ""
+    assert core({"properties": {"ll_uuid": "", "fields": {}}}, "ll_uuid") == ""
+    assert core({"properties": {"fields": {}}}, "ll_uuid") is None
+    assert core({"properties": {"ll_uuid": "", "fields": {"ll_uuid": "b"}}}, "ll_uuid") == "b"

@@ -6,6 +6,7 @@ import argparse
 import importlib.util
 import json
 import re
+import shlex
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -22,10 +23,21 @@ def validate_handoff(document: dict) -> None:
 
 
 def _route_strings(value: object, key: str = ""):
-    """Yield strings under route-bearing keys (url, path, endpoint); free text such as query is skipped."""
+    """Yield route strings: url/path/endpoint values and whitespace tokens of command/args.
+
+    Free text such as query is skipped.
+    """
     if isinstance(value, str):
-        if key.lower() in {"url", "path", "endpoint"}:
+        name = key.lower()
+        if name in {"url", "path", "endpoint"}:
             yield value
+        elif name in {"command", "args"}:
+            try:
+                tokens = shlex.split(value)
+            except ValueError:
+                tokens = value.split()
+            for token in tokens:
+                yield from token.split()
     elif isinstance(value, dict):
         for name, item in value.items():
             yield from _route_strings(item, str(name))
@@ -58,7 +70,7 @@ def _is_canadian_route(arguments: dict) -> bool:
     for text in _route_strings(arguments):
         for chunk in re.split(r"[?&#]", text):
             key, sep, value = chunk.partition("=")
-            if sep and key.strip().lower() != "path":
+            if sep and key.strip().lower().lstrip("-") != "path":
                 continue
             if _has_canadian_segment(value if sep else chunk):
                 return True

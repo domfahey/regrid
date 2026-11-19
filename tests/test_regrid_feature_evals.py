@@ -233,6 +233,12 @@ def test_geometry_absent_fixture_uses_the_real_map_error_text():
         ({"url": "https://x.test/api/v2/schemas/parcel"}, False),
         ({"query": "123 Main St, Los Angeles/CA/90001"}, False),
         ({"query": "/ca/on/toronto", "limit": 1}, False),
+        ({"command": "regrid parcel-path /ca/on/x"}, True),
+        ({"command": "regrid freshness --path /ca/on/x"}, True),
+        ({"command": "regrid freshness --path=/ca/on/x"}, True),
+        ({"command": "regrid parcel-path /us/ca/los-angeles"}, False),
+        ({"args": ["parcel-path", "/ca/on/x"]}, True),
+        ({"args": ["parcel-path", "/us/ca/x"]}, False),
     ],
 )
 def test_canadian_route_detection_encoded_empty_schema_and_free_text(arguments, expected):
