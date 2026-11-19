@@ -109,3 +109,10 @@ def test_workflow_helper_is_shared_but_scratch_scripts_are_excluded(source, tmp_
     name = "skills/property-research/scripts/workflow.py"
     assert cowork[name] == code[name] == standalone["property-research/scripts/workflow.py"]
     assert all(b"DO_NOT_PACKAGE" not in value for value in code.values())
+
+
+def test_map_helper_is_shared_across_all_archives(source, tmp_path):
+    cowork, code, standalone = map(archive_contents, builder.build(source, tmp_path / "out"))
+    name = "skills/property-research/scripts/map.py"
+    assert name in code
+    assert cowork[name] == code[name] == standalone["property-research/scripts/map.py"]

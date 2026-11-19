@@ -46,8 +46,9 @@ def skill_files(root: Path, name: str) -> dict[str, bytes]:
                     continue
                 result[relative] = read_public_file(root, relative)
     if name == "property-research":
-        relative = f"{prefix}/scripts/workflow.py"
-        result[relative] = read_public_file(root, relative)
+        for helper in ("workflow.py", "map.py"):
+            relative = f"{prefix}/scripts/{helper}"
+            result[relative] = read_public_file(root, relative)
     return result
 
 

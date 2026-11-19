@@ -333,3 +333,37 @@ def test_output_respects_umask(tmp_path):
     finally:
         os.umask(old)
     assert stat.S_IMODE((tmp_path / "m.html").stat().st_mode) == 0o644
+
+
+def test_extracted_map_helper_renders(tmp_path):
+    import importlib.util
+    from zipfile import ZipFile
+
+    build_path = SCRIPT.parents[5] / "scripts/build_claude_plugins.py"
+    spec = importlib.util.spec_from_file_location("map_test_builder", build_path)
+    assert spec and spec.loader
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    archives = builder.build(SCRIPT.parents[3], tmp_path / "archives")
+    with ZipFile(archives[-1]) as archive:
+        archive.extractall(tmp_path / "extracted")
+    helper = tmp_path / "extracted/property-research/scripts/map.py"
+    response = write_response(tmp_path / "r.json", good_feature(owner="Example LLC"))
+    output = tmp_path / "map.html"
+    result = subprocess.run(
+        [sys.executable, "-I", str(helper), "render", str(response), str(output)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert output.exists()
+    assert json.loads(result.stdout)["features"] == 1
+
+
+def test_skill_links_map_reference():
+    skill = (SCRIPT.parents[1] / "SKILL.md").read_text(encoding="utf-8")
+    guide = (SCRIPT.parents[1] / "references/map.md").read_text(encoding="utf-8")
+    assert "references/map.md" in skill
+    assert "scripts/map.py" in guide
+    assert "--all-candidates" in guide
+    assert "verbatim" in guide
