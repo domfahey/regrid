@@ -42,17 +42,23 @@ OUTPUT.html` (one request) or `regrid map RESPONSE.json OUTPUT.html` (offline).
 
 Only when the user asks. First state the cost: "one request, up to 25 records".
 Then make one `/parcels/point` request with the subject's `lat` and `lon`,
-`radius=100`, `limit=25`, `return_geometry=true`, and paid datasets off. Before the
-request, reserve a lookup attempt for the subject's input ID with record_limit 25;
-complete it with the actual returned record count (an unknown outcome stays
-uncertain). Save the response verbatim to `NEIGHBOURS.json` and run:
+`radius=100`, `limit=25`, `return_geometry=true`, and paid datasets off. Save the
+response verbatim to `NEIGHBOURS.json` and run:
 
 ```
 python3 <skill>/scripts/map.py render RESPONSE.json OUTPUT.html --neighbours NEIGHBOURS.json
 ```
 
 The CLI equivalent, `regrid address-map ADDRESS OUTPUT.html --neighbours`, makes the
-extra request (counted in its `requests made: N`, so reserve first) and saves `OUTPUT.neighbours.json`.
+extra request (counted in its `requests made: N`) and saves `OUTPUT.neighbours.json`.
+
+Ledger: a single-property map with no workflow ledger needs no entry; state the cost and
+wait for the user's request. When a workflow ledger or handoff is in use, the user's
+neighbours request is the authorization. Check that at least one request and 25 records
+remain, then reserve `authorized_retry=True` (kind lookup, the subject's input ID,
+record_limit 25). Complete it with the actual returned count; an unknown outcome stays
+uncertain. If the remaining budget is short, do not call: report that neighbours exceed
+the workflow budget.
 
 ## Limits
 

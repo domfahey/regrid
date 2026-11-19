@@ -89,7 +89,8 @@ the stderr line `regrid: requests made: N`; an unreadable line leaves it uncerta
 - MCP `/parcels/typeahead`: returns no parcel records, so `kind="diagnostic"`,
   record_limit 0.
 - `/parcels/path`: `kind="lookup"` for the input, record_limit 1.
-- Neighbours: see [map guide](map.md); `record_limit` 25.
+- Neighbours: `kind="lookup"` with `authorized_retry=True`, record_limit 25; see
+  [map guide](map.md).
 
 ## Resume without duplicate retrieval
 

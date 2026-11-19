@@ -358,3 +358,22 @@ def test_cli_freshness_diagnostic_uncertain_validates():
     workflow.validate(doc)
     assert doc["budget"]["attempted_requests"] == 1
     assert doc["budget"]["uncertain_records"] == 0
+
+
+def test_neighbours_reservation_after_subject_lookup_needs_authorized_retry_and_budget():
+    def settled(max_records):
+        doc = workflow.new_workflow(
+            "map", [{"address": "12 Example Ave", "parcel_id": None, "scope": None}], 3, max_records
+        )
+        doc = workflow.reserve_attempt(doc, ["input-000001"], 1)
+        return workflow.complete_attempt(doc, "attempt-000001", "success", 1)
+
+    doc = settled(30)
+    with pytest.raises(ValueError):
+        workflow.reserve_attempt(doc, ["input-000001"], 25)
+    doc = workflow.reserve_attempt(doc, ["input-000001"], 25, authorized_retry=True)
+    doc = workflow.complete_attempt(doc, "attempt-000002", "success", 12)
+    workflow.validate(doc)
+    assert doc["budget"]["returned_records"] == 13
+    with pytest.raises(ValueError, match="budget"):
+        workflow.reserve_attempt(settled(20), ["input-000001"], 25, authorized_retry=True)
