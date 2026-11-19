@@ -454,18 +454,6 @@ def _paged_search(
         pages += 1
         if pages == 1:
             merged = _copy_first_page(result)
-            present = [key for key in ("pages", "complete") if key in merged]
-            lost = [key for key in present if f"response_{key}" in merged]
-            moved = [key for key in present if key not in lost]
-            for keys, text in ((lost, "not kept"), (moved, "kept")):
-                if keys:
-                    names = "/".join(keys)
-                    renamed = "/".join(f"response_{key}" for key in keys)
-                    detail = f"({renamed} already present)" if keys is lost else f"as {renamed}"
-                    print(
-                        f"regrid: paging note: response {names} {text} {detail}",
-                        file=sys.stderr,
-                    )
         else:
             _merge_page(merged, result, noted)
         new = []
@@ -505,9 +493,17 @@ def _paged_result(
     collection = {**(parcels if isinstance(parcels, dict) else {}), "features": features}
     collection.setdefault("type", "FeatureCollection")
     result = {**merged, "parcels": collection}
-    for key in ("pages", "complete"):
-        if key in merged and f"response_{key}" not in merged:
-            result[f"response_{key}"] = merged[key]
+    present = [key for key in ("pages", "complete") if key in merged]
+    lost = [key for key in present if f"response_{key}" in merged]
+    moved = [key for key in present if key not in lost]
+    for key in moved:
+        result[f"response_{key}"] = merged[key]
+    for keys, text in ((lost, "not kept"), (moved, "kept")):
+        if keys:
+            names = "/".join(keys)
+            renamed = "/".join(f"response_{key}" for key in keys)
+            detail = f"({renamed} already present)" if keys is lost else f"as {renamed}"
+            print(f"regrid: paging note: response {names} {text} {detail}", file=sys.stderr)
     return {**result, "pages": pages, "complete": complete}
 
 
