@@ -124,6 +124,27 @@ Unverified at release:
 
 ### Fixed
 
+- `--max-records` paging:
+  - Never requests more records than still needed.
+  - Prints and enforces one honest worst-case request cap, including when the cursor repeats the previous page's last record.
+  - Merges `buildings` and `zoning` collections from every page.
+  - Stops cleanly (keeping fetched records) when a feature id isn't a usable cursor.
+  - Rejects `return_count` and unsupported query filters before the first request.
+  - De-duplicates ids within a page.
+- `address-map`:
+  - Skips the neighbours request when the subject parcel isn't mappable (non-US path or no geometry).
+  - Rejects directory targets before any request.
+  - Saves responses atomically without following symlinks.
+- `freshness`:
+  - Rejects non-finite, negative or huge `--max-age-days` values up front.
+  - Shares one cache across base URLs that differ only by a trailing slash.
+- Map helper:
+  - Fills page placeholders in one pass, so record text containing a placeholder name can't break the page.
+  - Reports a non-finite area ratio as unavailable.
+  - Guards CSV cells that start with non-ASCII digits.
+  - Rejects NaN inside list/dict CSV cells.
+- Discovery evaluations stage every reference file the plugin ships.
+
 - Reject `ll_updated_at` timestamps whose time-zone offset minutes are 60–99 (previously accepted and silently normalized).
 - Regrid Research workflow helper: `reserve_attempt` rejects non-list or non-string input IDs instead of splitting a string into characters; `set_result` raises `ValidationError` for non-object rows and unknown input IDs; `reconcile_attempt` runs the validator's reconciliation checks before adjusting budget counters, so it reports the actual reason (for example "Only uncertain attempts can be reconciled") instead of a misleading budget-counter error. `ValidationError` remains a `ValueError` subclass.
 - Discovery eval runners ignore blank stream-JSON lines and tolerate explicit nulls in `message`, `content`, `name`, and `input` instead of failing or crashing; non-object tool inputs are kept as recorded rather than replaced with `{}`.
