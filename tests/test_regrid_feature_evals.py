@@ -131,12 +131,13 @@ def test_california_us_path_is_not_flagged_non_us(tmp_path, monkeypatch):
         }
     ]
     _write(tmp_path, monkeypatch, cases=data)
-    run.load_cases("feature")
+    loaded = run.load_cases("feature")
+    assert loaded[0]["tool_history"][0]["arguments"]["parameters"]["path"] == "/us/ca/los-angeles"
 
 
 def test_feature_packet_allows_shell_and_read_file_doubles():
     text = run.packet(run.load_cases("feature"), False)["instructions"]
-    assert "shell" in text and "read_file" in text
+    assert "in the feature suite also shell and read_file" in text
     assert "only simulated callable tool" not in text
 
 
