@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import os
 import sys
 from datetime import datetime, timezone
@@ -13,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .client import RegridClient, RegridError
+from .endpoints import QueryPagingError
 from .offline import fields as parcel_fields
 from .offline import freshness as county_freshness
 from .offline import map as parcel_map
@@ -20,12 +20,11 @@ from .offline import map as parcel_map
 
 def _max_age_days(value: str) -> float:
     try:
-        number = float(value)
+        return county_freshness.check_max_age_days(value)
     except ValueError:
-        raise argparse.ArgumentTypeError("must be a number") from None
-    if not math.isfinite(number) or not 0 <= number <= 36500:
-        raise argparse.ArgumentTypeError("must be a finite number between 0 and 36500")
-    return number
+        raise argparse.ArgumentTypeError(
+            f"must be a finite number between 0 and {county_freshness.MAX_AGE_DAYS_LIMIT}"
+        ) from None
 
 
 def _object(value: str) -> dict[str, Any]:
@@ -80,15 +79,6 @@ def _run_fields(args: dict[str, Any]) -> None:
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 
-def _subject_point(result: Any) -> list[float] | None:
-    """The first parcel's in-US (lat, lon), or None."""
-    try:
-        features = parcel_map.load_features(result)
-    except ValueError:
-        return None
-    return parcel_map.fallback_point(features[0]) if isinstance(features[0], dict) else None
-
-
 def _client(args: dict[str, Any]) -> RegridClient:
     """Build the client from global options; the token comes only from REGRID_TOKEN."""
     return RegridClient(
@@ -115,11 +105,20 @@ def _save_json(path: Path, text: str, *, replace: bool) -> None:
     parcel_map.write_atomic_bytes(path, text.encode("utf-8"), replace=replace)
 
 
-def _subject_mappable(result: Any) -> bool:
+def _subject_feature(result: Any) -> Any:
+    """The first parcel feature of a response, or None when there is none."""
     try:
-        subject = parcel_map.load_features(result)[0]
+        return parcel_map.load_features(result)[0]
     except ValueError:
-        return False
+        return None
+
+
+def _subject_point(subject: Any) -> list[float] | None:
+    """The subject's in-US (lat, lon), or None."""
+    return parcel_map.fallback_point(subject) if isinstance(subject, dict) else None
+
+
+def _subject_mappable(subject: Any) -> bool:
     if not isinstance(subject, dict) or "geometry" not in subject:
         return False
     properties = subject.get("properties")
@@ -165,11 +164,12 @@ def _address_map(
             _save_json(response_path, body, replace=replace)
             saved.append(response_path)
             if args["neighbours"]:
-                point = _subject_point(result)
+                subject = _subject_feature(result)
+                point = _subject_point(subject)
                 if point is None:
-                    if parcel_map.load_features(result):
+                    if subject is not None:
                         notes.append("neighbours skipped: subject has no coordinates")
-                elif not _subject_mappable(result):
+                elif not _subject_mappable(subject):
                     notes.append("neighbours skipped: subject is not mappable")
                 else:
                     try:
@@ -270,6 +270,19 @@ def _is_collection(value: Any) -> bool:
     return isinstance(value, dict) and isinstance(value.get("features"), list)
 
 
+def _identity(item: Any) -> str:
+    """A feature's id when it has one, else the item's JSON form."""
+    if isinstance(item, dict) and item.get("id") is not None:
+        return "id:" + json.dumps(item["id"], sort_keys=True, default=str)
+    return "json:" + json.dumps(item, sort_keys=True, default=str)
+
+
+def _extend_new(current: list[Any], incoming: list[Any]) -> None:
+    """Append items not already merged; an inclusive cursor repeats the previous page's tail."""
+    known = {_identity(item) for item in current}
+    current.extend(item for item in incoming if _identity(item) not in known)
+
+
 def _merge_page(merged: dict[str, Any], result: dict[str, Any], noted: set[str]) -> None:
     """Fold a later page's top-level lists and FeatureCollections into the merged response."""
     for key, value in result.items():
@@ -280,14 +293,14 @@ def _merge_page(merged: dict[str, Any], result: dict[str, Any], noted: set[str])
             if merged.get(key) is None:
                 merged[key] = list(value)
             elif isinstance(current, list):
-                current.extend(value)
+                _extend_new(current, value)
             else:
                 _shape_note(key, noted)
         elif _is_collection(value):
             if merged.get(key) is None:
                 merged[key] = {**value, "features": list(value["features"])}
             elif isinstance(current, dict) and _is_collection(current):
-                current["features"].extend(value["features"])
+                _extend_new(current["features"], value["features"])
             else:
                 _shape_note(key, noted)
         elif isinstance(current, list) or _is_collection(current):
@@ -315,30 +328,49 @@ def _copy_first_page(result: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
-def _validate_paging(command: str, args: dict[str, Any], options: dict[str, Any]) -> None:
-    """Run page 2's catalog validation up front so it cannot fail after page 1 is billed."""
-    if options.get("return_count") is not None:
+def _validate_paging(
+    client: RegridClient, command: str, args: dict[str, Any], options: dict[str, Any]
+) -> None:
+    """Run page 2's validation up front so it cannot fail after page 1 is billed."""
+    if options.get("return_count"):
         raise _PagingError("--max-records conflicts with return_count")
-    if command == "query" and args.get("validate_fields"):
-        from .query_catalog import validate_catalog_filters
-        from .requests import QueryRequest, safe_validate
-
+    if command == "query":
         try:
-            validated = safe_validate(QueryRequest, {"fields": args.get("fields")}).fields
-        except ValueError as exc:
-            raise _PagingError(_error_message(exc, os_error="", type_error="")) from None
-        country = "ca" if args.get("country") == "ca" else "us"
-        unknown = bool(args.get("allow_unknown_fields"))
-        try:
-            validate_catalog_filters(
-                validated, country=country, allow_unknown=unknown, paging=False
-            )
-        except ValueError as exc:
-            raise _PagingError(_error_message(exc, os_error="", type_error="")) from None
-        try:
-            validate_catalog_filters(validated, country=country, allow_unknown=unknown, paging=True)
-        except ValueError:
+            client.validate_query(**args, paging=True, **options)
+        except QueryPagingError:
             raise _PagingError("--max-records is incompatible with these query filters") from None
+        except ValueError as exc:
+            raise _PagingError(_error_message(exc, os_error="", type_error="")) from None
+
+
+def _cursor(feature: Any) -> int | None:
+    """A usable offset_id from a feature id: a non-negative int or ASCII decimal digits."""
+    value = _feature_id(feature)
+    if type(value) is int and value >= 0:
+        return value
+    if isinstance(value, str) and value.isascii() and value.isdigit():
+        return int(value)
+    return None
+
+
+def _drop_trimmed_siblings(merged: dict[str, Any], kept: list[Any], trimmed: list[Any]) -> None:
+    """Remove sibling features that belong to parcels trimmed off the end."""
+
+    def uuids(features: list[Any]) -> set[Any]:
+        found = set()
+        for feature in features:
+            properties = feature.get("properties") if isinstance(feature, dict) else None
+            uuid = properties.get("ll_uuid") if isinstance(properties, dict) else None
+            if isinstance(uuid, str):
+                found.add(uuid)
+        return found
+
+    dropped = uuids(trimmed) - uuids(kept)
+    if not dropped:
+        return
+    for key, value in merged.items():
+        if key != "parcels" and _is_collection(value):
+            value["features"] = [f for f in value["features"] if not uuids([f]) & dropped]
 
 
 def _feature_id(feature: Any) -> Any:
@@ -359,14 +391,16 @@ def _paged_search(
         raise _PagingError(
             "--max-records requires a positive count and an integer limit in --options"
         )
+    if limit < 2:
+        raise _PagingError("--max-records paging needs a limit of at least 2 in --options")
     if command == "point" and args.get("method") == "POST":
         raise _PagingError("--max-records is not supported for POST point searches")
     if "offset_id" in options:
         raise _PagingError("--max-records conflicts with offset_id")
-    _validate_paging(command, args, options)
+    _validate_paging(client, command, args, options)
     # Worst case under an inclusive cursor: later pages add at least limit - 1 new records.
     first = min(limit, total)
-    requests_cap = 1 + -(-(total - first) // max(limit - 1, 1))
+    requests_cap = 1 + -(-(total - first) // (limit - 1))
     print(f"regrid: up to {requests_cap} requests for {total} records", file=sys.stderr)
     features: list[Any] = []
     seen_ids: set[Any] = set()
@@ -398,6 +432,7 @@ def _paged_search(
                 seen_ids.add(fid)
             new.append(feature)
         features.extend(new)
+        _drop_trimmed_siblings(merged, features[:total], features[total:])
         state.update(merged=merged, features=features[:total], pages=pages)
         if len(page) < page_options["limit"] or len(features) >= total:
             complete = True
@@ -405,8 +440,8 @@ def _paged_search(
         if not new:
             print("regrid: paging stopped: cursor did not advance", file=sys.stderr)
             break
-        last = _feature_id(page[-1])
-        if type(last) is not int or last < 0:
+        last = _cursor(page[-1])
+        if last is None:
             print("regrid: paging stopped: no cursor in response", file=sys.stderr)
             break
         if last == cursor:
@@ -429,7 +464,7 @@ def _paged_result(
 def _freshness(args: dict[str, Any], sent: list[int]) -> None:
     county = county_freshness.county_path(args["path"])
     cache_path = Path(args["cache"]) if args["cache"] else county_freshness.default_cache_path()
-    base_url = args["base_url"].rstrip("/") if args["base_url"] else args["base_url"]
+    base_url = args["base_url"]
     cached = None if args["refresh"] else county_freshness.read_cache(cache_path, base_url)
     max_age = args["max_age_days"]
     if cached is not None and county_freshness.is_stale(cached[0], max_age):

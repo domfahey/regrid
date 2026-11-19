@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from regrid import RegridClient
+from regrid.endpoints import QueryPagingError
 
 UUID = "12345678-1234-5678-1234-567812345678"
 POINT = {"type": "Point", "coordinates": [-105.2, 40.5]}
@@ -300,3 +301,25 @@ def test_normal_path_option_is_sent_unchanged(recording_client, method, args):
     getattr(client, method)(*args, path="/us/tx/dallas")
     assert len(requests) == 1
     assert requests[0].url.params["path"] == "/us/tx/dallas"
+
+
+def test_validate_query_sends_nothing_and_checks_like_query(recording_client):
+    client, requests = recording_client
+    client.validate_query({"geoid": {"eq": "48113"}}, validate_fields=True, limit=5)
+    with pytest.raises(ValueError, match="Field is not queryable"):
+        client.validate_query({"nope_field": {"eq": "x"}}, validate_fields=True)
+    with pytest.raises(ValueError):
+        client.validate_query({"geoid": {"eq": "1"}}, bogus_option=1)
+    assert requests == []
+
+
+def test_validate_query_paging_flags_only_paging_errors(recording_client):
+    client, requests = recording_client
+    order = {"yearbuilt": {"order": "ASC"}}
+    client.validate_query(order, validate_fields=True)  # fine unpaged
+    with pytest.raises(QueryPagingError):
+        client.validate_query(order, paging=True, validate_fields=True)
+    with pytest.raises(ValueError, match="Field is not queryable") as excinfo:
+        client.validate_query({"nope_field": {"eq": "x"}}, paging=True, validate_fields=True)
+    assert not isinstance(excinfo.value, QueryPagingError)
+    assert requests == []

@@ -172,3 +172,33 @@ def test_is_stale_rejects_unusable_max_age(age):
     now = datetime(2026, 11, 19, tzinfo=timezone.utc)
     with pytest.raises(ValueError, match="max_age_days"):
         freshness.is_stale("2026-10-19T00:00:00Z", age, now)
+
+
+def test_is_stale_validates_max_age_before_parsing():
+    with pytest.raises(ValueError, match="max_age_days"):
+        freshness.is_stale("garbage", float("nan"))
+    with pytest.raises(ValueError, match="max_age_days"):
+        freshness.is_stale("garbage", -1)
+    with pytest.raises(ValueError, match="max_age_days"):
+        freshness.is_stale("garbage", freshness.MAX_AGE_DAYS_LIMIT + 1)
+    assert freshness.is_stale("garbage", 0) is True
+
+
+@pytest.mark.parametrize("bad", ["abc", None, float("inf"), -0.1, 36501, "nan"])
+def test_check_max_age_days_rejects(bad):
+    with pytest.raises(ValueError, match="36500"):
+        freshness.check_max_age_days(bad)
+
+
+def test_check_max_age_days_accepts_bounds():
+    assert freshness.check_max_age_days("0") == 0.0
+    assert freshness.check_max_age_days(36500) == 36500.0
+
+
+def test_cache_normalises_trailing_slash_in_base_url(tmp_path):
+    cache = tmp_path / "verse.json"
+    freshness.write_cache(cache, "2026-11-19T00:00:00Z", VERSE, "https://a.example/")
+    assert json.loads(cache.read_text())["base_url"] == "https://a.example"
+    expected = ("2026-11-19T00:00:00Z", VERSE)
+    assert freshness.read_cache(cache, "https://a.example//") == expected
+    assert freshness.read_cache(cache, "https://a.example") == expected

@@ -32,10 +32,10 @@ Also: `regrid address-map ADDRESS OUT.html [--neighbours]` (one lookup, plus one
 neighbours request when asked). Never run `report` or `client-token-typeahead`.
 
 Paging: `--max-records N` on `point` (GET only), `area` and `query`, never `owner`.
-It needs an explicit `limit` in `--options` and rejects `return_count`. It prints
+It needs an explicit integer `limit` of at least 2 in `--options` and rejects a truthy `return_count`. It prints
 `regrid: up to K requests for N records` before the first request; K is the enforced
 worst case, allowing for a cursor that repeats the previous page's last record. It
-never asks for more records than still needed (plus one on later pages) and outputs
+never asks for more records than still needed (later pages may fetch, and bill, up to one extra record each) and outputs
 `{"parcels": FeatureCollection, "pages": P, "complete": true|false}`. Get the user's agreed record budget first; page only within one task.
 
 Export from a saved response, with no requests:

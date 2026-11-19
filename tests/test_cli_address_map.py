@@ -398,3 +398,18 @@ def test_save_json_race_reports_exists(tmp_path, monkeypatch, capsys):
     err = capsys.readouterr().err
     assert "exists; pass --replace" in err and "Could not write" not in err
     assert (tmp_path / "m.json").read_text() == "other"
+
+
+def test_neighbours_branch_loads_subject_once(tmp_path, monkeypatch):
+    calls = []
+    real = cli.parcel_map.load_features
+
+    def counting(document):
+        calls.append(1)
+        return real(document)
+
+    monkeypatch.setattr(cli.parcel_map, "load_features", counting)
+    _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03})
+    monkeypatch.setattr(cli.parcel_map, "render", lambda *a, **k: {})
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 0
+    assert len(calls) == 1

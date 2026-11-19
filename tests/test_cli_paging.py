@@ -280,7 +280,7 @@ def test_top_level_feature_collections_merge_across_pages(monkeypatch, capsys):
     assert [f["id"] for f in data["zoning"]["features"]] == [21]
 
 
-@pytest.mark.parametrize("bad", ["a", -5, True, 1.5])
+@pytest.mark.parametrize("bad", ["a", -5, True, 1.5, "", "-5", "+5", "1e3", " 5", "\u0663", None])
 def test_invalid_cursor_id_stops_with_partial(monkeypatch, capsys, bad):
     seen = install(monkeypatch, [feats(5, bad), feats(3, 4)])
     assert cli.main([*POINT, "--max-records", "4", "--options", '{"limit":2}']) == 0
@@ -392,12 +392,11 @@ def test_printed_cap_is_enforced_maximum(monkeypatch, capsys, inclusive, total, 
     assert cap <= max(total, 1)
 
 
-def test_limit_one_inclusive_cursor_stops_after_two_requests(monkeypatch, capsys):
+def test_limit_one_rejected_before_any_request(monkeypatch, capsys):
     seen = _counting(monkeypatch, _inclusive)
-    assert cli.main([*POINT, "--max-records", "5", "--options", '{"limit":1}']) == 0
-    out, err = capsys.readouterr()
-    assert len(seen) == 2
-    assert "cursor did not advance" in err and json.loads(out)["complete"] is False
+    assert cli.main([*POINT, "--max-records", "5", "--options", '{"limit":1}']) == 1
+    err = capsys.readouterr().err
+    assert seen == [] and "limit of at least 2" in err and "requests made: 0" in err
 
 
 def test_paging_validation_surfaces_non_paging_errors(monkeypatch, capsys):
@@ -450,3 +449,74 @@ def test_merge_shape_mismatch_keeps_first_and_notes_once(monkeypatch, capsys):
     assert "regrid: paging note: extras shape changed; later pages ignored for it" in err
     assert "regrid: paging note: buildings shape changed; later pages ignored for it" in err
     assert err.count("paging note: extras") == 1
+
+
+def test_string_digit_cursor_is_accepted(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, "10"), feats("10", "11")])
+    assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert [f["id"] for f in data["parcels"]["features"]] == [1, "10", "11"]
+    assert seen[1].url.params["offset_id"] == "10" and data["complete"] is True
+
+
+def _uuid_feature(fid, uuid):
+    return {"type": "Feature", "id": fid, "properties": {"ll_uuid": uuid}}
+
+
+def test_inclusive_cursor_does_not_duplicate_siblings(monkeypatch, capsys):
+    def fcoll(*features):
+        return {"type": "FeatureCollection", "features": list(features)}
+
+    b1, b10, b11 = ({"type": "Feature", "id": f"b{n}", "properties": {}} for n in (1, 10, 11))
+    z10 = {"type": "Feature", "properties": {"ll_uuid": "u10"}}  # no id: matched by JSON form
+    two_in_one = {"type": "Feature", "properties": {"ll_uuid": "u11", "n": 1}}
+    other = {"type": "Feature", "properties": {"ll_uuid": "u11", "n": 2}}
+    bodies = [
+        {
+            "parcels": fcoll(*feats(1, 10)),
+            "buildings": fcoll(b1, b10),
+            "zoning": fcoll(z10),
+            "tags": ["a", {"k": 1}],
+        },
+        {
+            "parcels": fcoll(*feats(10, 11)),
+            "buildings": fcoll(b10, b11),
+            "zoning": fcoll(z10, two_in_one, other),
+            "tags": [{"k": 1}, "b"],
+        },
+    ]
+    install_bodies(monkeypatch, bodies)
+    assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert [f["id"] for f in data["buildings"]["features"]] == ["b1", "b10", "b11"]
+    assert data["zoning"]["features"] == [z10, two_in_one, other]
+    assert data["tags"] == ["a", {"k": 1}, "b"]
+
+
+def test_siblings_of_trimmed_parcels_are_dropped(monkeypatch, capsys):
+    def body(parcels, buildings):
+        return {
+            "parcels": {"type": "FeatureCollection", "features": parcels},
+            "buildings": {"type": "FeatureCollection", "features": buildings},
+        }
+
+    def building(bid, uuid):
+        return {"type": "Feature", "id": bid, "properties": {"ll_uuid": uuid}}
+
+    first = body([_uuid_feature(1, "u1"), _uuid_feature(2, "u2")], [building("a", "u1")])
+    second = body(
+        [_uuid_feature(3, "u3"), _uuid_feature(4, "u4")],
+        [building("b", "u3"), building("c", "u4"), {"type": "Feature", "id": "d"}],
+    )
+    install_bodies(monkeypatch, [first, second])
+    assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert [f["id"] for f in data["parcels"]["features"]] == [1, 2, 3]
+    assert [f["id"] for f in data["buildings"]["features"]] == ["a", "b", "d"]
+
+
+def test_return_count_false_is_allowed(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 2)])
+    opts = '{"limit":2,"return_count":false}'
+    assert cli.main([*POINT, "--max-records", "2", "--options", opts]) == 0
+    assert len(seen) == 1 and seen[0].url.params["return_count"] == "false"
