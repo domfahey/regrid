@@ -45,5 +45,5 @@ authorized by the user"), and state that the other premium flags were sent as
 - Authorization: needs the user's authorization and may cost extra. Without it,
   send `return_matched_addresses=false`.
 - Handoff: add a `notes` entry with the value sent and the authorization basis.
-  Under this skill's match rules in SKILL.md, matched addresses are not by
+  Under this skill's match rules in [answers](answers.md), matched addresses are not by
   themselves evidence that the requested property is confirmed.

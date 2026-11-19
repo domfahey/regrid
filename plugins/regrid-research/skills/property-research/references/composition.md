@@ -109,7 +109,7 @@ but must not discard the original evidence needed by later stages.
 Version `1.1` adds `reconciliations` and explicit lookup/diagnostic attempt kinds.
 Upgrade legacy envelopes through `upgrade_workflow`, which preserves evidence
 and consumption and tags existing attempts as lookups. Reconciliation needs an
-independently verified authoritative receipt tied to one attempt; see
-[batch and resume](batch.md). An aggregate usage counter or structurally valid
+independently verified authoritative receipt tied to one attempt (see also
+[batch and resume](batch.md)). An aggregate usage counter or structurally valid
 proof cannot establish that receipt's authenticity. Append the proof without
 rewriting the uncertain attempt; reconciliation never creates a retry allowance.
