@@ -340,3 +340,13 @@ def test_reconcile_unknown_attempt_and_bad_proof_use_validator_messages():
     with pytest.raises(workflow.ValidationError):
         workflow.reconcile_attempt(doc, "attempt-000001", None, evidence_verified=True)
     assert doc == before
+
+
+def test_cli_freshness_zero_record_attempt_keeps_ledger_valid():
+    doc = workflow.reserve_attempt(workflow.upgrade_workflow(legacy()), [], 0, kind="diagnostic")
+    workflow.validate(doc)
+    doc = workflow.complete_attempt(doc, "attempt-000001", "success", 0)
+    workflow.validate(doc)
+    assert doc["budget"]["attempted_requests"] == 1
+    assert doc["budget"]["returned_records"] == 0
+    assert doc["budget"]["uncertain_records"] == 0

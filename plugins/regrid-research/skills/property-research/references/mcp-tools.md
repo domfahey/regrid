@@ -75,6 +75,12 @@ Only point, area, and query list `return_count`, `return_geometry`, and
 pass the value exactly as supplied even though the spec types `parcelnumb`
 as integer; HAR values are strings, so leading zeros and punctuation survive.
 
+## Address suggestions
+
+For an ambiguous or mistyped address, call `/parcels/typeahead` with `query`, show
+the suggestions, then fetch the chosen one with `/parcels/path`. Each is one request.
+Typeahead is Enterprise only: a permission or 403 error is recorded once and never retried; ask the user to clarify the address instead.
+
 Never call `/report` (a POST that files a data issue), `/client_token/typeahead`
 (issues a token), or any Batch spec operation during research.
 

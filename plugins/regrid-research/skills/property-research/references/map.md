@@ -38,6 +38,20 @@ a US property. Scope is US parcels only.
 Terminal users without MCP can use the CLI equivalents: `regrid address-map ADDRESS
 OUTPUT.html` (one request) or `regrid map RESPONSE.json OUTPUT.html` (offline).
 
+## Neighbouring parcels
+
+Only when the user asks. First state the cost: "one request, up to 25 records".
+Then make one `/parcels/point` request with the subject's `lat` and `lon`,
+`radius=100`, `limit=25`, `return_geometry=true`, and paid datasets off. Save the
+response verbatim to `NEIGHBOURS.json` and run:
+
+```
+python3 <skill>/scripts/map.py render RESPONSE.json OUTPUT.html --neighbours NEIGHBOURS.json
+```
+
+The CLI equivalent, `regrid address-map ADDRESS OUTPUT.html --neighbours`, makes the
+extra request and saves `OUTPUT.neighbours.json`.
+
 ## Limits
 
 - The page loads Leaflet from unpkg.com and imagery from Esri (server.arcgisonline.com).

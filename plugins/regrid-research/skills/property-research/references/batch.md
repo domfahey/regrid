@@ -80,6 +80,11 @@ overshoot and stop if the proven count exceeds the allowance.
 
 ## Resume without duplicate retrieval
 
+CLI attempts: the CLI is ledger-unaware. Reserve a `kind="diagnostic"` attempt with
+`record_limit` 0 before each CLI command that can make a request, then complete it
+from the stderr line `regrid: requests made: N`. An unreadable line leaves the
+attempt uncertain.
+
 Persist a checkpoint only when the user requests saving/resuming or approves a
 specific file destination. Do not write personal property data into the plugin
 source, shared templates, or archives. Save the complete envelope atomically to
