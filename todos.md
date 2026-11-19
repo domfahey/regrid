@@ -6,6 +6,42 @@ changelog entry and a plugin version bump. Items marked **decision** need the ow
 answer before building; items marked **authorization** need explicit permission for a
 billable or credentialed call.
 
+## Priority
+
+Impact is judged against the main workflow: look up a US property by street address,
+pull its data and boundary, and view it on an interactive satellite map. Size is
+relative:
+- **XS:** a single check or doc edit.
+- **S:** one small PR, mostly docs or skill text plus tests.
+- **M:** new helper code or several references.
+- **L:** a new execution path with security and budget rules.
+
+| # | Todo | Impact | Size | Why this rank |
+| --- | --- | --- | --- | --- |
+| 1 | Live outline check | High | XS | The map feature rests on it; one lookup settles the open risk (**authorization**) |
+| 2 | One command for the usual flow | High | S | Turns the main workflow into one step |
+| 3 | Map in Claude apps and Cowork | High | XS | If the map doesn't load there, those hosts need a fallback |
+| 4 | Premium dataset guidance | Medium | S | Docs only; makes zoning and enhanced ownership usable when asked |
+| 5 | Ship the US parcel field catalog | Medium | S | The generator already exists; explains fields at no request cost |
+| 6 | Refresh by Regrid path | Medium | S | Cheap, exact re-fetch of a saved property |
+| 7 | Windows CI job | Medium | S | Guards the bundled helpers on a platform only simulated so far |
+| 8 | County freshness (`/verse`) | Medium | M | Adds trust in the data date, but needs caching (one call returns all counties) (**decision**: stale threshold) |
+| 9 | Address suggestions then fetch by path | Medium | M | Helps mistyped addresses, but Enterprise-only, so many tokens can't use it |
+| 10 | Neighbouring parcel outlines | Medium | M | Useful map context, but costs extra records (**decision**: radius and cap) |
+| 11 | Count before pulling (`return_count`) | Low | S | Matters for open-ended searches, not single-address lookups |
+| 12 | Field definitions (`/schemas/*`) | Low | S | Mostly covered by the field catalog (#5) |
+| 13 | Detailed usage (`/usage/detailed`) | Low | S | Nice for "lookups left" questions |
+| 14 | Tile commands documented as CLI-only | Low | XS | Docs clarity only |
+| 15 | Paging (`offset_id`) | Low | M | Only for large open-ended searches |
+| 16 | Spreadsheet or GeoJSON export | Low | M | Reverses a design non-goal (**decision**) |
+| 17 | CLI executor for Claude Code | Low | L | MCP already works; adds a second credential path to secure and test |
+
+Suggested batches:
+- **Now:** #1–#3. They confirm the map works everywhere and make the main workflow one step.
+- **Next:** #4–#7. Small, low-risk improvements.
+- **Then:** #8–#10. Each needs a decision or more code.
+- **Later:** #11–#17.
+
 ## Verification
 
 - [ ] **Live outline check** (**authorization**): with one live address lookup,
