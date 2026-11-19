@@ -3,7 +3,9 @@
 import importlib.util
 import json
 import math
+import os
 import re
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -296,3 +298,38 @@ def test_cli_render_and_errors(tmp_path):
     assert bad.stdout == ""
     assert len(bad.stderr.strip().splitlines()) == 1
     assert "Traceback" not in bad.stderr
+
+
+def test_footer_does_not_overlap_map_attribution(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    parcel_map.render(response, tmp_path / "m.html")
+    html = (tmp_path / "m.html").read_text(encoding="utf-8")
+    rule = re.search(r"footer\s*\{([^}]*)\}", html)
+    assert rule
+    assert "position" not in rule.group(1)
+    assert "z-index" not in rule.group(1)
+    assert html.index('<div id="map">') < html.index("<footer>")
+
+
+def test_candidate_banner_names_the_candidate(tmp_path):
+    null_point = feature(None, lat="39.9", lon="-75.03")
+    response = write_response(tmp_path / "r.json", good_feature(), null_point)
+    parcel_map.render(response, tmp_path / "m.html", all_candidates=True)
+    html = (tmp_path / "m.html").read_text(encoding="utf-8")
+    assert "Candidate 2: No boundary on file for this parcel" in html
+
+
+def test_index_and_all_candidates_conflict(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature(), good_feature())
+    with pytest.raises(MapError, match="not both"):
+        parcel_map.render(response, tmp_path / "m.html", index=0, all_candidates=True)
+
+
+def test_output_respects_umask(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    old = os.umask(0o022)
+    try:
+        parcel_map.render(response, tmp_path / "m.html")
+    finally:
+        os.umask(old)
+    assert stat.S_IMODE((tmp_path / "m.html").stat().st_mode) == 0o644

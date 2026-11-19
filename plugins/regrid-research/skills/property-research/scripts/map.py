@@ -173,6 +173,8 @@ COLORS = ("#ffeb3b", "#ff5722", "#00e5ff", "#76ff03", "#e040fb", "#ff4081")
 
 
 def select_features(features: list[dict], *, index: int | None, all_candidates: bool) -> list[dict]:
+    if index is not None and all_candidates:
+        raise MapError("Use --feature or --all-candidates, not both")
     if index is not None:
         if not 0 <= index < len(features):
             raise MapError(f"Feature index must be between 0 and {len(features) - 1}")
@@ -227,7 +229,9 @@ def _feature_data(feature: dict, label: str | None, retrieved_at: str | None) ->
         "facts": facts,
         "geometry": geometry,
         "point": None if geometry is not None else _fallback_point(feature),
-        "banner": NO_BOUNDARY if geometry is None else None,
+        "banner": (f"{label}: {NO_BOUNDARY}" if label else NO_BOUNDARY)
+        if geometry is None
+        else None,
     }
 
 
@@ -240,7 +244,8 @@ _PAGE = """<!doctype html>
 <link rel="stylesheet" href="__BASE__leaflet.css" integrity="__CSS_SRI__" crossorigin="">
 <style>
 html, body { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
-#map { position: absolute; inset: 0; }
+body { display: flex; flex-direction: column; }
+#map { flex: 1 1 auto; min-height: 0; }
 #overlay { position: absolute; top: 8px; left: 56px; right: 8px; z-index: 1000;
   max-width: 28rem; display: flex; flex-direction: column; gap: 6px; }
 .banner { background: #fff3cd; color: #5c4400; border: 1px solid #e0b400;
@@ -251,8 +256,7 @@ html, body { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
 #panel dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; }
 #panel dt { font-weight: 600; }
 #panel dd { margin: 0; overflow-wrap: anywhere; }
-footer { position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000;
-  background: rgba(0, 0, 0, 0.65); color: #fff; font-size: 12px; padding: 4px 8px; }
+footer { flex: none; background: #222; color: #fff; font-size: 12px; padding: 4px 8px; }
 </style>
 </head>
 <body>
@@ -371,6 +375,9 @@ def _write_atomic(path: Path, content: str, *, replace: bool) -> None:
     try:
         with handle:
             handle.write(content)
+            umask = os.umask(0)
+            os.umask(umask)
+            os.chmod(handle.fileno(), 0o666 & ~umask)
         os.replace(handle.name, path)
     except BaseException:
         Path(handle.name).unlink(missing_ok=True)
