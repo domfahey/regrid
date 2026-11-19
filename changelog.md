@@ -6,7 +6,9 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
-No changes yet.
+### Added
+
+- Regrid Research plugin README: MCP server coverage summary (tools, endpoints, options, and deliberately unused features), linking to the skill references.
 
 ## [SDK 0.3.0][sdk-v0.3.0] and [Regrid Research 0.8.0][regrid-research-v0.8.0] - 2026-11-19
 
