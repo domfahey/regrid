@@ -19,7 +19,8 @@ a US property. Scope is US parcels only.
 2. Save the decoded `execute-request` JSON verbatim to `RESPONSE.json`. Do not
    reformat, re-indent, or trim coordinates; the helper checks the boundary against
    the recorded area.
-3. Render with the bundled helper, using the skill directory:
+3. Render with the bundled helper. `<skill>` is the `property-research` skill folder,
+   the one that contains `SKILL.md` and `scripts/` (not the plugin root):
 
    ```
    python3 <skill>/scripts/map.py render RESPONSE.json OUTPUT.html [--retrieved-at ISO]
