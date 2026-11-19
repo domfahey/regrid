@@ -24,7 +24,7 @@ Claude Code and Cowork only; other hosts follow the steps below directly.
    the one that contains `SKILL.md` and `scripts/` (not the plugin root):
 
    ```
-   python3 <skill>/scripts/map.py render RESPONSE.json OUTPUT.html [--retrieved-at ISO]
+   python3 "<skill>/scripts/map.py" render RESPONSE.json OUTPUT.html [--retrieved-at ISO]
    ```
 
    Add `--feature N` or `--all-candidates` as above; passing both is an error.
@@ -51,7 +51,7 @@ Then make one `/parcels/point` request with the subject's `lat` and `lon`,
 response verbatim to `NEIGHBOURS.json` and run:
 
 ```
-python3 <skill>/scripts/map.py render RESPONSE.json OUTPUT.html --neighbours NEIGHBOURS.json
+python3 "<skill>/scripts/map.py" render RESPONSE.json OUTPUT.html --neighbours NEIGHBOURS.json
 ```
 
 The CLI equivalent, `regrid address-map ADDRESS OUTPUT.html --neighbours`, makes the
@@ -66,7 +66,7 @@ To give the user a spreadsheet or GeoJSON, export from the saved response; it ma
 extra requests:
 
 ```
-python3 <skill>/scripts/map.py export RESPONSE.json [--csv F] [--geojson F] [--all-fields] [--replace]
+python3 "<skill>/scripts/map.py" export RESPONSE.json [--csv F] [--geojson F] [--all-fields] [--replace]
 ```
 
 CSV has the core columns (headline, path, ll_uuid, owner, parcelnumb, ll_last_refresh,

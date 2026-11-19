@@ -271,9 +271,9 @@ def test_cli_path_paging_schema_usage_and_export_guidance():
     assert "CLI-only" in cli
     assert "/usage/detailed" in tools and "never per-token" in tools
     assert "fields.py" in tools and "one request each" in tools
-    assert "map.py export" in (refs / "map.md").read_text()
+    assert 'map.py" export' in (refs / "map.md").read_text()
     skill = (SKILL_ROOT / "SKILL.md").read_text()
-    assert "map.py export" in skill and "return_count" in (refs / "batch.md").read_text()
+    assert 'map.py" export' in skill and "return_count" in (refs / "batch.md").read_text()
     assert "not saved in checkpoints" in (refs / "batch.md").read_text()
     assert "CLI" in (PLUGIN / "skills/setup/SKILL.md").read_text()
 
@@ -357,7 +357,7 @@ def test_cli_is_the_fallback_route_and_freshness_script_is_routed():
     for word in ("MCP", "export", "tiles"):
         assert word in cli_line
     cli = (SKILL_ROOT / "references/cli.md").read_text()
-    assert "scripts/freshness.py county VERSE.json --path /us/<st>/<county>" in cli
+    assert 'scripts/freshness.py" county VERSE.json --path /us/<st>/<county>' in cli
     description = skill.split("---")[1]
     assert "CLI or a supplied" in description
     batch = (SKILL_ROOT / "references/batch.md").read_text()
@@ -425,7 +425,7 @@ def test_descriptions_state_exclusions():
 def test_skill_md_defines_skill_path_and_hides_fields_json():
     skill = (SKILL_ROOT / "SKILL.md").read_text()
     assert "`<skill>`" in skill and "contains `SKILL.md`" in skill
-    assert "python3 <skill>/scripts/fields.py explain" in skill
+    assert 'python3 "<skill>/scripts/fields.py" explain' in skill
     assert "don't open it" in skill and "](references/fields.json)" in skill
 
 
@@ -437,15 +437,20 @@ def test_one_script_path_convention():
         assert not re.search(r"python3 scripts/", text), path
     for path in DOC_FILES:
         text = path.read_text()
-        for match in re.finditer(r"python3 (\S+\.py)", text):
-            assert match.group(1).startswith("<skill>/scripts/"), (path, match.group(1))
+        assert not re.search(r"python3 <skill>/", text), path
+        assert not re.search(r"python3 \$\{CLAUDE_PLUGIN_ROOT\}", text), path
+        for match in re.finditer(r"python3 (\S+\.py\S*)", text):
+            assert re.fullmatch(r'"<skill>/scripts/(?:[a-z_]+|<name>)\.py"', match.group(1)), (
+                path,
+                match.group(1),
+            )
 
 
 def test_command_uses_skill_prefixed_paths_and_states_hosts():
     text = (PLUGIN / "commands/address-map.md").read_text()
-    assert "${CLAUDE_PLUGIN_ROOT}/skills/property-research" in text
+    assert '"${CLAUDE_PLUGIN_ROOT}/skills/property-research"' in text
     assert "elsewhere it is\nthe property-research skill folder" in text
-    assert "python3 <skill>/scripts/map.py render" in text
+    assert 'python3 "<skill>/scripts/map.py" render' in text
     assert not re.search(r"(?<!<skill>/)(?<![\w/.-])(scripts|references)/", text)
     assert "Claude Code and Cowork only" in (SKILL_ROOT / "references/map.md").read_text()
 

@@ -553,3 +553,46 @@ def test_return_count_false_is_allowed(monkeypatch, capsys):
     opts = '{"limit":2,"return_count":false}'
     assert cli.main([*POINT, "--max-records", "2", "--options", opts]) == 0
     assert len(seen) == 1 and seen[0].url.params["return_count"] == "false"
+
+
+def test_first_page_is_deduplicated_like_later_pages(monkeypatch, capsys):
+    def fcoll(*features):
+        return {"type": "FeatureCollection", "features": list(features)}
+
+    b1 = {"type": "Feature", "id": "b1", "properties": {}}
+    bodies = [
+        {
+            "parcels": fcoll(*feats(1, 2)),
+            "buildings": fcoll(b1, dict(b1)),
+            "tags": ["a", "a", {"k": 1}, {"k": 1}],
+        }
+    ]
+    install_bodies(monkeypatch, bodies)
+    assert cli.main([*POINT, "--max-records", "2", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert [f["id"] for f in data["buildings"]["features"]] == ["b1"]
+    assert data["tags"] == ["a", "a", {"k": 1}]
+
+
+def test_later_pages_keep_repeated_non_dict_items():
+    current = ["a"]
+    cli._extend_new(current, ["a", "b", {"id": 1}, {"id": 1}])
+    assert current == ["a", "a", "b", {"id": 1}]
+
+
+def _building(uuid_list):
+    return {"type": "Feature", "properties": {"ll_uuids": uuid_list}}
+
+
+def _trim_siblings(buildings, kept, trimmed):
+    merged = {"buildings": {"type": "FeatureCollection", "features": list(buildings)}}
+    cli._drop_trimmed_siblings(merged, kept, trimmed)
+    return merged["buildings"]["features"]
+
+
+def test_sibling_dropped_only_when_it_references_dropped_and_no_kept_uuid():
+    kept, trimmed = [_uuid_feature(3, "u3")], [_uuid_feature(4, "u4")]
+    mixed_unfetched = _building(["u4", "u9"])
+    straddle = _building(["u3", "u4"])
+    assert _trim_siblings([mixed_unfetched, straddle], kept, trimmed) == [straddle]
+    assert _trim_siblings([straddle], kept, trimmed) == [straddle]

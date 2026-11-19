@@ -197,10 +197,10 @@ resuming. The `save` command also validates before writing atomically:
 
 
 ```sh
-python3 <skill>/scripts/workflow.py validate /path/to/result.json
-python3 <skill>/scripts/workflow.py save /path/to/result.json /path/to/checkpoint.json
-python3 <skill>/scripts/workflow.py validate /path/to/checkpoint.json
-python3 <skill>/scripts/workflow.py pending /path/to/checkpoint.json
+python3 "<skill>/scripts/workflow.py" validate /path/to/result.json
+python3 "<skill>/scripts/workflow.py" save /path/to/result.json /path/to/checkpoint.json
+python3 "<skill>/scripts/workflow.py" validate /path/to/checkpoint.json
+python3 "<skill>/scripts/workflow.py" pending /path/to/checkpoint.json
 ```
 
 Substitute the actual installed skill directory and user-requested file paths.

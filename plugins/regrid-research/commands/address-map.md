@@ -5,7 +5,7 @@ argument-hint: <US street address>
 
 Map the US property at: $ARGUMENTS
 
-In Claude Code, `<skill>` is `${CLAUDE_PLUGIN_ROOT}/skills/property-research`; elsewhere it is
+In Claude Code, `<skill>` is `"${CLAUDE_PLUGIN_ROOT}/skills/property-research"`; elsewhere it is
 the property-research skill folder (the folder that holds `SKILL.md`).
 Use the property-research skill and its Regrid MCP tools. Scope is US parcels only; for
 a non-US address, follow the skill's scope rule and stop.
@@ -15,7 +15,7 @@ a non-US address, follow the skill's scope rule and stop.
 2. Check the match as the skill requires. If the result is unmatched or an error, say
    so and stop; do not render a map.
 3. Save the decoded `execute-request` JSON verbatim to a response file.
-4. Render it with `python3 <skill>/scripts/map.py render`, following
+4. Render it with `python3 "<skill>/scripts/map.py" render`, following
    `<skill>/references/map.md` and map the single returned parcel.
 5. Give a short summary: matched address, owner and parcel identifiers if present, the
    data date, and any warning from the helper (including an area mismatch).

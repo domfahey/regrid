@@ -6,7 +6,7 @@ description: Looks up recorded owners, parcel IDs, sale and assessment details, 
 # Regrid property research
 
 In this skill, `<skill>` means the property-research skill folder (the one that
-contains `SKILL.md` and `scripts/`); run helpers as `python3 <skill>/scripts/<name>.py ...`.
+contains `SKILL.md` and `scripts/`); run helpers as `python3 "<skill>/scripts/<name>.py" ...`.
 
 Scope is US parcels only. For a property outside the United States, say it is
 outside this skill's scope; do not search Canadian, international, or batch APIs.
@@ -29,11 +29,11 @@ Load supporting resources only for the relevant task:
 - Request and record budgets, multiple inputs, or checkpoints: [batch and resume](references/batch.md).
 - Map, boundary, or neighbouring parcels: [map guide](references/map.md). The
   `/regrid-research:address-map` command runs this flow for one address.
-- Spreadsheet or GeoJSON requested: `python3 <skill>/scripts/map.py export` from the saved response
+- Spreadsheet or GeoJSON requested: `python3 "<skill>/scripts/map.py" export` from the saved response
   ([map guide](references/map.md#export)), with no extra requests.
 - MCP tools missing in Claude Code but the `regrid` CLI available, files (export/freshness), tiles, county pull dates (CLI only), or a user-supplied saved `/verse` file (`freshness.py`, no request): [CLI guide](references/cli.md).
 - Ambiguous or mistyped address: suggestions flow in the [tool guide](references/mcp-tools.md).
-- Field meaning: run `python3 <skill>/scripts/fields.py explain FIELD` (its large
+- Field meaning: run `python3 "<skill>/scripts/fields.py" explain FIELD` (its large
   [data file](references/fields.json): don't open it). Only fields it lacks justify a
   `/schemas/*` request.
 - Zoning, enhanced ownership, matched buildings or addresses requested: [premium datasets](references/premium.md).

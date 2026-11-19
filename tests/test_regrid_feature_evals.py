@@ -167,3 +167,19 @@ def test_feature_packet_includes_fields_catalog():
         refs["fields.json"]
         == (run.ROOT.parent / "skills/property-research/references/fields.json").read_text()
     )
+
+
+def test_packet_suite_all_includes_fields_catalog(monkeypatch, capsys):
+    monkeypatch.setattr("sys.argv", ["run.py", "packet", "--suite", "all"])
+    run.main()
+    refs = json.loads(capsys.readouterr().out)["references"]
+    assert (
+        refs["fields.json"]
+        == (run.ROOT.parent / "skills/property-research/references/fields.json").read_text()
+    )
+
+
+def test_packet_research_suite_keeps_placeholder(monkeypatch, capsys):
+    monkeypatch.setattr("sys.argv", ["run.py", "packet", "--suite", "research"])
+    run.main()
+    assert "omitted" in json.loads(capsys.readouterr().out)["references"]["fields.json"]

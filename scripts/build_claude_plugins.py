@@ -134,7 +134,7 @@ def build(source: Path, output: Path) -> list[Path]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=SOURCE)
-    parser.add_argument("--output", type=Path, default=SOURCE.parents[1] / "dist")
+    parser.add_argument("--output", type=Path, default=REPO_ROOT / "dist")
     args = parser.parse_args()
     for path in build(args.source, args.output):
         print(path)

@@ -146,7 +146,9 @@ def main() -> None:
             f"Validated {len(cases)} synthetic fixtures and matching rubrics (not model behavior)"
         )
     else:
-        print(json.dumps(packet(cases, not args.without_skill, args.suite == "feature"), indent=2))
+        feature_ids = {case["id"] for case in load_cases("feature")}
+        include_fields = any(case["id"] in feature_ids for case in cases)
+        print(json.dumps(packet(cases, not args.without_skill, include_fields), indent=2))
 
 
 if __name__ == "__main__":

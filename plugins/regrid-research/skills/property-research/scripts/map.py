@@ -527,6 +527,25 @@ def _write_atomic_bytes(path: Path, data: bytes, *, replace: bool) -> None:
         temp.unlink(missing_ok=True)
 
 
+def check_mappable(feature: dict, *, label: str | None = None) -> None:
+    """Raise MapError unless the feature can be drawn: US path, valid boundary or a US point.
+
+    With ``label`` the path and omitted-geometry messages are prefixed ``label: `` as render does.
+    """
+    prefix = f"{label}: " if label else ""
+    properties = feature.get("properties")
+    path = properties.get("path") if isinstance(properties, dict) else None
+    if isinstance(path, str) and not path.startswith("/us/"):
+        raise MapError(f"{prefix}{OUTSIDE_US}")
+    if "geometry" not in feature:
+        raise MapError(f"{prefix}response omits geometry; it was requested without boundaries")
+    geometry = feature["geometry"]
+    if geometry is not None:
+        validate_geometry(geometry)
+    elif _fallback_point(feature) is None:
+        raise MapError(f"{label or 'Parcel'} has no boundary and no usable coordinates")
+
+
 def render(
     response_path: Path,
     output_path: Path,
@@ -556,15 +575,7 @@ def render(
     warnings: list[str] = []
     for number, feature in enumerate(chosen, 1):
         name = f"Candidate {number}" if all_candidates else "Parcel"
-        properties = feature.get("properties")
-        path = properties.get("path") if isinstance(properties, dict) else None
-        if isinstance(path, str) and not path.startswith("/us/"):
-            raise MapError(f"{name}: {OUTSIDE_US}")
-        if "geometry" not in feature:
-            raise MapError(f"{name}: response omits geometry; it was requested without boundaries")
-        geometry = feature["geometry"]
-        if geometry is not None:
-            validate_geometry(geometry)
+        check_mappable(feature, label=name)
         check = area_check(feature)
         checks.append(check)
         if check["status"] == "mismatch":
