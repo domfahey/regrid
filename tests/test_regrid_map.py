@@ -1,5 +1,6 @@
 """Parcel geometry is validated offline and cross-checked against the recorded area."""
 
+import csv
 import importlib.util
 import json
 import os
@@ -631,3 +632,133 @@ def test_neighbours_cli_flag_from_extracted_skill(tmp_path):
     )
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["neighbours"] == 1
+
+
+CORE_COLUMNS = [
+    "headline",
+    "path",
+    "ll_uuid",
+    "owner",
+    "parcelnumb",
+    "ll_last_refresh",
+    "ll_gisacre",
+    "ll_gissqft",
+    "lat",
+    "lon",
+]
+
+
+def _rows(path):
+    with path.open(encoding="utf-8", newline="") as handle:
+        return list(csv.reader(handle))
+
+
+def test_csv_core_columns_and_formula_guard(tmp_path):
+    f = good_feature(owner='=HYPERLINK("x")', parcelnumb='1,2 "q"\nz', lat="39.9", lon="-75.03")
+    summary = parcel_map.export(write_response(tmp_path / "r.json", f), csv_path=tmp_path / "o.csv")
+    raw = (tmp_path / "o.csv").read_bytes()
+    assert raw.startswith(b"\xef\xbb\xbf") and b"\r\n" in raw
+    rows = _rows(tmp_path / "o.csv")
+    rows[0][0] = rows[0][0].lstrip("\ufeff")
+    assert rows[0] == CORE_COLUMNS
+    assert rows[1][3] == '\'=HYPERLINK("x")' and rows[1][4] == '1,2 "q"\nz'
+    assert rows[1][5] == "" and rows[1][9] == "'-75.03"
+    for lead in "+-@":
+        assert parcel_map._csv_cell(f"{lead}1") == f"'{lead}1"
+    assert summary == {
+        "features": 1,
+        "csv": str(tmp_path / "o.csv"),
+        "geojson": None,
+        "columns": CORE_COLUMNS,
+    }
+
+
+def test_all_fields_appends_sorted(tmp_path):
+    f = good_feature(zeta="z", alpha={"a": 1}, owner="O", flag=True, nothing=None)
+    summary = parcel_map.export(
+        write_response(tmp_path / "r.json", f), csv_path=tmp_path / "o.csv", all_fields=True
+    )
+    rows = _rows(tmp_path / "o.csv")
+    extras = ["alpha", "flag", "ll_gissqft", "nothing", "zeta"]
+    extras = [name for name in extras if name not in CORE_COLUMNS]
+    assert summary["columns"] == CORE_COLUMNS + extras
+    assert rows[0][1:] == (CORE_COLUMNS + extras)[1:]
+    record = dict(zip(summary["columns"], rows[1]))
+    assert record["alpha"] == '{"a": 1}' and record["flag"] == "True" and record["nothing"] == ""
+
+
+def test_geojson_keeps_geometry_verbatim(tmp_path):
+    f = good_feature(owner="=X")
+    parcel_map.export(write_response(tmp_path / "r.json", f), geojson_path=tmp_path / "o.geojson")
+    out = json.loads((tmp_path / "o.geojson").read_text())
+    assert out["type"] == "FeatureCollection" and out["features"][0]["geometry"] == f["geometry"]
+    props = out["features"][0]["properties"]
+    assert (
+        list(props) == CORE_COLUMNS and props["owner"] == "=X" and props["ll_last_refresh"] is None
+    )
+
+
+def test_export_requires_an_output(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    with pytest.raises(MapError, match="Choose --csv and/or --geojson"):
+        parcel_map.export(response)
+
+
+def test_export_refuses_overwrite_and_invalid_before_writing(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    existing = tmp_path / "o.csv"
+    existing.write_text("keep")
+    with pytest.raises(MapError, match="--replace"):
+        parcel_map.export(response, csv_path=existing, geojson_path=tmp_path / "o.geojson")
+    assert existing.read_text() == "keep" and not (tmp_path / "o.geojson").exists()
+    parcel_map.export(response, csv_path=existing, replace=True)
+    assert existing.read_bytes().startswith(b"\xef\xbb\xbf")
+
+    same = tmp_path / "same"
+    with pytest.raises(MapError, match="different files"):
+        parcel_map.export(response, csv_path=same, geojson_path=same)
+
+    bad = good_feature()
+    bad["properties"]["path"] = "/ca/on/x"
+    outside = good_feature()
+    outside["geometry"] = square(lon=-100.0, lat=60.0)  # not in any US box
+    broken = good_feature()
+    broken["geometry"] = {"type": "Point", "coordinates": [-75, 39.9]}
+    for number, invalid in enumerate((bad, outside, broken)):
+        r = write_response(tmp_path / f"bad{number}.json", good_feature(), invalid)
+        with pytest.raises(MapError):
+            parcel_map.export(
+                r, csv_path=tmp_path / f"b{number}.csv", geojson_path=tmp_path / f"b{number}.gj"
+            )
+        assert not (tmp_path / f"b{number}.csv").exists()
+        assert not (tmp_path / f"b{number}.gj").exists()
+
+
+def test_export_geometry_requirements(tmp_path):
+    null_geo = good_feature()
+    null_geo["geometry"] = None
+    r = write_response(tmp_path / "n.json", null_geo)
+    parcel_map.export(r, csv_path=tmp_path / "n.csv")  # CSV needs no boundary
+    parcel_map.export(r, geojson_path=tmp_path / "n.geojson")
+    assert json.loads((tmp_path / "n.geojson").read_text())["features"][0]["geometry"] is None
+    omitted = good_feature()
+    del omitted["geometry"]
+    r = write_response(tmp_path / "o.json", omitted)
+    parcel_map.export(r, csv_path=tmp_path / "o.csv")
+    with pytest.raises(MapError, match="omits geometry"):
+        parcel_map.export(r, geojson_path=tmp_path / "o.geojson")
+    r = write_response(tmp_path / "x.json", "not a feature")
+    with pytest.raises(MapError, match="Expected a Regrid parcel response"):
+        parcel_map.export(r, csv_path=tmp_path / "x.csv")
+    (tmp_path / "junk.json").write_text("{")
+    with pytest.raises(MapError, match="not valid JSON"):
+        parcel_map.export(tmp_path / "junk.json", csv_path=tmp_path / "j.csv")
+
+
+def test_export_main_subcommand(tmp_path, capsys):
+    response = write_response(tmp_path / "r.json", good_feature())
+    args = ["export", str(response), "--csv", str(tmp_path / "o.csv"), "--all-fields"]
+    assert parcel_map.main(args) == 0
+    assert json.loads(capsys.readouterr().out)["features"] == 1
+    assert parcel_map.main(["export", str(response)]) == 1
+    assert "Choose --csv and/or --geojson" in capsys.readouterr().err

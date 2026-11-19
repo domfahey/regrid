@@ -7,7 +7,9 @@ The generated page loads Leaflet and Esri imagery in the viewer's browser.
 from __future__ import annotations
 
 import argparse
+import csv
 import html
+import io
 import json
 import math
 import os
@@ -480,9 +482,12 @@ def _temp_file(directory: Path) -> tuple[int, Path]:
 
 
 def _write_atomic(path: Path, content: str, *, replace: bool) -> None:
+    _write_atomic_bytes(path, content.encode("utf-8"), replace=replace)
+
+
+def _write_atomic_bytes(path: Path, data: bytes, *, replace: bool) -> None:
     if not replace and os.path.lexists(path):
         raise MapError(EXISTS)
-    data = content.encode("utf-8")
     fd, temp = _temp_file(path.parent)
     try:
         with os.fdopen(fd, "wb") as handle:
@@ -577,6 +582,122 @@ def render(
     }
 
 
+CORE_COLUMNS = (
+    "headline",
+    "path",
+    "ll_uuid",
+    "owner",
+    "parcelnumb",
+    "ll_last_refresh",
+    "ll_gisacre",
+    "ll_gissqft",
+    "lat",
+    "lon",
+)
+_PROPERTY_COLUMNS = frozenset({"headline", "path", "ll_uuid"})
+NO_OUTPUT = "Choose --csv and/or --geojson"
+
+
+def _csv_cell(value: object) -> str:
+    """A CSV cell: missing is empty, and spreadsheet formula prefixes are neutralised."""
+    if value is None:
+        return ""
+    if isinstance(value, (dict, list)):
+        text = json.dumps(value, ensure_ascii=False)
+    else:
+        text = str(value)
+    return "'" + text if text[:1] in {"=", "+", "-", "@"} else text
+
+
+def _core_value(feature: dict, name: str) -> Any:
+    properties = feature.get("properties")
+    source = properties if name in _PROPERTY_COLUMNS and isinstance(properties, dict) else None
+    return (source if source is not None else _fields(feature)).get(name)
+
+
+def export(
+    response_path: Path,
+    *,
+    csv_path: Path | None = None,
+    geojson_path: Path | None = None,
+    all_fields: bool = False,
+    replace: bool = False,
+) -> dict[str, Any]:
+    """Write a saved parcel response as CSV and/or GeoJSON; makes no requests."""
+    if csv_path is None and geojson_path is None:
+        raise MapError(NO_OUTPUT)
+    targets = [Path(p) for p in (csv_path, geojson_path) if p is not None]
+    if len(targets) == 2 and (
+        targets[0] == targets[1] or os.path.abspath(targets[0]) == os.path.abspath(targets[1])
+    ):
+        raise MapError("CSV and GeoJSON outputs must be different files")
+    try:
+        document = json.loads(Path(response_path).read_text(encoding="utf-8"))
+    except (ValueError, RecursionError) as exc:
+        raise MapError("Response file is not valid JSON") from exc
+    features = load_features(document)
+    for number, feature in enumerate(features):
+        if not isinstance(feature, dict):
+            raise MapError("Expected a Regrid parcel response with parcels.features")
+        name = f"Feature {number}"
+        properties = feature.get("properties")
+        path = properties.get("path") if isinstance(properties, dict) else None
+        if isinstance(path, str) and not path.startswith("/us/"):
+            raise MapError(f"{name}: {OUTSIDE_US}")
+        if geojson_path is not None and "geometry" not in feature:
+            raise MapError(f"{name}: response omits geometry; it was requested without boundaries")
+        if feature.get("geometry") is not None:
+            validate_geometry(feature["geometry"])
+    if not replace:
+        for target in targets:
+            if os.path.lexists(target):
+                raise MapError(EXISTS)
+    columns = list(CORE_COLUMNS)
+    if all_fields:
+        extras = {key for feature in features for key in _fields(feature)}
+        columns += sorted(extras - set(CORE_COLUMNS))
+    csv_data = geojson_data = None
+    if csv_path is not None:
+        buffer = io.StringIO(newline="")
+        writer = csv.writer(buffer, lineterminator="\r\n")
+        writer.writerow(columns)
+        for feature in features:
+            writer.writerow(
+                _csv_cell(
+                    _core_value(feature, name)
+                    if name in CORE_COLUMNS
+                    else _fields(feature).get(name)
+                )
+                for name in columns
+            )
+        csv_data = buffer.getvalue().encode("utf-8-sig")
+    if geojson_path is not None:
+        collection = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": feature["geometry"],
+                    "properties": {name: _core_value(feature, name) for name in CORE_COLUMNS},
+                }
+                for feature in features
+            ],
+        }
+        geojson_data = (json.dumps(collection, ensure_ascii=False, allow_nan=False) + "\n").encode(
+            "utf-8"
+        )
+    if csv_path is not None and csv_data is not None:
+        _write_atomic_bytes(Path(csv_path), csv_data, replace=replace)
+    if geojson_path is not None and geojson_data is not None:
+        _write_atomic_bytes(Path(geojson_path), geojson_data, replace=replace)
+    return {
+        "features": len(features),
+        "csv": None if csv_path is None else str(csv_path),
+        "geojson": None if geojson_path is None else str(geojson_path),
+        "columns": columns,
+    }
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -588,17 +709,32 @@ def main(argv: Sequence[str] | None = None) -> int:
     cmd.add_argument("--retrieved-at", metavar="ISO")
     cmd.add_argument("--replace", action="store_true")
     cmd.add_argument("--neighbours", type=Path, metavar="FILE", help="neighbouring parcels")
+    exp = commands.add_parser("export", help="export a saved parcel response to CSV and/or GeoJSON")
+    exp.add_argument("response", type=Path)
+    exp.add_argument("--csv", type=Path, metavar="FILE")
+    exp.add_argument("--geojson", type=Path, metavar="FILE")
+    exp.add_argument("--all-fields", action="store_true")
+    exp.add_argument("--replace", action="store_true")
     args = parser.parse_args(argv)
     try:
-        summary = render(
-            args.response,
-            args.output,
-            index=args.feature,
-            all_candidates=args.all_candidates,
-            retrieved_at=args.retrieved_at,
-            replace=args.replace,
-            neighbours_path=args.neighbours,
-        )
+        if args.command == "export":
+            summary = export(
+                args.response,
+                csv_path=args.csv,
+                geojson_path=args.geojson,
+                all_fields=args.all_fields,
+                replace=args.replace,
+            )
+        else:
+            summary = render(
+                args.response,
+                args.output,
+                index=args.feature,
+                all_candidates=args.all_candidates,
+                retrieved_at=args.retrieved_at,
+                replace=args.replace,
+                neighbours_path=args.neighbours,
+            )
     except (MapError, OSError) as exc:
         message = " ".join(str(exc).split())
         print(f"error: {message}", file=sys.stderr)
