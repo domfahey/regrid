@@ -79,3 +79,17 @@ def test_export_cli_offline(tmp_path, monkeypatch, capsys):
     assert cli.main([*argv, "--replace"]) == 0
     assert cli.main(["export", str(response)]) == 1
     assert "Choose --csv and/or --geojson" in capsys.readouterr().err
+
+
+def test_export_cli_non_finite_is_one_line(tmp_path, capsys):
+    response = tmp_path / "r.json"
+    response.write_text(
+        '{"parcels":{"features":[{"type":"Feature","geometry":null,'
+        '"properties":{"path":"/us/nj/x","headline":Infinity,"fields":{}}}]}}',
+        encoding="utf-8",
+    )
+    argv = ["export", str(response), "--geojson", str(tmp_path / "o.geojson")]
+    assert cli.main(argv) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("regrid: ") and err.count("\n") == 1
+    assert not (tmp_path / "o.geojson").exists()

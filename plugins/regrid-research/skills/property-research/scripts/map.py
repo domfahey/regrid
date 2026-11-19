@@ -636,9 +636,14 @@ def export(
         raise MapError(NO_OUTPUT)
     targets = [Path(p) for p in (csv_path, geojson_path) if p is not None]
     if len(targets) == 2 and (
-        targets[0] == targets[1] or os.path.abspath(targets[0]) == os.path.abspath(targets[1])
+        targets[0] == targets[1]
+        or os.path.abspath(targets[0]) == os.path.abspath(targets[1])
+        or targets[0].resolve() == targets[1].resolve()
     ):
         raise MapError("CSV and GeoJSON outputs must be different files")
+    for target in targets:
+        if not target.parent.is_dir():
+            raise MapError("Output directory does not exist")
     try:
         document = json.loads(Path(response_path).read_text(encoding="utf-8"))
     except (ValueError, RecursionError) as exc:
@@ -668,7 +673,7 @@ def export(
     if csv_path is not None:
         buffer = io.StringIO(newline="")
         writer = csv.writer(buffer, lineterminator="\r\n")
-        writer.writerow(columns)
+        writer.writerow(_csv_cell(name) for name in columns)
         for feature in features:
             writer.writerow(
                 _csv_cell(
@@ -743,7 +748,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 replace=args.replace,
                 neighbours_path=args.neighbours,
             )
-    except (MapError, OSError) as exc:
+    except (MapError, OSError, ValueError) as exc:
         message = " ".join(str(exc).split())
         print(f"error: {message}", file=sys.stderr)
         return 1

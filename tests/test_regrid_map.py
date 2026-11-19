@@ -782,3 +782,43 @@ def test_export_main_subcommand(tmp_path, capsys):
 )
 def test_csv_cell_numbers_unprefixed(value, expected):
     assert parcel_map._csv_cell(value) == expected
+
+
+def test_export_precheck_leaves_no_partial_csv(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    csv_target = tmp_path / "o.csv"
+    with pytest.raises(MapError, match="directory"):
+        parcel_map.export(
+            response, csv_path=csv_target, geojson_path=tmp_path / "missing" / "o.geojson"
+        )
+    assert not csv_target.exists()
+    with pytest.raises(MapError, match="different files"):
+        parcel_map.export(
+            response, csv_path=tmp_path / "x.csv", geojson_path=tmp_path / "sub" / ".." / "x.csv"
+        )
+    assert not (tmp_path / "x.csv").exists()
+
+
+def test_export_all_fields_header_is_formula_guarded(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature(**{"=cmd": "x", "plain": "y"}))
+    out = tmp_path / "o.csv"
+    parcel_map.export(response, csv_path=out, all_fields=True)
+    header = next(csv.reader(out.read_text(encoding="utf-8-sig").splitlines()))
+    assert "'=cmd" in header and "=cmd" not in header and "plain" in header
+
+
+def test_export_non_finite_reports_one_line_and_writes_nothing(tmp_path, capsys):
+    response = tmp_path / "r.json"
+    response.write_text(
+        '{"parcels":{"features":[{"type":"Feature","geometry":null,'
+        '"properties":{"path":"/us/nj/x","headline":NaN,"fields":{}}}]}}',
+        encoding="utf-8",
+    )
+    gj = tmp_path / "o.geojson"
+    csv_out = tmp_path / "o.csv"
+    assert (
+        parcel_map.main(["export", str(response), "--csv", str(csv_out), "--geojson", str(gj)]) == 1
+    )
+    err = capsys.readouterr().err
+    assert err.startswith("error: ") and err.count("\n") == 1 and "Traceback" not in err
+    assert not gj.exists() and not csv_out.exists()
