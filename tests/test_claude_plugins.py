@@ -12,6 +12,7 @@ import regrid
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins/regrid-research"
+SKILL_ROOT = ROOT / "plugins/regrid-research/skills/property-research"
 SPEC = importlib.util.spec_from_file_location(
     "build_claude_plugins", ROOT / "scripts" / "build_claude_plugins.py"
 )
@@ -165,3 +166,17 @@ def test_host_results_never_claim_unrun_checks():
 def test_versions():
     assert json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())["version"] == "0.7.0"
     assert regrid.__version__ == "0.2.0"
+
+
+def test_premium_guide_covers_every_flag_and_requires_authorization():
+    skill = (SKILL_ROOT / "SKILL.md").read_text()
+    guide = (SKILL_ROOT / "references/premium.md").read_text()
+    assert "references/premium.md" in skill
+    for flag in (
+        "return_zoning",
+        "return_enhanced_ownership",
+        "return_matched_buildings",
+        "return_matched_addresses",
+    ):
+        assert flag in guide
+    assert guide.lower().count("authoriz") >= 4 and "beneficial" in guide

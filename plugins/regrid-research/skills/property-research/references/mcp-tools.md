@@ -50,6 +50,7 @@ and `list-endpoints` still accepted the earlier unsuffixed title
 ## Choosing the endpoint
 
 All paths are under `https://app.regrid.com/api/v2`. Use `GET` only.
+Premium `return_*` flags need user authorization; see [premium datasets](premium.md).
 
 | Request | Path | Required | Scope parameters |
 | --- | --- | --- | --- |
