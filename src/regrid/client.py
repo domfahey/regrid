@@ -129,7 +129,7 @@ class RegridClient(EndpointsMixin):
         data: Any = None
         try:
             data = response.json(parse_float=_finite_float, parse_constant=_reject_json_constant)
-        except (ValueError, UnicodeError):
+        except (ValueError, UnicodeError, RecursionError):
             valid = False
         # Raise outside the except block: __context__ would retain the raw response body.
         if not valid:
