@@ -329,3 +329,21 @@ def test_skill_descriptions_are_third_person_and_bounded():
         assert word in research, word
     setup = re.search(r"^description: (.+)$", SKILL_FILES[1].read_text(), re.M).group(1).lower()
     assert "tools" in setup and "auth" in setup
+
+
+def test_map_present_step_states_match_status_with_page_path():
+    map_guide = (SKILL_ROOT / "references/map.md").read_text()
+    assert "match status" in map_guide
+    assert "candidates, not confirmed" in map_guide
+
+
+def test_county_freshness_is_cli_only_over_mcp():
+    tools = (SKILL_ROOT / "references/mcp-tools.md").read_text()
+    verse_row = next(
+        line for line in tools.splitlines() if line.startswith("| County pull dates | `/verse`")
+    )
+    assert "CLI only" in verse_row and "ll_last_refresh" in verse_row
+    skill_lines = (SKILL_ROOT / "SKILL.md").read_text().splitlines()
+    cli_line = next(line for line in skill_lines if "cli.md" in line)
+    assert "county pull dates" in cli_line.lower()
+    assert "CLI only" in cli_line

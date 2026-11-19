@@ -34,6 +34,9 @@ a US property. Scope is US parcels only.
 5. Present the page:
    - Claude Code: give the absolute path to `OUTPUT.html` and offer to open it in a browser.
    - Claude apps: show the HTML as an interactive page.
+   - State the match status with the page path, for example "Confirmed match: one
+     parcel — page at /abs/path/OUTPUT.html". For ambiguous results say
+     "candidates, not confirmed" and list the candidates.
 
 Terminal users without MCP can use the CLI equivalents: `regrid address-map ADDRESS
 OUTPUT.html` (one request) or `regrid map RESPONSE.json OUTPUT.html` (offline).

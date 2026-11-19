@@ -29,8 +29,7 @@ Load supporting resources only for the relevant task:
   `/regrid-research:address-map` command runs this flow for one address.
 - Spreadsheet or GeoJSON requested: `scripts/map.py export` from the saved response
   ([map guide](references/map.md#export)), with no extra requests.
-- County data-pull dates, files, tiles, or lookups when MCP is unavailable (Claude Code
-  with the CLI): [CLI guide](references/cli.md).
+- County pull dates: CLI only (`regrid freshness`), even when MCP is connected: [CLI guide](references/cli.md).
 - Ambiguous or mistyped address: suggestions flow in the [tool guide](references/mcp-tools.md).
 - Field meaning: run `scripts/fields.py explain FIELD` (it reads the
   [field catalog](references/fields.json)); only fields it lacks justify a
