@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
+import tempfile
 from datetime import datetime, timezone
 from importlib.resources import files
 from pathlib import Path
@@ -15,6 +17,16 @@ from .client import RegridClient, RegridError
 from .offline import fields as parcel_fields
 from .offline import freshness as county_freshness
 from .offline import map as parcel_map
+
+
+def _max_age_days(value: str) -> float:
+    try:
+        number = float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError("must be a number") from None
+    if not math.isfinite(number) or not 0 <= number <= 36500:
+        raise argparse.ArgumentTypeError("must be a finite number between 0 and 36500")
+    return number
 
 
 def _object(value: str) -> dict[str, Any]:
@@ -99,6 +111,39 @@ def _error_message(exc: Exception, *, os_error: str, type_error: str) -> str:
     return " ".join(str(exc).split())
 
 
+def _save_json(path: Path, text: str, *, replace: bool) -> None:
+    """Write atomically via a same-directory temp file; never follow a symlink at ``path``."""
+    handle, temp_name = tempfile.mkstemp(dir=path.parent, prefix=".regrid-", suffix=".tmp")
+    temp = Path(temp_name)
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            stream.write(text)
+        if replace:
+            os.replace(temp, path)
+            return
+        try:
+            os.link(temp, path)  # atomic and never overwrites
+        except FileExistsError:
+            raise ValueError(f"{path} exists; pass --replace to overwrite it") from None
+        except OSError:  # hard links unsupported: exclusive create still never overwrites
+            with open(path, "x", encoding="utf-8") as stream:
+                stream.write(text)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def _subject_mappable(result: Any) -> bool:
+    try:
+        subject = parcel_map.load_features(result)[0]
+    except ValueError:
+        return False
+    if not isinstance(subject, dict) or "geometry" not in subject:
+        return False
+    properties = subject.get("properties")
+    path = properties.get("path") if isinstance(properties, dict) else None
+    return path is None or (isinstance(path, str) and path.startswith("/us/"))
+
+
 def _address_map(
     args: dict[str, Any], sent: list[int], saved: list[Path], notes: list[str]
 ) -> None:
@@ -112,6 +157,9 @@ def _address_map(
     for target in targets:
         if not target.parent.is_dir():
             raise ValueError("Output directory does not exist")
+    for target in targets:
+        if target.is_dir():
+            raise ValueError(f"{target} is a directory")
     for target in targets:
         if not replace and os.path.lexists(target):
             raise ValueError(f"{target} exists; pass --replace to overwrite it")
@@ -131,14 +179,15 @@ def _address_map(
         try:
             result = client.address(args["address"], **options)
             body = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
-            with open(response_path, "w" if replace else "x", encoding="utf-8") as handle:
-                handle.write(body)
+            _save_json(response_path, body, replace=replace)
             saved.append(response_path)
             if args["neighbours"]:
                 point = _subject_point(result)
                 if point is None:
                     if parcel_map.load_features(result):
                         notes.append("neighbours skipped: subject has no coordinates")
+                elif not _subject_mappable(result):
+                    notes.append("neighbours skipped: subject is not mappable")
                 else:
                     try:
                         around = client.point(
@@ -160,9 +209,7 @@ def _address_map(
                         text = (
                             json.dumps(around, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
                         )
-                        mode = "w" if replace else "x"
-                        with open(neighbours_path, mode, encoding="utf-8") as handle:
-                            handle.write(text)
+                        _save_json(neighbours_path, text, replace=replace)
                         neighbours_file = neighbours_path
                         saved.append(neighbours_path)
         finally:
@@ -319,7 +366,8 @@ def _paged_result(
 def _freshness(args: dict[str, Any], sent: list[int]) -> None:
     county = county_freshness.county_path(args["path"])
     cache_path = Path(args["cache"]) if args["cache"] else county_freshness.default_cache_path()
-    cached = None if args["refresh"] else county_freshness.read_cache(cache_path, args["base_url"])
+    base_url = args["base_url"].rstrip("/") if args["base_url"] else args["base_url"]
+    cached = None if args["refresh"] else county_freshness.read_cache(cache_path, base_url)
     max_age = args["max_age_days"]
     if cached is not None and county_freshness.is_stale(cached[0], max_age):
         print(f"regrid: cached verse is older than {max_age:g} days; refetching", file=sys.stderr)
@@ -335,7 +383,7 @@ def _freshness(args: dict[str, Any], sent: list[int]) -> None:
         retrieved_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         state = "miss"
         try:
-            county_freshness.write_cache(cache_path, retrieved_at, verse, args["base_url"])
+            county_freshness.write_cache(cache_path, retrieved_at, verse, base_url)
         except (OSError, ValueError):
             print("regrid: warning: verse cache not saved", file=sys.stderr)
     try:
@@ -436,7 +484,7 @@ def _parser() -> argparse.ArgumentParser:
     freshness.add_argument("--refresh", action="store_true", help="Ignore the cache and refetch")
     freshness.add_argument(
         "--max-age-days",
-        type=float,
+        type=_max_age_days,
         default=30,
         metavar="N",
         help="Refetch a cache older than N days (default 30)",
