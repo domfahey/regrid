@@ -113,8 +113,9 @@ Never call `/report` (a POST that files a data issue), `/client_token/typeahead`
 `python3 "<skill>/scripts/fields.py" search TEXT` / `explain FIELD` (the catalog marks
 queryability). The CLI check `--validate-fields` applies the same catalog to operators:
 text fields take `eq`, `ne`, `isnull`, `in`, `nin`, `ilike`; numeric and date fields
-take `eq`, `ne`, `isnull`, `in`, `nin`, `between` (two values), `gt`, `gte`, `lt`,
-`lte`, `order` (`ASC` or `DESC`, not with paging); boolean fields only `eq`, `ne`, `isnull`.
+take `eq`, `ne`, `isnull`, `in`, `nin`, `between` (two values, e.g. `[2000,2999]`),
+`gt`, `gte`, `lt`, `lte`, `order` (`ASC` or `DESC`, not with paging);
+boolean fields only `eq`, `ne`, `isnull`.
 The boolean-like text fields `usps_vacancy` and `rdi` also take only `eq`, `ne`, `isnull`.
 Exception: `zoning` additionally allows `between` and `order`.
 Scope with `path` or `geojson`, and run a `return_count` first.

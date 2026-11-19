@@ -188,36 +188,49 @@ def _probe_client() -> object:
     )
 
 
-def _accepts(command: str, key: str, value: object) -> bool:
-    """Ask the real endpoint method whether it accepts one --options key (US country)."""
+def _recorded_allowed(monkeypatch: pytest.MonkeyPatch) -> dict[str, set[str]]:
+    """Call each --options command and record the `allowed` set it hands to _options (US)."""
+    from regrid import endpoints
+
+    seen: list[set[str]] = []
+    real = endpoints._options
+
+    def spy(options: dict[str, object], allowed: set[str]) -> dict[str, object]:
+        seen.append(set(allowed))
+        return real(options, allowed)
+
+    monkeypatch.setattr(endpoints, "_options", spy)
     client = _probe_client()
     point = {"lat": 39.9, "lon": -75.1}
     calls = {
-        "point": lambda o: client.point(**point, **o),  # type: ignore[attr-defined]
-        "area": lambda o: client.area({"type": "Point", "coordinates": [-75.1, 39.9]}, **o),  # type: ignore[attr-defined]
-        "address": lambda o: client.address("1 Main St", **o),  # type: ignore[attr-defined]
-        "apn": lambda o: client.apn("123", **o),  # type: ignore[attr-defined]
-        "owner": lambda o: client.owner("Smith", **o),  # type: ignore[attr-defined]
-        "query": lambda o: client.query({"owner": {"ilike": "smith"}}, **o),  # type: ignore[attr-defined]
-        "parcel": lambda o: client.parcel("00000000-0000-4000-8000-000000000000", **o),  # type: ignore[attr-defined]
-        "parcel-path": lambda o: client.parcel_path("/us/nj/camden/camden", **o),  # type: ignore[attr-defined]
-        "verse": lambda o: client.verse(**o),  # type: ignore[attr-defined]
-        "usage": lambda o: client.usage(**o),  # type: ignore[attr-defined]
-        "schema": lambda o: client.schema("parcel", **o),  # type: ignore[attr-defined]
+        "point": lambda: client.point(**point),  # type: ignore[attr-defined]
+        "area": lambda: client.area({"type": "Point", "coordinates": [-75.1, 39.9]}),  # type: ignore[attr-defined]
+        "address": lambda: client.address("1 Main St"),  # type: ignore[attr-defined]
+        "apn": lambda: client.apn("123"),  # type: ignore[attr-defined]
+        "owner": lambda: client.owner("Smith"),  # type: ignore[attr-defined]
+        "query": lambda: client.query({"owner": {"ilike": "smith"}}),  # type: ignore[attr-defined]
+        "parcel": lambda: client.parcel("00000000-0000-4000-8000-000000000000"),  # type: ignore[attr-defined]
+        "parcel-path": lambda: client.parcel_path("/us/nj/camden/camden"),  # type: ignore[attr-defined]
+        "verse": lambda: client.verse(),  # type: ignore[attr-defined]
+        "usage": lambda: client.usage(),  # type: ignore[attr-defined]
+        "schema": lambda: client.schema("parcel"),  # type: ignore[attr-defined]
     }
-    try:
-        calls[command]({key: value})
-    except (ValueError, TypeError):
-        return False
-    return True
+    recorded: dict[str, set[str]] = {}
+    for command, call in calls.items():
+        seen.clear()
+        call()
+        assert len(seen) == 1, command
+        recorded[command] = seen[0]
+    return recorded
 
 
-# One valid value per key type, so a rejection means "unsupported key", not "bad value".
-_SAMPLE = {"limit": 1, "begin_date": "2024-01-01", "end_date": "2024-01-31"}
-
-
-def _sample(key: str) -> object:
-    return _SAMPLE.get(key, True)
+def _documented() -> dict[str, set[str]]:
+    documented: dict[str, set[str]] = {}
+    for commands, keys, _ in _options_bullets():
+        for command in commands:
+            assert command not in documented, f"{command} appears in two --options bullets"
+            documented[command] = set(keys)
+    return documented
 
 
 def test_options_bullets_are_found() -> None:
@@ -225,38 +238,43 @@ def test_options_bullets_are_found() -> None:
     assert {"point", "parcel", "parcel-path", "verse", "usage", "schema"} <= commands
 
 
-def test_documented_options_keys_are_accepted() -> None:
+def test_documented_options_keys_are_accepted(monkeypatch: pytest.MonkeyPatch) -> None:
     from regrid.endpoints import _parcel_options
 
+    recorded = _recorded_allowed(monkeypatch)
     bad = []
-    for commands, keys, _ in _options_bullets():
-        for command in commands:
-            for key in keys:
-                if not _accepts(command, key, _sample(key)):
-                    bad.append(f"{command} --options {key}")
+    for command, keys in _documented().items():
+        bad += [f"{command} --options {k}" for k in sorted(keys - recorded[command])]
     assert not bad, f"cli.md names keys the code rejects: {bad}"
-    # return_* flags: the doc says "return flags" without listing them; spot-check the set.
-    assert any(k.startswith("return_") for k in _parcel_options("us"))
+    # "return flags" is not listed key by key; every parcel return flag must be accepted.
+    flags = _parcel_options("us")
+    assert any(k.startswith("return_") for k in flags)
+    for commands, _, body in _options_bullets():
+        if "return flags" in body:
+            for command in commands:
+                assert flags <= recorded[command], command
 
 
-def test_documented_options_sets_are_exact_for_verse_usage_schema() -> None:
-    from regrid.endpoints import _USAGE, _parcel_options
+def test_documented_options_sets_are_exact_for_verse_usage_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from regrid.endpoints import _USAGE
 
-    # Every key name the code knows about, probed against the real methods.
-    universe = _parcel_options("us") | _USAGE | {"limit", "path", "premium_only", "return_geometry"}
-    documented = {c: set(k) for cmds, k, _ in _options_bullets() for c in cmds}
+    recorded = _recorded_allowed(monkeypatch)
+    documented = _documented()
     for command in ("verse", "usage", "schema"):
-        accepted = {k for k in universe if _accepts(command, k, _sample(k))}
-        assert documented[command] == accepted, command
-    # Cross-check the usage set against the code constant, not just the probe.
+        assert documented[command] == recorded[command], command
+    # Cross-check the usage set against the code constant, not just the recorder.
     assert documented["usage"] == set(_USAGE)
 
 
-def test_parcel_commands_reject_limit_and_doc_says_so() -> None:
+def test_parcel_commands_reject_limit_and_doc_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
+    recorded = _recorded_allowed(monkeypatch)
     for command in ("parcel", "parcel-path"):
-        assert not _accepts(command, "limit", 1)
+        assert "limit" not in recorded[command]
+        assert "return_stacked" in recorded[command]  # positive control: probe reached _options
     for command in ("point", "area", "address", "apn", "owner", "query"):
-        assert _accepts(command, "limit", 1)
+        assert "limit" in recorded[command]
     for commands, keys, body in _options_bullets():
         if "parcel" in commands:
             assert "limit" not in keys

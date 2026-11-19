@@ -16,7 +16,7 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 - Docs: `references/cli.md` covers the remaining CLI flags (global `--timeout`, `--base-url`, `--tiles-base-url`, `--country`, `area --method`, `query --validate-fields` and `--allow-unknown-fields`, `address-map --path`, `--save-response` and `--retrieved-at`, tile `--format`, `--retina` and `--metadata`, `usage`/`schema --options`, `@file` values).
 - Docs: `references/mcp-tools.md` adds recipes for `/parcels/query` operators, `/parcels/area` geometry, `/parcels/{ll_uuid}`, `/usage/detailed` dates and `/schemas` `premium_only`; POST geometry search on `/parcels/point` and `/parcels/area` for geometry too large for a URL; and the `return_field_labels`, `return_custom`, `return_custom_id` and `return_stacked` response options.
 - CLI: `address`, `apn`, `owner`, `parcel`, `parcel-path`, `typeahead`, `client-token-typeahead`, `verse`, `usage` and `tilejson` now have descriptive `--help` text instead of their own name.
-- Skill: `SKILL.md` is reworded to about 900 words (from 949) with the same rules, leaving room under the 950-word limit. `references/mcp-tools.md` folds the duplicate query-operator sentence into the query recipe.
+- Skill: `SKILL.md` is reworded to about 910 words (from 949) with the same rules, leaving room under the 950-word limit. `references/mcp-tools.md` folds the duplicate query-operator sentence into the query recipe.
 
 ## [SDK 0.4.2][sdk-v0.4.2] and [Regrid Research 0.9.2][regrid-research-v0.9.2] - 2026-11-19
 

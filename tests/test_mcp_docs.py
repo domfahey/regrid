@@ -13,6 +13,8 @@ DOC = (REFS / "mcp-tools.md").read_text(encoding="utf-8")
 ENDPOINTS = set(json.loads((REFS / "endpoints.json").read_text(encoding="utf-8"))["endpoints"])
 FORBIDDEN = {"/report", "/client_token/typeahead"}
 BACKTICKED = re.compile(r"`(/[^`\s]*)`")
+# Slash-prefixed tokens in the doc that are path shapes, not endpoints.
+NON_ENDPOINT_FORMS = {"/", "/{country}/...", "/<section>/<slug>", "/ca/...", "/us/nj/camden"}
 
 
 def _choosing_table_paths() -> set[str]:
@@ -35,11 +37,7 @@ def test_choosing_table_matches_endpoints_json() -> None:
 
 
 def test_every_documented_path_is_known_or_forbidden() -> None:
-    mentioned = {
-        p
-        for p in BACKTICKED.findall(DOC)
-        if p.startswith(("/parcels", "/schemas", "/usage", "/verse", "/report", "/client_token"))
-    }
+    mentioned = set(BACKTICKED.findall(DOC)) - NON_ENDPOINT_FORMS
     assert mentioned
     for path in mentioned:
         if path.endswith("/*"):  # wildcard shorthand such as `/schemas/*`
