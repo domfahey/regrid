@@ -485,7 +485,7 @@
   {
    "id": "geometry_absent",
    "user_request": "Show that parcel on a map",
-   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Paid datasets are not authorized. Calls in tool_history have already happened. The helper will be run on ./RESPONSE.json, saved verbatim from an address lookup earlier in this task. In that response the feature has no geometry field at all. If you run the helper, the host returns: exit status 1, stderr \"map.py: error: response omits geometry; boundaries were not returned\". Treat that as the observed outcome of a helper command you propose, not as something you may fabricate.",
+   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Paid datasets are not authorized. Calls in tool_history have already happened. The helper will be run on ./RESPONSE.json, saved verbatim from an address lookup earlier in this task. In that response the feature has no geometry field at all. If you run the helper, the host returns: exit status 1, stderr \"error: Parcel: response omits geometry; it was requested without boundaries\". Treat that as the observed outcome of a helper command you propose, not as something you may fabricate.",
    "us_only": true,
    "available_tools": [
     {

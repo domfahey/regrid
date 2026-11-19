@@ -112,14 +112,20 @@ line leaves the attempt uncertain and is never retried. A cache hit reports 0.
   `reserve_attempt(doc, [], 0, kind="diagnostic")`, then complete with the actual
   outcome: `complete_attempt(doc, attempt_id, "success", 0)` or `"error"` with 0 when
   it failed, or leave it uncertain when the count or outcome is unknown.
-- `/parcels/path`: `kind="lookup"` for the input, record_limit 1.
+- `/parcels/path`: `kind="lookup"` for the input, record_limit 1. When the input is already
+  resolved (a refresh, or a path lookup after typeahead), reserve with
+  `authorized_retry=True`; the user's refresh request is the authorization.
 - Record lookups: reserve with the input ID and `record_limit` equal to the page limit.
 - Neighbours: see [neighbour requests](#neighbour-requests).
 
 Paged searches: each page is one attempt with `record_limit` equal to that page's
 requested limit (three pages, three attempts; the CLI prints `regrid: up to K requests for N records`,
-so reserve K attempts). Paging positions are not saved in checkpoints; a resumed
-open-ended search needs fresh authorization before it pages again.
+so reserve K attempts). The first page reserves normally; every later page reuses the same
+input ID, so reserve it with `authorized_retry=True`. Later pages request the remaining
+count plus one, so the workflow needs at least K requests and N + (K - 1) records
+remaining. If it cannot cover that, refuse to page and report the shortfall. Paging
+positions are not saved in checkpoints; a resumed open-ended search needs fresh
+authorization before it pages again.
 
 ## Neighbour requests
 
@@ -167,7 +173,7 @@ and retain the reservation. Do not transition a still-running request or infer
 zero consumption from a crash. These helper calls neither retry nor save a file.
 
 An explicit refresh of a saved result uses `/parcels/path` with the saved `path`:
-one request, one record. If the saved result has no `path`, stop and ask;
+one request, one record, reserved with `authorized_retry=True` because the input is resolved. If the saved result has no `path`, stop and ask;
 never fall back to an unscoped search.
 
 Proceed only with genuinely `not_attempted` inputs not covered by unresolved

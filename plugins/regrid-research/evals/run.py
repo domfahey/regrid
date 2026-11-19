@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -31,8 +32,10 @@ def _strings(value: object):
 
 
 def _is_canadian_route(arguments: dict) -> bool:
-    """True for path-like values starting /ca/; /us/ca/... (California) is fine."""
-    return any(text.strip().lower().startswith(("/ca/", "ca/")) for text in _strings(arguments))
+    """True for values with a /ca/ path segment (also inside URLs); /us/ca/ is California."""
+    return any(
+        re.search(r"(?<!/us)/ca/", text.strip().lower()) is not None for text in _strings(arguments)
+    )
 
 
 def load_cases(suite: str = "research") -> list[dict]:
