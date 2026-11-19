@@ -18,6 +18,7 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ### Added
 
+- Tests: `make e2e` now runs every CLI subcommand end to end (subprocess or SDK over real local TLS against a fake Regrid server in `tests/e2e_support.py`): parcel searches incl. POST and `--max-records` paging, `TypedRegridClient`, `address-map`, `map`, `export`, `fields`, `freshness` caching, `schema`, `usage`, `verse`, tiles, `grid`, `report` and `client-token-typeahead` (local server only), plus redirect, error, timeout and missing-token safety. `tests/test_e2e_inventory.py` (in `make check`) fails if a subcommand has no e2e test.
 - Tests: `tests/test_cli_docs.py` now fails unless `references/cli.md` shows every CLI subcommand as code (`regrid <cmd>` or a backtick before it) and every long option on one line that is word-bounded with that code subcommand (global options need only the flag). It checks presence, not accuracy.
 - Tests: `tests/test_cli_docs.py` also checks the per-command `--options` keys listed in `references/cli.md` against the keys the client accepts (exact sets for `verse`, `usage` and `schema`; `parcel` and `parcel-path` reject `limit`). New `tests/test_mcp_docs.py` checks that the endpoint table in `references/mcp-tools.md` matches `references/endpoints.json` and that every API path it names is known or explicitly forbidden.
 
