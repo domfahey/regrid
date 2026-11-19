@@ -163,3 +163,12 @@ def test_is_stale():
     assert freshness.is_stale("garbage", 30, now)
     assert not freshness.is_stale("2026-10-19T00:00:00Z", 60, now)
     assert freshness.is_stale("2026-10-19T00:00:00", 30, now) is True  # naive treated as UTC
+
+
+@pytest.mark.parametrize("age", [float("inf"), float("nan"), 1e18, -1e18])
+def test_is_stale_rejects_unusable_max_age(age):
+    from datetime import datetime, timezone
+
+    now = datetime(2026, 11, 19, tzinfo=timezone.utc)
+    with pytest.raises(ValueError, match="max_age_days"):
+        freshness.is_stale("2026-10-19T00:00:00Z", age, now)
