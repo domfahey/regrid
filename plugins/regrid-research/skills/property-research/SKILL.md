@@ -26,6 +26,9 @@ Load supporting resources only for the relevant task:
 - Multiple inputs, shared budgets, or requested checkpoints: [batch and resume](references/batch.md).
 - Map or boundary requested: [map guide](references/map.md). The
   `/regrid-research:address-map` command runs this flow for one address.
+  Neighbouring parcels only when asked: same guide.
+- County data-pull dates (Claude Code with the CLI): [CLI guide](references/cli.md).
+- Ambiguous or mistyped address: suggestions flow in the [tool guide](references/mcp-tools.md).
 - Field meaning: run `scripts/fields.py explain FIELD`; only fields it lacks justify a
   `/schemas/*` request.
 - Zoning, enhanced ownership, matched buildings or addresses requested: [premium datasets](references/premium.md).

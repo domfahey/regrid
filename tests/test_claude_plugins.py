@@ -151,7 +151,7 @@ def test_command_is_bounded_and_links_map_guide():
     text = (PLUGIN / "commands/address-map.md").read_text()
     assert text.startswith("---\n") and "argument-hint:" in text
     assert "one request" in text and "references/map.md" in text
-    assert "neighbour" not in text.lower()
+    assert "neighbour" in text.lower() and "up to 25 records" in text
     assert "limit=1" in text and "US" in text
     assert "map the single returned parcel" in text and "token" in text
     assert "--all-candidates" not in text
@@ -218,3 +218,28 @@ def test_new_endpoints_documented():
 def test_refresh_rule_never_unscoped():
     batch = (SKILL_ROOT / "references/batch.md").read_text()
     assert "/parcels/path" in batch and "never fall back to an unscoped search" in batch
+
+
+def test_cli_freshness_neighbours_and_suggestions_guidance():
+    refs = SKILL_ROOT / "references"
+    cli = (refs / "cli.md").read_text()
+    assert "requests made" in cli and "record_limit" in cli and "ll_last_refresh" in cli
+    assert "cli.md" in (SKILL_ROOT / "SKILL.md").read_text()
+    map_guide = (refs / "map.md").read_text()
+    for text in ("radius=100", "limit=25", "up to 25 records", "--neighbours"):
+        assert text in map_guide
+    tools = (refs / "mcp-tools.md").read_text()
+    assert "/parcels/typeahead" in tools and "never retried" in tools
+    assert "requests made" in (refs / "batch.md").read_text()
+
+
+def test_neighbours_and_suggestions_are_ledger_accounted():
+    refs = SKILL_ROOT / "references"
+    for text in ((refs / "map.md").read_text(), (PLUGIN / "commands/address-map.md").read_text()):
+        assert "record_limit 25" in text and "uncertain" in text
+        assert "authorized_retry=True" in text and "no workflow ledger" in text
+    batch = (refs / "batch.md").read_text()
+    assert "## CLI and suggestion requests" in batch
+    assert "typeahead" in batch and "record_limit 1" in batch
+    for line in (refs / "mcp-tools.md").read_text().splitlines():
+        assert len(line) <= 100 or line.startswith("|")

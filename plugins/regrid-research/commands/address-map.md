@@ -20,6 +20,13 @@ a non-US address, follow the skill's scope rule and stop.
 6. Present the page as `references/map.md` describes: the absolute path in Claude Code,
    or the interactive page in the Claude apps.
 
+With neighbours: only if the user asked. State "one request, up to 25 records", then
+follow the neighbours section of `references/map.md` (one extra `/parcels/point`
+request) and render with `--neighbours`. With no workflow ledger, no ledger entry is
+needed. With one, reserve a lookup attempt for the subject (`authorized_retry=True`,
+record_limit 25) if 25 records remain, complete it with the returned count, and leave it
+uncertain if the outcome is unknown; if the budget is short, do not call.
+
 Never put the Regrid token in chat, command arguments, the saved response, or the page.
 
 If no address was given, ask for one.

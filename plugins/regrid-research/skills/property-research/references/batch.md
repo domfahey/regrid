@@ -3,6 +3,7 @@
 ## Contents
 
 - [One allowance across stages](#one-allowance-across-stages)
+- [CLI and suggestion requests](#cli-and-suggestion-requests)
 - [Resume without duplicate retrieval](#resume-without-duplicate-retrieval)
 - [Optional offline helper](#optional-offline-helper)
 
@@ -77,6 +78,19 @@ record and preserves the original uncertain attempt and evidence. It replaces
 the reservation with the proven count, preserves attempted-request consumption,
 and does not retry the request or silently change input results. Preserve an
 overshoot and stop if the proven count exceeds the allowance.
+
+## CLI and suggestion requests
+
+Every request needs a reserved attempt, including CLI and suggestion calls. The CLI is
+ledger-unaware: reserve before each command that can make a request, then complete from
+the stderr line `regrid: requests made: N`; an unreadable line leaves it uncertain.
+
+- `regrid freshness`: `kind="diagnostic"`, record_limit 0.
+- MCP `/parcels/typeahead`: returns no parcel records, so `kind="diagnostic"`,
+  record_limit 0.
+- `/parcels/path`: `kind="lookup"` for the input, record_limit 1.
+- Neighbours: `kind="lookup"` with `authorized_retry=True`, record_limit 25; see
+  [map guide](map.md).
 
 ## Resume without duplicate retrieval
 
