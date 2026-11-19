@@ -2,6 +2,8 @@ import pytest
 
 from regrid import doctor
 
+FOOTER = "Local check only; API authentication was not tested"
+
 
 @pytest.mark.parametrize("exists", [False, True])
 @pytest.mark.parametrize(
@@ -17,7 +19,12 @@ def test_configuration_checks(tmp_path, monkeypatch, capsys, exists, token):
         monkeypatch.setenv("REGRID_TOKEN", token)
     assert doctor.main() == (0 if exists and token == "secret-value" else 1)
     output = capsys.readouterr().out
-    assert ("PASS .env exists" in output) == exists
-    assert ("PASS REGRID_TOKEN configured" in output) == (token == "secret-value")
+    assert output.splitlines() == [
+        "PASS .env exists" if exists else "FAIL .env missing",
+        "PASS REGRID_TOKEN configured"
+        if token == "secret-value"
+        else "FAIL REGRID_TOKEN missing or placeholder",
+        FOOTER,
+    ]
     assert "secret-value" not in output
     assert "replace_with_your_regrid_api_token" not in output

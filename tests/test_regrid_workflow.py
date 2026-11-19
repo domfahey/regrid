@@ -50,7 +50,7 @@ def test_stable_input_ids_and_duplicate_id_rejection():
     assert [r["input_id"] for r in first["results"]] == ["input-000001", "input-000002"]
     assert state() == first
     first["results"][1]["input_id"] = first["results"][0]["input_id"]
-    with pytest.raises(ValueError, match="input"):
+    with pytest.raises(ValueError, match=r"results\[1\]\.input_id: Invalid or duplicate input ID"):
         workflow.validate(first)
 
 
@@ -60,7 +60,7 @@ def test_shared_budget_reserves_uncertain_records_and_does_not_mutate_on_failure
     assert doc["budget"]["uncertain_records"] == 2
     uncertain = workflow.complete_attempt(doc, "attempt-000001", "uncertain")
     before = deepcopy(uncertain)
-    with pytest.raises(ValueError, match="budget"):
+    with pytest.raises(ValueError, match="Record budget exhausted"):
         workflow.reserve_attempt(uncertain, ["input-000002"], 1)
     assert uncertain == before
     assert workflow.pending_input_ids(uncertain) == ["input-000002"]
@@ -94,13 +94,13 @@ def test_supplied_evidence_and_duplicate_input_reuse_need_no_attempt():
 
 def test_reuse_rejects_different_requested_property():
     doc = workflow.set_result(state(), success(state()["results"][0]))
-    with pytest.raises(ValueError, match="requested"):
+    with pytest.raises(ValueError, match="Cannot reuse different requested identity"):
         workflow.reuse_result(doc, "input-000001", "input-000002")
 
 
 def test_checkpoint_requires_request_and_never_overwrites_implicitly(tmp_path):
     path = tmp_path / "checkpoint.json"
-    with pytest.raises(ValueError, match="requested"):
+    with pytest.raises(ValueError, match="Checkpoint must be explicitly requested"):
         workflow.save_checkpoint(state(), path)
     assert not path.exists()
     workflow.save_checkpoint(state(), path, requested=True)
@@ -128,11 +128,11 @@ def test_invalid_checkpoint_does_not_replace_existing_file(tmp_path):
 def test_error_is_not_unmatched_and_success_requires_evidence():
     doc = state()
     doc["results"][0].update(lookup_status="error", match_status="unmatched")
-    with pytest.raises(ValueError, match="status"):
+    with pytest.raises(ValueError, match="Inconsistent status pair"):
         workflow.validate(doc)
     doc = state()
     doc["results"][0].update(lookup_status="success", match_status="confirmed")
-    with pytest.raises(ValueError, match="candidate"):
+    with pytest.raises(ValueError, match="Match requires candidate evidence"):
         workflow.validate(doc)
 
 
@@ -140,16 +140,16 @@ def test_record_overrun_is_retained_and_blocks_further_requests():
     doc = workflow.reserve_attempt(state(), ["input-000001"], 1)
     doc = workflow.complete_attempt(doc, "attempt-000001", "success", 3)
     assert doc["budget"]["returned_records"] == 3
-    with pytest.raises(ValueError, match="budget"):
+    with pytest.raises(ValueError, match="Record budget exhausted"):
         workflow.reserve_attempt(doc, ["input-000002"], 1)
 
 
 def test_request_cannot_be_repeated_or_settled_twice():
     doc = workflow.reserve_attempt(state(), ["input-000001"], 1)
-    with pytest.raises(ValueError, match="attempted"):
+    with pytest.raises(ValueError, match="already attempted or resolved"):
         workflow.reserve_attempt(doc, ["input-000001"], 1)
     doc = workflow.complete_attempt(doc, "attempt-000001", "error", 0)
-    with pytest.raises(ValueError, match="pending"):
+    with pytest.raises(ValueError, match="Attempt is not pending"):
         workflow.complete_attempt(doc, "attempt-000001", "success", 1)
 
 
@@ -168,27 +168,33 @@ def test_caller_ids_survive_reordering_and_budget_tightening_keeps_consumption()
     narrowed = workflow.tighten_budget(doc, max_requests=1, max_records=0)
     assert narrowed["budget"]["attempted_requests"] == 1
     assert narrowed["budget"]["returned_records"] == 1
-    with pytest.raises(ValueError, match="budget"):
+    with pytest.raises(ValueError, match="Request budget exhausted"):
         workflow.reserve_attempt(narrowed, ["sheet-row-8"], 1)
-    with pytest.raises(ValueError, match="increase"):
+    with pytest.raises(ValueError, match="Cannot increase caller budget"):
         workflow.tighten_budget(narrowed, max_requests=4, max_records=4)
 
 
 @pytest.mark.parametrize(
-    "mutate",
+    ("mutate", "message"),
     [
-        lambda d: d.update(extra=True),
-        lambda d: d["results"][0].pop("error"),
-        lambda d: d["results"][0].update(extra=True),
-        lambda d: d["results"][0].update(missing_fields=["owner", "owner"]),
-        lambda d: d["results"][0].update(candidates=success(d["results"][0])["candidates"]),
-        lambda d: d["budget"].update(max_requests=True),
+        (lambda d: d.update(extra=True), r"^\$: Invalid handoff fields"),
+        (lambda d: d["results"][0].pop("error"), r"results\[0\]: Invalid result fields"),
+        (lambda d: d["results"][0].update(extra=True), r"results\[0\]: Invalid result fields"),
+        (
+            lambda d: d["results"][0].update(missing_fields=["owner", "owner"]),
+            r"results\[0\]: Duplicate missing fields",
+        ),
+        (
+            lambda d: d["results"][0].update(candidates=success(d["results"][0])["candidates"]),
+            r"results\[0\]: Not-attempted status cannot contain candidate evidence",
+        ),
+        (lambda d: d["budget"].update(max_requests=True), r"budget: Invalid budget counters"),
     ],
 )
-def test_malformed_handoff_rejected(mutate):
+def test_malformed_handoff_rejected(mutate, message):
     doc = state()
     mutate(doc)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=message):
         workflow.validate(doc)
 
 
@@ -197,7 +203,7 @@ def test_conflicting_evidence_cannot_be_silently_discarded():
     conflicting = deepcopy(doc["results"][0])
     conflicting["candidates"][0]["facts"]["recorded_owner"] = "Another LLC"
     conflicting["candidates"][0]["provenance"]["evidence_id"] = "e-2"
-    with pytest.raises(ValueError, match="evidence"):
+    with pytest.raises(ValueError, match="Cannot discard existing candidate evidence"):
         workflow.set_result(doc, conflicting)
     conflicting["candidates"].extend(doc["results"][0]["candidates"])
     retained = workflow.set_result(doc, conflicting)
@@ -211,14 +217,14 @@ def test_authorized_retry_preserves_old_attempt_and_respects_shared_budget():
     assert len(retried["attempts"]) == 2
     assert retried["attempts"][0]["state"] == "uncertain"
     assert retried["budget"]["uncertain_records"] == 2
-    with pytest.raises(ValueError, match="budget"):
+    with pytest.raises(ValueError, match="Request budget exhausted"):
         workflow.reserve_attempt(retried, ["input-000001"], 1, authorized_retry=True)
 
 
 @pytest.mark.parametrize("requested", ["false", 1])
 def test_checkpoint_requested_flag_must_be_exactly_true(tmp_path, requested):
     path = tmp_path / "checkpoint.json"
-    with pytest.raises(ValueError, match="requested"):
+    with pytest.raises(ValueError, match="Checkpoint must be explicitly requested"):
         workflow.save_checkpoint(state(), path, requested=requested)
     assert not path.exists()
     assert list(tmp_path.iterdir()) == []
@@ -307,12 +313,12 @@ def test_same_source_observation_cannot_have_conflicting_snapshots(across_rows):
     if across_rows:
         row = success(doc["results"][1])
         row["candidates"] = [conflicting]
-        with pytest.raises(ValueError, match="observation"):
+        with pytest.raises(ValueError, match="Conflicting snapshots share one source observation"):
             workflow.set_result(doc, row)
     else:
         row = deepcopy(doc["results"][0])
         row["candidates"].append(conflicting)
-        with pytest.raises(ValueError, match="observation"):
+        with pytest.raises(ValueError, match="Conflicting snapshots share one source observation"):
             workflow.set_result(doc, row)
 
 

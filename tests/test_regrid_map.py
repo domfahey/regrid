@@ -55,33 +55,52 @@ def test_hole_and_multipolygon_area():
 
 
 @pytest.mark.parametrize(
-    "geometry",
+    ("geometry", "reason"),
     [
-        {"type": "Point", "coordinates": [-75.03, 39.9]},
-        {
-            "type": "Polygon",
-            "coordinates": [[[-75.03, 39.9], [-75.029, 39.9], [-75.029, 39.901], [-75.03, 39.901]]],
-        },
-        {"type": "Polygon", "coordinates": [[[-75.03, 39.9], [-75.029, 39.9], [-75.03, 39.9]]]},
-        {
-            "type": "Polygon",
-            "coordinates": [[[-75.03, 39.9], ["nan", 39.9], [-75.029, 39.901], [-75.03, 39.9]]],
-        },
-        {
-            "type": "Polygon",
-            "coordinates": [
-                [[-75.03, 39.9], [float("inf"), 39.9], [-75.029, 39.901], [-75.03, 39.9]]
-            ],
-        },
-        {
-            "type": "Polygon",
-            "coordinates": [[[-75.03, 39.9], ["-75.029", 39.9], [-75.029, 39.901], [-75.03, 39.9]]],
-        },
-        {"type": "Polygon", "coordinates": None},
+        ({"type": "Point", "coordinates": [-75.03, 39.9]}, "^Unsupported geometry type$"),
+        (
+            {
+                "type": "Polygon",
+                "coordinates": [
+                    [[-75.03, 39.9], [-75.029, 39.9], [-75.029, 39.901], [-75.03, 39.901]]
+                ],
+            },
+            "^Polygon rings must be closed$",
+        ),
+        (
+            {"type": "Polygon", "coordinates": [[[-75.03, 39.9], [-75.029, 39.9], [-75.03, 39.9]]]},
+            "^Polygon rings need at least four positions$",
+        ),
+        (
+            {
+                "type": "Polygon",
+                "coordinates": [[[-75.03, 39.9], ["nan", 39.9], [-75.029, 39.901], [-75.03, 39.9]]],
+            },
+            "^Geometry coordinates must be finite numbers$",
+        ),
+        (
+            {
+                "type": "Polygon",
+                "coordinates": [
+                    [[-75.03, 39.9], [float("inf"), 39.9], [-75.029, 39.901], [-75.03, 39.9]]
+                ],
+            },
+            "^Geometry coordinates must be finite numbers$",
+        ),
+        (
+            {
+                "type": "Polygon",
+                "coordinates": [
+                    [[-75.03, 39.9], ["-75.029", 39.9], [-75.029, 39.901], [-75.03, 39.9]]
+                ],
+            },
+            "^Geometry coordinates must be finite numbers$",
+        ),
+        ({"type": "Polygon", "coordinates": None}, "^Invalid geometry coordinates$"),
     ],
 )
-def test_validate_geometry_rejects_malformed(geometry):
-    with pytest.raises(MapError):
+def test_validate_geometry_rejects_malformed(geometry, reason):
+    with pytest.raises(MapError, match=reason):
         parcel_map.validate_geometry(geometry)
 
 
@@ -129,6 +148,9 @@ def test_area_check_flags_mismatch():
     corrupted["coordinates"][0][2][1] = 39.911  # ring stays closed: only index 2 changes
     result = parcel_map.area_check(feature(corrupted, ll_gissqft=expected_sqft()))
     assert result["status"] == "mismatch"
+    assert result["recorded_sqft"] == pytest.approx(expected_sqft())
+    assert result["computed_sqft"] != pytest.approx(expected_sqft(), rel=0.01)
+    assert result["ratio"] == pytest.approx(result["computed_sqft"] / expected_sqft())
 
 
 def test_oversized_integer_coordinates_raise_map_error():
@@ -151,8 +173,10 @@ def test_render_writes_page_and_summary(tmp_path):
     response = write_response(tmp_path / "r.json", good_feature(owner="Example LLC"))
     output = tmp_path / "map.html"
     summary = parcel_map.render(response, output)
-    assert summary["features"] == 1
-    assert summary["area_checks"][0]["status"] == "ok"
+    assert summary["output"] == str(output)
+    assert summary["features"] == 1 and summary["neighbours"] == 0
+    assert [c["status"] for c in summary["area_checks"]] == ["ok"]
+    assert summary["area_checks"][0]["ratio"] == pytest.approx(1.0)
     assert summary["warnings"] == []
     html = output.read_text(encoding="utf-8")
     for needle in ("leaflet@1.9.4", 'integrity="sha256-', "World_Imagery", "Esri", "Example LLC"):
@@ -184,8 +208,9 @@ def test_multiple_features_require_explicit_choice(tmp_path):
     response = write_response(tmp_path / "r.json", good_feature(), second)
     with pytest.raises(MapError, match="--feature or --all-candidates"):
         parcel_map.render(response, tmp_path / "a.html")
-    with pytest.raises(MapError):
+    with pytest.raises(MapError, match="^Feature index must be between 0 and 1$"):
         parcel_map.render(response, tmp_path / "b.html", index=5)
+    assert not (tmp_path / "a.html").exists() and not (tmp_path / "b.html").exists()
     single = parcel_map.render(response, tmp_path / "c.html", index=1)
     assert single["features"] == 1
     assert "Candidate 2" not in (tmp_path / "c.html").read_text(encoding="utf-8")
@@ -219,7 +244,12 @@ def test_mismatch_adds_warning(tmp_path):
     response = write_response(tmp_path / "r.json", good_feature(ll_gissqft=1.0))
     output = tmp_path / "map.html"
     summary = parcel_map.render(response, output)
-    assert summary["warnings"]
+    (warning,) = summary["warnings"]
+    assert warning.startswith(
+        "Parcel: area mismatch: boundary area differs from the recorded parcel area ("
+    )
+    assert warning.endswith(" vs 1 sq ft)")
+    assert [c["status"] for c in summary["area_checks"]] == ["mismatch"]
     html = output.read_text(encoding="utf-8")
     assert summary["warnings"][0] in html
 
@@ -244,8 +274,9 @@ def test_cli_render_and_errors(tmp_path):
         capture_output=True,
         text=True,
     )
-    assert ok.returncode == 0
+    assert ok.returncode == 0 and ok.stderr == ""
     assert json.loads(ok.stdout)["features"] == 1
+    assert output.exists()
 
     broken = tmp_path / "broken.json"
     broken.write_text("{not json")
@@ -256,8 +287,10 @@ def test_cli_render_and_errors(tmp_path):
     )
     assert bad.returncode == 1
     assert bad.stdout == ""
-    assert len(bad.stderr.strip().splitlines()) == 1
+    assert bad.stderr.startswith("error: ") and "not valid JSON" in bad.stderr
+    assert bad.stderr.count("\n") == 1
     assert "Traceback" not in bad.stderr
+    assert not (tmp_path / "x.html").exists()
 
 
 def test_footer_does_not_overlap_map_attribution(tmp_path):
@@ -360,7 +393,10 @@ def test_malformed_properties_do_not_traceback(tmp_path, properties):
         capture_output=True,
         text=True,
     )
-    assert "Traceback" not in result.stderr
+    # Malformed properties degrade to "not in record" rather than failing or crashing.
+    assert result.returncode == 0 and result.stderr == ""
+    assert json.loads(result.stdout)["area_checks"][0]["status"] == "unavailable"
+    assert "not in record" in (tmp_path / "m.html").read_text(encoding="utf-8")
 
 
 def test_missing_fact_renders_not_in_record(tmp_path):
@@ -441,21 +477,25 @@ def test_no_replace_never_overwrites_a_file_created_after_the_check(tmp_path, mo
 def test_main_prints_summary_json(tmp_path, capsys):
     response = write_response(tmp_path / "r.json", good_feature())
     assert parcel_map.main(["render", str(response), str(tmp_path / "m.html")]) == 0
-    assert json.loads(capsys.readouterr().out)["features"] == 1
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["output"] == str(tmp_path / "m.html")
+    assert captured.err == "" and (tmp_path / "m.html").exists()
 
 
 def test_main_reports_map_error_on_one_line(tmp_path, capsys):
     response = write_response(tmp_path / "r.json", good_feature(), good_feature())
     assert parcel_map.main(["render", str(response), str(tmp_path / "m.html")]) == 1
     err = capsys.readouterr().err
-    assert err.startswith("error: ") and err.count("\n") == 1
+    assert err.startswith("error: Response has several parcels") and err.count("\n") == 1
+    assert not (tmp_path / "m.html").exists()
 
 
 def test_main_reports_os_error(tmp_path, capsys):
-    assert (
-        parcel_map.main(["render", str(tmp_path / "missing.json"), str(tmp_path / "m.html")]) == 1
-    )
-    assert capsys.readouterr().err.startswith("error: ")
+    missing = tmp_path / "missing.json"
+    assert parcel_map.main(["render", str(missing), str(tmp_path / "m.html")]) == 1
+    captured = capsys.readouterr()
+    assert captured.err == f"error: [Errno 2] No such file or directory: {str(missing)!r}\n"
+    assert captured.out == "" and not (tmp_path / "m.html").exists()
 
 
 def _render_doc(tmp_path, document):
@@ -483,8 +523,14 @@ def test_render_rejects_invalid_json_and_non_object_features(tmp_path):
     ],
 )
 def test_render_rejects_bad_geometry(tmp_path, geometry):
-    with pytest.raises(MapError):
+    with pytest.raises(
+        MapError,
+        match="^(Unsupported geometry type|Invalid geometry coordinates"
+        "|Geometry positions must start with longitude and latitude"
+        "|Geometry lies outside the United States)$",
+    ):
         _render_doc(tmp_path, {"parcels": {"features": [feature(geometry)]}})
+    assert not (tmp_path / "m.html").exists()
 
 
 def test_render_accepts_numeric_string_area(tmp_path):
@@ -512,6 +558,8 @@ def test_temp_name_collision_is_retried(tmp_path, monkeypatch):
     response = write_response(tmp_path / "r.json", good_feature())
     parcel_map.render(response, tmp_path / "m.html")
     assert (tmp_path / "m.html").exists()
+    # The colliding temp file is left alone and no new temp file is left behind.
+    assert sorted(p.name for p in tmp_path.iterdir()) == [".map-aa.tmp", "m.html", "r.json"]
 
 
 def test_module_runs_as_script(tmp_path):
@@ -600,7 +648,11 @@ def test_non_feature_neighbour_entries_and_bad_file(tmp_path):
     near = tmp_path / "n.json"
     near.write_text(json.dumps({"parcels": {"features": ["x", None]}}), encoding="utf-8")
     summary = parcel_map.render(response, tmp_path / "m.html", neighbours_path=near)
-    assert summary["neighbours"] == 0 and len(summary["warnings"]) == 2
+    assert summary["neighbours"] == 0
+    assert summary["warnings"] == [
+        "Neighbour 0 skipped: Neighbour is not a parcel feature",
+        "Neighbour 1 skipped: Neighbour is not a parcel feature",
+    ]
     near.write_text("not json", encoding="utf-8")
     summary = parcel_map.render(response, tmp_path / "m2.html", neighbours_path=near)
     assert summary["features"] == 1 and summary["neighbours"] == 0
@@ -772,7 +824,8 @@ def test_export_main_subcommand(tmp_path, capsys):
     assert parcel_map.main(args) == 0
     assert json.loads(capsys.readouterr().out)["features"] == 1
     assert parcel_map.main(["export", str(response)]) == 1
-    assert "Choose --csv and/or --geojson" in capsys.readouterr().err
+    captured = capsys.readouterr()
+    assert captured.err == "error: Choose --csv and/or --geojson\n" and captured.out == ""
 
 
 @pytest.mark.parametrize(

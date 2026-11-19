@@ -38,7 +38,8 @@ def test_choosing_table_matches_endpoints_json() -> None:
 
 def test_every_documented_path_is_known_or_forbidden() -> None:
     mentioned = set(BACKTICKED.findall(DOC)) - NON_ENDPOINT_FORMS
-    assert mentioned
+    assert {"/parcels/address", "/parcels/query", "/verse"} <= mentioned
+    assert {"/report", "/client_token/typeahead"} <= mentioned  # forbidden paths are documented
     for path in mentioned:
         if path.endswith("/*"):  # wildcard shorthand such as `/schemas/*`
             prefix = path[:-1]

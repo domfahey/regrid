@@ -1,5 +1,6 @@
 """Discovery trials remain blinded and filesystem-only."""
 
+import hashlib
 import importlib.util
 import json
 import re
@@ -105,7 +106,11 @@ def test_trace_recording_and_comparison(tmp_path):
     )
     assert skill["observed_models"] == ["claude-sonnet-test-1"]
     assert skill["read_paths"] == ["skills/property-research/SKILL.md"]
-    assert skill["trace"] and skill["trace_sha256"]
+    assert skill["trace"] == [json.loads(trace.read_text())]
+    assert skill["trace_sha256"] == hashlib.sha256(trace.read_bytes()).hexdigest()
+    assert skill["tool_calls"] == [
+        {"name": "Read", "input": {"file_path": "skills/property-research/SKILL.md"}}
+    ]
     assert discovery.compare(skill, baseline)["verdict"] == "not_graded"
     baseline["requested_model"] = "other-model"
     with pytest.raises(ValueError, match="requested_model"):

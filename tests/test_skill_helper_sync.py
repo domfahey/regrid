@@ -67,5 +67,7 @@ def test_cli_check_exit_codes(tmp_path, capsys):
 
 
 def test_offline_helpers_import_nothing_from_regrid():
-    for path in (ROOT / "src/regrid/offline").glob("*.py"):
+    paths = sorted((ROOT / "src/regrid/offline").glob("*.py"))
+    assert {"map.py", "fields.py", "freshness.py"} <= {p.name for p in paths}
+    for path in paths:
         assert not re.search(r"^\s*(from|import)\s+regrid\b|^\s*from\s+\.", path.read_text(), re.M)

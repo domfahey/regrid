@@ -76,19 +76,19 @@ def test_limits_are_strict_and_bounded(client, value, accepted):
         assert len(calls) == 1
         assert calls[0].url.params["limit"] == str(value)
     else:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="^Invalid Regrid request parameters$"):
             sdk.owner("Smith", limit=value)
         assert calls == []
 
 
 @pytest.mark.parametrize("value", [1, "true", [], {}])
 def test_flags_do_not_coerce(value):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="^Invalid Regrid request parameters$"):
         validate_options({"return_geometry": value}, {"return_geometry"})
 
 
 def test_model_rejects_extra_keys_even_if_they_are_known_on_other_endpoints():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="^Invalid Regrid request parameters$"):
         validate_options({"return_count": True}, {"limit"})
     assert validate_options(
         {"limit": None, "return_parcels": False}, {"limit", "return_parcels"}
@@ -172,8 +172,8 @@ def test_feature_point_and_coordinates_are_validated_without_losing_geometry(cli
 
 def test_known_path_and_dates_require_strings(client):
     sdk, calls = client
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="^Invalid Regrid request parameters$"):
         sdk.address("Main", path=42)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="^Invalid Regrid request parameters$"):
         sdk.usage(begin_date=20261027)
     assert not calls

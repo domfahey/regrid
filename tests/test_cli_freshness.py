@@ -64,10 +64,12 @@ def test_freshness_caches_and_reuses(tmp_path, verse_server, capsys):
 def test_refresh_forces_request(tmp_path, verse_server, capsys):
     cache = tmp_path / "verse.json"
     args = ["freshness", "--path", "/us/nj/camden", "--cache", str(cache)]
-    cli.main(args)
-    cli.main([*args, "--refresh"])
+    assert cli.main(args) == 0
+    first = json.loads(capsys.readouterr().out)
+    assert cli.main([*args, "--refresh"]) == 0
+    second = json.loads(capsys.readouterr().out)
     assert len(verse_server) == 2
-    assert '"cache": "miss"' in capsys.readouterr().out.split("}\n{")[-1]
+    assert first["cache"] == "miss" and second["cache"] == "miss"
 
 
 def test_unknown_county_exits_1_without_retry(tmp_path, verse_server, capsys):
@@ -199,7 +201,10 @@ def test_unparseable_timestamp_is_refetched(tmp_path, verse_server, capsys):
     cache = tmp_path / "verse.json"
     freshness.write_cache(cache, "yesterday", VERSE, DEFAULT_BASE)
     assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", str(cache)]) == 0
-    assert len(verse_server) == 1
+    captured = capsys.readouterr()
+    assert len(verse_server) == 1 and json.loads(captured.out)["cache"] == "miss"
+    assert "requests made: 1" in captured.err
+    assert json.loads(cache.read_text())["retrieved_at"] != "yesterday"
 
 
 def test_different_base_url_is_a_miss(tmp_path, verse_server, capsys):
@@ -214,23 +219,31 @@ def test_cache_without_base_url_is_a_miss(tmp_path, verse_server, capsys):
     cache = tmp_path / "verse.json"
     cache.write_text(json.dumps({"retrieved_at": _aged(1), "response": VERSE}))
     assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", str(cache)]) == 0
-    assert len(verse_server) == 1
+    assert len(verse_server) == 1 and json.loads(capsys.readouterr().out)["cache"] == "miss"
+    assert json.loads(cache.read_text())["base_url"] == DEFAULT_BASE
 
 
 @pytest.mark.parametrize("value", ["inf", "-inf", "nan", "1e10", "-1", "36501", "abc"])
 def test_max_age_days_rejects_unsafe_values(tmp_path, verse_server, capsys, value):
     cache = tmp_path / "verse.json"
-    freshness.write_cache(cache, _aged(1), VERSE, DEFAULT_BASE)
+    stamp = _aged(1)
+    freshness.write_cache(cache, stamp, VERSE, DEFAULT_BASE)
     argv = ["freshness", "--path", "/us/nj/camden", "--cache", str(cache), "--max-age-days", value]
     assert cli.main(argv) == 2
-    assert verse_server == []
+    captured = capsys.readouterr()
+    assert verse_server == [] and captured.out == ""
+    assert "--max-age-days" in captured.err and "secret" not in captured.err
+    assert json.loads(cache.read_text())["retrieved_at"] == stamp
 
 
 @pytest.mark.parametrize("value", ["0", "36500", "0.5"])
-def test_max_age_days_accepts_bounds(tmp_path, verse_server, value):
+def test_max_age_days_accepts_bounds(tmp_path, verse_server, capsys, value):
     cache = tmp_path / "verse.json"
     argv = ["freshness", "--path", "/us/nj/camden", "--cache", str(cache), "--max-age-days", value]
     assert cli.main(argv) == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["last_refresh"] == "2026-09-01"
+    assert len(verse_server) == 1 and "requests made: 1" in captured.err
 
 
 def test_trailing_slash_base_url_shares_cache(tmp_path, verse_server, capsys):

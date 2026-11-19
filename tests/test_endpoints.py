@@ -191,10 +191,6 @@ def test_report_is_post_with_encoded_details(recording_client):
         ("address", ("Main",), {"country": "uk"}),
         ("address", (" ",), {}),
         ("apn", (123,), {}),
-        ("owner", ("abc",), {}),
-        ("owner", ("Smith",), {"country": "ca"}),
-        ("typeahead", ("Main",), {"country": "ca"}),
-        ("parcel", ("../usage",), {}),
         ("point", (40, -105), {"method": "POST"}),
         ("point", (91, -105), {}),
         ("point", (40, -181), {}),
@@ -207,17 +203,43 @@ def test_report_is_post_with_encoded_details(recording_client):
         ("query", ({"bad][field": {"eq": 1}},), {}),
         ("query", ({"field": {"eq]": 1}},), {}),
         ("schema", ("building",), {"premium_only": True}),
-        ("schema", ("missing",), {}),
         ("schema", (), {"premium_only": 1}),
-        ("usage", (), {"country": "ca", "detailed": True}),
         ("usage", (), {"unexpected": True}),
         ("client_token_typeahead", (), {"exp": 0}),
     ],
 )
 def test_invalid_requests_fail_before_transport(recording_client, method, args, options):
     client, requests = recording_client
-    with pytest.raises((ValueError, TypeError)):
+    with pytest.raises(ValueError) as caught:
         getattr(client, method)(*args, **options)
+    # The sanitized message names no input value, only that the request was invalid.
+    assert str(caught.value) == "Invalid Regrid request parameters"
+    assert not requests
+
+
+@pytest.mark.parametrize(
+    ("method", "args", "options", "message"),
+    [
+        ("owner", ("abc",), {}, "owner must contain at least four characters"),
+        ("owner", ("Smith",), {"country": "ca"}, "owner search is only documented for the US"),
+        ("typeahead", ("Main",), {"country": "ca"}, "typeahead is only documented for the US"),
+        ("parcel", ("../usage",), {}, "ll_uuid must be a valid UUID"),
+        ("schema", ("missing",), {}, "Unknown schema name"),
+        (
+            "usage",
+            (),
+            {"country": "ca", "detailed": True},
+            "/ca/usage/detailed is not documented; use usage(detailed=True)",
+        ),
+    ],
+)
+def test_specific_invalid_requests_name_the_problem_before_transport(
+    recording_client, method, args, options, message
+):
+    client, requests = recording_client
+    with pytest.raises(ValueError) as caught:
+        getattr(client, method)(*args, **options)
+    assert str(caught.value) == message
     assert not requests
 
 
@@ -241,11 +263,13 @@ def test_query_validate_fields_accepts_uppercase_us(recording_client):
     client, requests = recording_client
     client.query({"geoid": {"eq": "48113"}}, country="US", validate_fields=True)
     assert len(requests) == 1
+    assert requests[0].url.path == "/api/v2/parcels/query"
+    assert requests[0].url.params["fields[geoid][eq]"] == "48113"
 
 
 def test_query_validate_fields_still_rejects_uppercase_ca(recording_client):
     client, requests = recording_client
-    with pytest.raises(ValueError, match="US queries only"):
+    with pytest.raises(ValueError, match="^The field catalog currently covers US queries only$"):
         client.query({"postcode": {"eq": "R0B 0J0"}}, country="CA", validate_fields=True)
     assert requests == []
 

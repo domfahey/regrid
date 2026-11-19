@@ -17,6 +17,13 @@ for name in ("discovery", "run_discovery_claude"):
     sys.modules[name] = module
     spec.loader.exec_module(module)
 runner = sys.modules["run_discovery_claude"]
+EXPECTED_RUNS = (
+    len(runner.MODELS)
+    * len(
+        sys.modules["discovery"].read_json(sys.modules["discovery"].ROOT / "discovery-cases.json")
+    )
+    * 2  # skill and baseline variants
+)
 
 
 def success_trace():
@@ -60,15 +67,18 @@ def test_suite_uses_restricted_argv_and_records_models(tmp_path, monkeypatch):
     monkeypatch.setattr(runner.subprocess, "run", fake_run)
     monkeypatch.setenv("REGRID_TOKEN", "test-secret-not-forwarded")
     report = runner.run_suite(tmp_path / "results")
-    assert len(calls) == 25
-    assert len(report["runs"]) == 24
+    assert len(calls) == EXPECTED_RUNS + 1  # plus --version
+    assert len(report["runs"]) == EXPECTED_RUNS
     assert all(item["status"] == "completed" for item in report["runs"])
     assert report["runs"][0]["resolved_model_ids"] == ["claude-test-20261028"]
     assert report["runs"][0]["grading_status"] == "not_graded"
 
 
 def test_auth_failure_stops_remaining_runs(tmp_path, monkeypatch):
+    calls = []
+
     def fake_run(command, **kwargs):
+        calls.append(command)
         if command[-1] == "--version":
             return SimpleNamespace(stdout="2.test", returncode=0)
         return SimpleNamespace(
@@ -79,7 +89,10 @@ def test_auth_failure_stops_remaining_runs(tmp_path, monkeypatch):
     report = runner.run_suite(tmp_path / "results")
     assert report["runs"][0]["status"] == "blocked"
     assert report["runs"][0]["resolved_model_ids"] == []
+    assert report["runs"][0]["auth_blocked"] is True
+    assert len(report["runs"]) == EXPECTED_RUNS
     assert all(item["status"] == "not_run" for item in report["runs"][1:])
+    assert len(calls) == 2  # --version plus the single blocked trial; nothing after it runs
 
 
 def auth_phrase_trace():
@@ -127,7 +140,7 @@ def test_suite_continues_after_successful_trial_mentioning_auth_phrases(tmp_path
 
     monkeypatch.setattr(runner.subprocess, "run", fake_run)
     report = runner.run_suite(tmp_path / "results")
-    assert len(report["runs"]) == 24
+    assert len(report["runs"]) == EXPECTED_RUNS
     assert all(item["status"] == "completed" for item in report["runs"])
 
 
@@ -168,10 +181,23 @@ def test_timeout_is_not_success(tmp_path, monkeypatch):
     assert report["helper_execution"] == "unavailable_read_only"
 
 
-@pytest.mark.parametrize("timeout,budget", [(0, 1), (601, 1), (1, 0), (1, float("nan"))])
-def test_invalid_limits(tmp_path, timeout, budget):
-    with pytest.raises(ValueError):
+@pytest.mark.parametrize(
+    ("timeout", "budget", "message"),
+    [
+        (0, 1, "timeout must be between 1 and 600 seconds"),
+        (601, 1, "timeout must be between 1 and 600 seconds"),
+        (1, 0, "per-trial budget must be greater than zero"),
+        (1, float("nan"), "per-trial budget must be greater than zero"),
+    ],
+)
+def test_invalid_limits(tmp_path, monkeypatch, timeout, budget, message):
+    def forbidden(*args, **kwargs):
+        pytest.fail("invalid limits must be rejected before any CLI process starts")
+
+    monkeypatch.setattr(runner.subprocess, "run", forbidden)
+    with pytest.raises(ValueError, match=message):
         runner.run_suite(tmp_path / "results", timeout=timeout, budget=budget)
+    assert not (tmp_path / "results").exists()
 
 
 def test_observed_logged_out_cli_trace_is_blocked(tmp_path, monkeypatch):

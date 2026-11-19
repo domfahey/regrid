@@ -53,22 +53,46 @@ def test_authenticated_endpoint_rejects_missing_token_before_network():
             client.address("123 Main St")
 
 
-@pytest.mark.parametrize("limit", [0, -1, 1001, True, 1.5])
+@pytest.mark.parametrize("limit", [0, -1, 1001, True, 1.5, "5", [5]])
 def test_invalid_limit_rejected_before_network(limit):
+    seen = []
+
     def handler(request):
-        pytest.fail("Invalid limit reached transport")
+        seen.append(request)
+        return httpx.Response(200, json={})
 
     with client_for(handler) as client:
-        with pytest.raises((ValueError, TypeError)):
+        with pytest.raises(ValueError, match="^Invalid Regrid request parameters$"):
             client.address("123 Main St", limit=limit)
+    assert seen == []
+
+
+@pytest.mark.parametrize("limit", [1, 1000])
+def test_limit_bounds_are_inclusive(limit):
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json={})
+
+    with client_for(handler) as client:
+        client.address("123 Main St", limit=limit)
+    assert seen[0].url.params["limit"] == str(limit)
 
 
 def test_custom_max_limit_is_enforced():
-    with client_for(
-        lambda request: pytest.fail("Exceeded configured maximum"), max_limit=10
-    ) as client:
-        with pytest.raises(ValueError):
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json={})
+
+    with client_for(handler, max_limit=10) as client:
+        with pytest.raises(ValueError, match="^Parcel limit exceeds configured maximum$"):
             client.address("123 Main St", limit=11)
+        assert seen == []
+        client.address("123 Main St", limit=10)
+    assert seen[0].url.params["limit"] == "10"
 
 
 @pytest.mark.parametrize("status", [401, 403, 429, 500])
@@ -113,15 +137,24 @@ def test_malformed_json_is_wrapped_without_exposing_response():
 
 
 def test_point_preserves_coordinate_order():
+    seen = []
+
     def handler(request):
-        assert request.url.path == "/api/v2/parcels/point"
-        assert request.url.params["lat"] == "40.5"
-        assert request.url.params["lon"] == "-105.2"
-        assert request.url.params["limit"] == "1"
+        seen.append(request)
         return httpx.Response(200, json={"parcels": {"features": []}})
 
     with client_for(handler) as client:
-        client.point(40.5, -105.2, limit=1)
+        assert client.point(40.5, -105.2, limit=1) == {"parcels": {"features": []}}
+    (request,) = seen
+    assert request.method == "GET"
+    assert request.url.path == "/api/v2/parcels/point"
+    assert dict(request.url.params) == {
+        "lat": "40.5",
+        "lon": "-105.2",
+        "limit": "1",
+        "return_parcels": "true",
+        "token": TOKEN,
+    }
 
 
 def test_redirect_is_not_followed_or_forwarded():
