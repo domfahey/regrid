@@ -395,3 +395,33 @@ def test_cli_save_explicit_create_and_replace_offline(tmp_path, monkeypatch, cap
     source.write_text("{}")
     code, _ = run_cli(monkeypatch, capsys, "save", source, destination, "--replace")
     assert code == 1 and workflow.load_checkpoint(destination) == doc
+
+
+@pytest.mark.parametrize("input_ids", ["input-000001", ("input-000001",), [["input-000001"]], [1]])
+def test_reserve_rejects_non_list_or_non_string_input_ids(input_ids):
+    original = state()
+    before = deepcopy(original)
+    with pytest.raises(workflow.ValidationError, match="list of strings"):
+        workflow.reserve_attempt(original, input_ids, 1)
+    assert original == before
+
+
+def test_reserve_string_is_not_split_into_matching_character_ids():
+    doc = workflow.new_workflow(
+        "test-run", [request(), request("14 Example Ave")], 2, 2, input_ids=["a", "b"]
+    )
+    with pytest.raises(workflow.ValidationError, match="list of strings"):
+        workflow.reserve_attempt(doc, "ab", 1)
+
+
+@pytest.mark.parametrize("row", ["not-a-row", None, ["input-000001"]])
+def test_set_result_rejects_non_object_row(row):
+    with pytest.raises(workflow.ValidationError, match="must be an object"):
+        workflow.set_result(state(), row)
+
+
+def test_set_result_unknown_input_raises_validation_error():
+    row = success(state()["results"][0])
+    row["input_id"] = "missing"
+    with pytest.raises(workflow.ValidationError, match="Unknown input ID"):
+        workflow.set_result(state(), row)

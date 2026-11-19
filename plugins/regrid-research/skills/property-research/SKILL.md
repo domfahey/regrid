@@ -1,9 +1,12 @@
 ---
 name: property-research
-description: Looks up recorded property owners, parcel IDs, sale and assessment details, or geographically scoped parcel searches using Regrid. Use for address, APN, owner-name, and property-research requests.
+description: Looks up recorded property owners, parcel IDs, sale and assessment details, or geographically scoped parcel searches for US properties using Regrid. Use for US address, APN, owner-name, and property-research requests.
 ---
 
 # Regrid property research
+
+Scope is US parcels only. For a property outside the United States, say it is
+outside this skill's scope; do not search Canadian, international, or batch APIs.
 
 Research with existing evidence first; use the connected Regrid MCP server at
 https://support.regrid.com/mcp only when retrieval is needed. Before the first

@@ -1,6 +1,10 @@
 {
   "source": "https://support.regrid.com/mcp",
-  "observed_date": "2026-10-27",
+  "observed_date": "2026-11-18",
+  "server": {
+    "name": "Regrid Support",
+    "version": "2.3.1"
+  },
   "tools": [
     {
       "name": "list-endpoints",
@@ -259,7 +263,15 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "The ID of the documentation to retrieve. Must come from the `search` tool. Recipe IDs are prefixed with `recipe:`, reference page IDs with `ref:`."
+            "description": "Canonical IDs use project/section/slug. Legacy project/slug, recipe:project/slug and ref:project/slug IDs are also accepted. For a link `/<section>/<slug>` the search tool did not return, use `<project>/<section>/<slug>`, with `<project>` taken from an ID this project already returned."
+          },
+          "format": {
+            "description": "Custom pages can be authored in HTML. `markdown` converts an HTML custom page to Markdown; omitted or `original` returns the page as authored.",
+            "type": "string",
+            "enum": [
+              "original",
+              "markdown"
+            ]
           }
         },
         "required": [

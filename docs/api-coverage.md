@@ -4,6 +4,8 @@ This inventory tracks the Regrid OpenAPI 3.0.0 document with `info.version: 2.0.
 
 `tests/test_api_contract.py` exercises all 33 operations through both the SDK and CLI. Fixtures assert the exact verb, host, path, complete query parameter set, authentication, request body, one-call behavior, and response preservation. Sixteen additional cases check endpoint-specific exclusions. These are mocked contract tests, not proof of live access, entitlements, data completeness, count billing, or current server behavior.
 
+Scope is US parcel data ([README](../README.md#scope)). The 11 `/ca/...` and `schema("ca")` operations remain covered for compatibility but are not extended. Regrid's separately published Global and Batch Processing specifications are out of scope.
+
 ## Operation Inventory
 
 All paths below are relative to `/api/v2`. `--options` carries the SDK keyword options as JSON. The same method names are available on `TypedRegridClient`.

@@ -111,28 +111,51 @@ def stage(case_id: str, variant: str, output: Path) -> dict[str, Any]:
     return {"case_id": case_id, "variant": variant, "files": hashes}
 
 
+def extract_calls(events: list[dict[str, Any]]) -> tuple[set[str], list[dict[str, Any]]]:
+    """Collect models and tool calls, tolerating null or malformed stream-json fields."""
+    models: set[str] = set()
+    calls: list[dict[str, Any]] = []
+    for event in events:
+        message = event.get("message") if isinstance(event, dict) else None
+        if not isinstance(message, dict):
+            continue
+        model = message.get("model")
+        if isinstance(model, str) and model:
+            models.add(model)
+        content = message.get("content")
+        for block in content if isinstance(content, list) else []:
+            if isinstance(block, dict) and block.get("type") == "tool_use":
+                # Keep the input exactly as recorded; only an absent/null input becomes {}.
+                tool_input = block.get("input")
+                calls.append(
+                    {"name": block.get("name"), "input": {} if tool_input is None else tool_input}
+                )
+    return models, calls
+
+
+def read_paths(calls: list[dict[str, Any]]) -> list[Any]:
+    """Requested Read paths; a non-object input yields None but is preserved in tool_calls."""
+    return [
+        c["input"].get("file_path") if isinstance(c["input"], dict) else None
+        for c in calls
+        if c["name"] == "Read"
+    ]
+
+
 def record(manifest: dict[str, Any], trace: Path, model: str, cli_version: str) -> dict[str, Any]:
     """Preserve raw stream-json and extract observed tool calls without grading."""
     if not model.strip() or model in {"haiku", "sonnet", "opus"} or not cli_version.strip():
         raise ValueError("An explicit model ID and CLI version are required")
     raw = trace.read_text()
     events = [json.loads(line) for line in raw.splitlines() if line.strip()]
-    calls = []
-    observed_models = set()
-    for event in events:
-        message = event.get("message", {})
-        if message.get("model"):
-            observed_models.add(message["model"])
-        for block in message.get("content", []):
-            if isinstance(block, dict) and block.get("type") == "tool_use":
-                calls.append({"name": block["name"], "input": block.get("input", {})})
+    observed_models, calls = extract_calls(events)
     return {
         **manifest,
         "requested_model": model,
         "observed_models": sorted(observed_models),
         "cli_version": cli_version,
         "tool_calls": calls,
-        "read_paths": [c["input"].get("file_path") for c in calls if c["name"] == "Read"],
+        "read_paths": read_paths(calls),
         "trace_sha256": hashlib.sha256(raw.encode()).hexdigest(),
         "trace": events,
         "grading_status": "not_graded",

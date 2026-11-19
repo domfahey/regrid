@@ -1,6 +1,17 @@
 {
-  "observed_date": "2026-10-27",
-  "spec_title": "Regrid OpenAPI Specification",
+  "observed_date": "2026-11-18",
+  "spec_title": "Regrid OpenAPI Specification (reference)",
+  "security_schemes": {
+    "APIKeyHeader": {
+      "name": "x-regrid-token",
+      "in": "header"
+    },
+    "APIKeyQueryParam": {
+      "name": "token",
+      "in": "query"
+    }
+  },
+  "security_note": "Every endpoint below accepts either scheme. Credentials come from the outer MCP connection's header; never place a token in harRequest headers or queryString.",
   "endpoints": {
     "/parcels/address": {
       "method": "GET",
@@ -24,7 +35,6 @@
         {
           "name": "limit",
           "in": "query",
-          "required": false,
           "schema": {
             "type": "integer"
           }
@@ -32,7 +42,6 @@
         {
           "name": "return_custom",
           "in": "query",
-          "required": false,
           "schema": {
             "type": "boolean"
           }
@@ -54,7 +63,6 @@
         {
           "name": "return_zoning",
           "in": "query",
-          "required": false,
           "schema": {
             "type": "boolean"
           }
@@ -62,7 +70,6 @@
         {
           "name": "return_matched_buildings",
           "in": "query",
-          "required": false,
           "schema": {
             "type": "boolean"
           }
@@ -70,7 +77,6 @@
         {
           "name": "return_matched_addresses",
           "in": "query",
-          "required": false,
           "schema": {
             "type": "boolean"
           }
@@ -78,7 +84,6 @@
         {
           "name": "return_enhanced_ownership",
           "in": "query",
-          "required": false,
           "schema": {
             "type": "boolean"
           }
@@ -86,27 +91,619 @@
         {
           "name": "return_parcels",
           "in": "query",
-          "required": false,
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      ]
+    },
+    "/parcels/apn": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [
+        {
+          "name": "parcelnumb",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          },
+          "required": true
+        },
+        {
+          "name": "path",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "return_custom",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_field_labels",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_stacked",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_zoning",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_buildings",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_addresses",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_enhanced_ownership",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_parcels",
+          "in": "query",
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      ]
+    },
+    "/parcels/owner": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [
+        {
+          "name": "owner",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
+        },
+        {
+          "name": "path",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "return_custom",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_field_labels",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_stacked",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_zoning",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_buildings",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_addresses",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_enhanced_ownership",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_parcels",
+          "in": "query",
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      ]
+    },
+    "/parcels/point": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [
+        {
+          "name": "lon",
+          "in": "query",
+          "schema": {
+            "type": "number"
+          }
+        },
+        {
+          "name": "lat",
+          "in": "query",
+          "schema": {
+            "type": "number"
+          }
+        },
+        {
+          "name": "radius",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "geojson",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "offset_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "return_count",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_geometry",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_custom",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_field_labels",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_stacked",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_zoning",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_buildings",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_addresses",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_enhanced_ownership",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_custom_id",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_parcels",
+          "in": "query",
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      ]
+    },
+    "/parcels/area": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [
+        {
+          "name": "geojson",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
+        },
+        {
+          "name": "radius",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "offset_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "return_geometry",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_count",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_custom",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_field_labels",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_stacked",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_zoning",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_buildings",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_addresses",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_enhanced_ownership",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_custom_id",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_parcels",
+          "in": "query",
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      ]
+    },
+    "/parcels/query": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [
+        {
+          "name": "fields[:field_name][:operator]",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "offset_id",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "geojson",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "radius",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "path",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "return_count",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_geometry",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_custom",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_field_labels",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_stacked",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_zoning",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_buildings",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_addresses",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_enhanced_ownership",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_custom_id",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_parcels",
+          "in": "query",
           "schema": {
             "type": "boolean",
             "default": false
           }
         }
       ],
-      "securitySchemes": {
-        "APIKeyHeader": {
-          "name": "x-regrid-token",
-          "description": "Your Regrid authorization token",
-          "type": "apiKey",
-          "in": "header"
+      "skill_note": "Not part of the live schema. The live name 'fields[:field_name][:operator]' is a pattern: send at least one filter as fields[<field>][<op>] (for example fields[ll_gisacre][gte]=5) with a path or geojson scope. Never send an unfiltered query."
+    },
+    "/parcels/{ll_uuid}": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [
+        {
+          "name": "ll_uuid",
+          "in": "path",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
         },
-        "APIKeyQueryParam": {
-          "name": "token",
-          "description": "Your Regrid authorization token",
-          "type": "apiKey",
-          "in": "query"
+        {
+          "name": "return_custom",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_field_labels",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_stacked",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_zoning",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_buildings",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_addresses",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_enhanced_ownership",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_parcels",
+          "in": "query",
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
         }
-      }
+      ]
     },
     "/usage": {
       "method": "GET",
@@ -147,21 +744,7 @@
             "type": "boolean"
           }
         }
-      ],
-      "securitySchemes": {
-        "APIKeyHeader": {
-          "name": "x-regrid-token",
-          "description": "Your Regrid authorization token",
-          "type": "apiKey",
-          "in": "header"
-        },
-        "APIKeyQueryParam": {
-          "name": "token",
-          "description": "Your Regrid authorization token",
-          "type": "apiKey",
-          "in": "query"
-        }
-      }
+      ]
     }
   }
 }

@@ -2,6 +2,14 @@
 
 A synchronous Python SDK and command-line client for the [Regrid](https://regrid.com/) Parcel and Tileserver APIs, built on HTTPX and Pydantic v2. `RegridClient` keeps dictionary responses for compatibility; `TypedRegridClient` validates responses into models. Both validate request parameters strictly. Tile requests return bytes.
 
+## Scope
+
+This project targets **United States** parcel data. US endpoints are the only ones
+prioritized for development, verification, and the Claude plugin. Canadian
+(`country="ca"`) routes from the supplied contract remain implemented and tested
+but receive no further feature work. Regrid's Global (international) and Batch
+Processing APIs are out of scope and not implemented.
+
 ## Documentation
 
 - [Architecture](architecture.md): components, request flow, validation boundaries, and extension points.
@@ -280,9 +288,9 @@ Output contains only status and aggregate counts, not credentials, addresses, ow
 The [Regrid Research guide](plugins/regrid-research/README.md) covers separate
 Cowork and Claude Code packages built from one canonical research skill:
 
-- `dist/regrid-research-cowork-0.5.1.zip`: remote connector declaration and skills.
-- `dist/regrid-research-claude-code-0.5.1.zip`: local bridge and skills.
-- `dist/regrid-property-research-skill-0.5.1.zip`: standalone skill with references.
+- `dist/regrid-research-cowork-0.5.2.zip`: remote connector declaration and skills.
+- `dist/regrid-research-claude-code-0.5.2.zip`: local bridge and skills.
+- `dist/regrid-property-research-skill-0.5.2.zip`: standalone skill with references.
 
 Build with `.venv/bin/python scripts/build_claude_plugins.py`. For Cowork,
 configure `x-regrid-token` privately in the custom web connector's Request headers

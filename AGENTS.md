@@ -6,6 +6,12 @@ Python source lives in `src/regrid/`. `client.py` owns HTTPX transport, authenti
 
 Tests live in `tests/`, grouped by module. Consult `README.md` for usage, `architecture.md` for design boundaries, and `REFERENCE.md` for supplied API details. Build artifacts belong in ignored `dist/`. Canonical Claude skills, contracts, helper scripts, and evaluation fixtures live in `plugins/regrid-research/`; `scripts/build_claude_plugins.py` builds the three plugin/skill archive variants.
 
+## Scope
+
+US parcel data only. Prioritize US endpoints; keep existing Canadian routes working
+but do not extend them. Do not add Regrid Global (international) or Batch
+Processing API support unless the user explicitly asks.
+
 ## Build, Test, and Development Commands
 
 - `make install`: install the editable package and development dependencies using uv.

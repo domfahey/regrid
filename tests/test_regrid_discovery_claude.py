@@ -208,3 +208,67 @@ def test_observed_logged_out_cli_trace_is_blocked(tmp_path, monkeypatch):
     )
     assert report["status"] == "blocked"
     assert report["auth_blocked"] is True
+
+
+def test_parse_trace_ignores_blank_lines():
+    events, invalid = runner.parse_trace('{"type": "a"}\n\n   \n{"type": "b"}\n\n')
+    assert [event["type"] for event in events] == ["a", "b"]
+    assert invalid == 0
+
+
+def test_blank_trace_lines_do_not_fail_successful_trial(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        runner.subprocess,
+        "run",
+        lambda *a, **k: SimpleNamespace(
+            stdout="\n" + success_trace() + "\n\n", stderr="", returncode=0
+        ),
+    )
+    report = runner.run_trial(
+        "claude", "haiku", "existing-evidence", "skill", tmp_path, "2.test", 90, 0.5
+    )
+    assert report["status"] == "completed"
+    assert report["invalid_trace_lines"] == 0
+
+
+NULL_EVENTS = [
+    {"type": "assistant", "message": None},
+    {"type": "assistant", "message": {"model": None, "content": None}},
+    {"type": "assistant", "message": {"content": [{"type": "tool_use"}]}},
+    {
+        "type": "assistant",
+        "message": {"content": [{"type": "tool_use", "name": "Read", "input": None}]},
+    },
+    {"type": "assistant", "message": {"content": [None, "text"]}},
+]
+
+
+def test_extract_calls_tolerates_null_fields():
+    models, calls = sys.modules["discovery"].extract_calls(NULL_EVENTS)
+    assert models == set()
+    assert calls == [{"name": None, "input": {}}, {"name": "Read", "input": {}}]
+
+
+def test_record_tolerates_null_fields(tmp_path):
+    trace = tmp_path / "trace.jsonl"
+    trace.write_text("\n".join(json.dumps(event) for event in NULL_EVENTS) + "\n")
+    report = sys.modules["discovery"].record({}, trace, "claude-test-1", "2.test")
+    assert report["read_paths"] == [None]
+    assert len(report["tool_calls"]) == 2
+
+
+def test_non_object_tool_input_is_preserved():
+    events = [
+        {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {"type": "tool_use", "name": "Read", "input": '{"file_path": "x.md"}'},
+                    {"type": "tool_use", "name": "Read", "input": {"file_path": "y.md"}},
+                ]
+            },
+        }
+    ]
+    _, calls = sys.modules["discovery"].extract_calls(events)
+    assert calls[0]["input"] == '{"file_path": "x.md"}'
+    assert sys.modules["discovery"].read_paths(calls) == [None, "y.md"]
