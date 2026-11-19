@@ -368,7 +368,8 @@ def test_cli_is_the_fallback_route_and_freshness_script_is_routed():
     cli = (SKILL_ROOT / "references/cli.md").read_text()
     assert 'scripts/freshness.py" county VERSE.json --path /us/<st>/<county>' in cli
     description = skill.split("---")[1]
-    assert "CLI or a supplied" in description
+    assert "reports county data freshness." in description
+    assert "supplied saved `/verse` file" in skill
     batch = (SKILL_ROOT / "references/batch.md").read_text()
     assert "with the actual\n  outcome" in batch and "uncertain" in batch
     assert "MCP `/parcels/typeahead`: returns no parcel records" not in batch

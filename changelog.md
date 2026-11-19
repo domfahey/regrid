@@ -6,7 +6,9 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
-No changes yet.
+### Changed
+
+- Skill (best-practice audit): MCP paging now says how to pick the next `offset_id` (the last feature's `id`) and when to stop and report a search incomplete; "parcel ID" is defined (the county `parcelnumb`) in `answers.md` and `result.schema.json`; the neighbours rule is single-sourced in `batch.md` (proceed if the user asked, otherwise offer and wait); `cli.md` has a contents list and notes that `--max-records` rejects `offset_id`; `SKILL.md` reads only the needed `mcp-tools.md` sections, its description no longer embeds a workflow step, and the helper note covers Windows; `/regrid-research:address-map` asks for a missing address first, treats "with neighbours" as a flag, saves the response in the working directory, and falls back to `regrid address-map` when MCP tools are missing in Claude Code. Duplicated and dated text removed.
 
 ## [SDK 0.4.4][sdk-v0.4.4] and [Regrid Research 0.9.4][regrid-research-v0.9.4] - 2026-11-19
 

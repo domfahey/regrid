@@ -22,8 +22,7 @@ within authorized scope without renewed permission. For open-ended searches,
 establish geography and a finite total record budget first. Broader searches,
 extra candidates beyond the budget, and unrequested premium datasets require
 additional authorization; ambiguity resolution within an explicit candidate
-budget does not. Before an open-ended search, an optional `return_count` call (one
-request, zero records) can size it. Page only within the agreed budget and one task.
+budget does not. Page only within the agreed budget and one task.
 
 Carry one shared attempt ledger across stages, reserve possible records before
 dispatch, and retain reservations for unknown outcomes. Never reset consumption or
@@ -37,8 +36,7 @@ The rules below say what counts and how to record it.
 
 `budget` carries `max_requests`, `max_records`, `attempted_requests`,
 `returned_records`, and `uncertain_records`. Limits are finite nonnegative
-integers. A finite list defaults to one bounded one-result lookup per distinct
-input; a supplied lower limit wins. Do not count reused evidence as a new lookup.
+integers. Do not count reused evidence as a new lookup.
 Count every API executor invocation against `max_requests`: parcel lookups,
 count-only queries, usage/authentication diagnostics, and failed or uncertain
 attempts. A non-billable diagnostic still consumes one request; a usage-only
@@ -47,9 +45,9 @@ and documentation-only discovery are not API executor calls and do not consume
 API requests. Remote discovery still obeys offline/no-network instructions. Pass
 the same remaining allowance and constraints to setup or other consumers.
 
-For open-ended searches, use count-only queries when supported to estimate scope,
-then paginate only within the remaining allowance. A list of addresses does not
-authorize a broader owner search. Honor the endpoint's actual parameter schema;
+For open-ended searches, an optional `return_count` call (one request, zero records)
+sizes the search when supported; then paginate only within the remaining
+allowance. A list of addresses does not authorize a broader owner search. Honor the endpoint's actual parameter schema;
 count-only and pagination options are not universal.
 
 Before dispatch, append a unique attempt with `attempt_id`, the affected
@@ -130,10 +128,11 @@ authorization before it pages again.
 ## Neighbour requests
 
 Neighbouring parcels are one `kind="lookup"` request with `authorized_retry=True`, the
-subject's input ID, and record_limit 25. A single-property map with
-no workflow ledger needs no entry: state the cost ("one request, up to
-25 records") and wait for the user's request. When a workflow ledger or handoff is in
-use, the user's neighbours request is the authorization. Check that at least one request
+subject's input ID, and record_limit 25. If the user already asked for neighbours,
+state the cost ("one request, up to 25 records") and proceed; otherwise offer it with
+that cost and wait. A single-property map with
+no workflow ledger needs no entry. When a workflow ledger or handoff is in use,
+the user's neighbours request is the authorization. Check that at least one request
 and 25 records remain, then reserve. Complete it with the actual returned count; an
 unknown outcome stays uncertain. If the remaining budget is short, do not call: report
 that neighbours exceed the workflow budget. The request itself is described in the

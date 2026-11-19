@@ -133,6 +133,7 @@
       ],
       "properties": {
         "parcel_id": {
+          "description": "County assessor's parcel number (parcelnumb, the APN as recorded); the Regrid ID (ll_uuid) goes in provenance.",
           "type": [
             "string",
             "null"

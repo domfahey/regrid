@@ -36,6 +36,9 @@ a nonblank owner field, a useful default is: “Regrid lists
 without that field, say the parcel matched but its response has no recorded owner
 value. For other statuses, lead with the uncertainty, no-match result, or error.
 
+"Parcel ID" means the county assessor's parcel number (`parcelnumb`, the APN as
+recorded). The Regrid ID (`ll_uuid`) belongs in provenance, not in the parcel ID field.
+
 Include parcel ID and source refresh date when available; if absent, identify
 them as unavailable when relevant. Retrieval time is not source freshness.
 Include sale date, sale price, or mailing address only when relevant. For batches,
