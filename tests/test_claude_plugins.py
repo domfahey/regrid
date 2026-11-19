@@ -496,7 +496,7 @@ def test_paging_and_refresh_guidance_match_the_workflow_helper():
     refs = SKILL_ROOT / "references"
     batch = (refs / "batch.md").read_text()
     assert (
-        "N + (K - 1) records" in batch
+        "K = ceil(N / limit) requests and N records" in batch
         and "authorized_retry=True" in batch.split("Paged searches")[1].split("## Neighbour")[0]
     )
     assert "refresh" in batch.split("## Resume")[1] and (

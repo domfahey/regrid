@@ -486,9 +486,6 @@ def _paged_search(
         if len(page) < page_options["limit"] or len(features) >= total:
             complete = True
             break
-        if not new:
-            print("regrid: paging stopped: cursor did not advance", file=sys.stderr)
-            break
         last = _cursor(page[-1])
         if last is None:
             print("regrid: paging stopped: no cursor in response", file=sys.stderr)

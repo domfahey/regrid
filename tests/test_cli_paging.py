@@ -163,11 +163,22 @@ def test_page_adding_nothing_new_stops_incomplete(monkeypatch, capsys):
 
 
 def test_inclusive_offset_page_is_deduplicated(monkeypatch, capsys):
+    """Safety net for a server that (unexpectedly) repeats the cursor record."""
     seen = install(monkeypatch, [feats(1, 10), feats(10, 11)])
     assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
     data = json.loads(capsys.readouterr().out)
     assert [f["id"] for f in data["parcels"]["features"]] == [1, 10, 11]
     assert data["complete"] is True and len(seen) == 2
+
+
+def test_short_page_of_only_repeats_stops_incomplete(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 2), feats(2)])
+    assert cli.main([*POINT, "--max-records", "4", "--options", '{"limit":2}']) == 0
+    out, err = capsys.readouterr()
+    data = json.loads(out)
+    assert [f["id"] for f in data["parcels"]["features"]] == [1, 2]
+    assert data["complete"] is False and len(seen) == 2
+    assert "cursor did not advance" in err
 
 
 def test_features_without_id_are_kept(monkeypatch, capsys):
@@ -462,6 +473,8 @@ def _uuid_feature(fid, uuid):
 
 
 def test_inclusive_cursor_does_not_duplicate_siblings(monkeypatch, capsys):
+    """Safety net for a server that (unexpectedly) repeats the cursor record and its siblings."""
+
     def fcoll(*features):
         return {"type": "FeatureCollection", "features": list(features)}
 
