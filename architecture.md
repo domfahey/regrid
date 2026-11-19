@@ -2,6 +2,9 @@
 
 The SDK separates API transport, endpoint behavior, request validation, and optional response modeling. It is synchronous and uses HTTPX plus Pydantic v2. The CLI deliberately uses the dictionary client so introducing typed models does not change command output.
 
+Scope is US parcel data; see [README](README.md#scope). Canadian routes are maintained
+but not extended, and the Global and Batch APIs are intentionally absent.
+
 ## Components
 
 | Module | Responsibility |

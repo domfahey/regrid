@@ -1,6 +1,7 @@
 # Regrid Research for Claude
 
 Personal plugin wrapping Regrid's hosted MCP with property-research instructions.
+Scope is US parcels only; Canadian, Global, and Batch APIs are not used.
 Not an official Regrid plugin. Includes `/regrid-research:property-research` and
 `/regrid-research:setup`. No SDK installation is needed.
 

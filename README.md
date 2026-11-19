@@ -2,6 +2,14 @@
 
 A synchronous Python SDK and command-line client for the [Regrid](https://regrid.com/) Parcel and Tileserver APIs, built on HTTPX and Pydantic v2. `RegridClient` keeps dictionary responses for compatibility; `TypedRegridClient` validates responses into models. Both validate request parameters strictly. Tile requests return bytes.
 
+## Scope
+
+This project targets **United States** parcel data. US endpoints are the only ones
+prioritized for development, verification, and the Claude plugin. Canadian
+(`country="ca"`) routes from the supplied contract remain implemented and tested
+but receive no further feature work. Regrid's Global (international) and Batch
+Processing APIs are out of scope and not implemented.
+
 ## Documentation
 
 - [Architecture](architecture.md): components, request flow, validation boundaries, and extension points.
