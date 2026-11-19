@@ -139,6 +139,56 @@ These are skill instructions, not server-enforced spending limits. Regrid's
 account limits and permissions still apply. Returned records consume API usage.
 Regrid requires disabling model training/data sharing before using its data with AI.
 
+## MCP server coverage
+
+A short summary. The source of truth is
+[`mcp-tools.md`](skills/property-research/references/mcp-tools.md) (MCP tools and
+endpoints) and [`cli.md`](skills/property-research/references/cli.md) (CLI commands);
+check them when this table and a reference differ.
+
+The plugin has two skills, `property-research` and `setup`, plus the
+`/regrid-research:address-map` command (Claude Code and Cowork archives only; the
+standalone skill archive has no commands), which drives `property-research`.
+
+**MCP tools.** Only `execute-request` makes API calls; the other six use no request
+allowance. `setup` inspects tool schemas, may make one documentation discovery call,
+and, only when a non-billable usage operation is exposed and one request remains,
+makes at most one `/usage` check through `execute-request`.
+
+| MCP tool | What it does |
+| --- | --- |
+| `list-specs` | Lists the API specs. The first covers US and Canada (`/ca/...`); the skill uses only its US routes. The Global and Batch specs are not used |
+| `list-endpoints`, `search-endpoints` | List the paths in one spec, or find a path across specs |
+| `get-endpoint` | Gets an endpoint's exact parameters before a call |
+| `search`, `fetch` | Search and read Regrid's documentation |
+| `execute-request` | Makes the API call (counts toward the request budget) |
+
+**Endpoints reached through `execute-request`** (GET only, US routes):
+
+| Endpoint | Purpose |
+| --- | --- |
+| `/parcels/address`, `/parcels/apn`, `/parcels/owner` | Address, APN (within a county) and owner lookups |
+| `/parcels/point`, `/parcels/area`, `/parcels/query` | Point or radius, GeoJSON area, and field-filter searches |
+| `/parcels/{ll_uuid}`, `/parcels/path` | Lookup by Regrid ID; refresh by Regrid path |
+| `/parcels/typeahead` | Address suggestions. Enterprise product; trial tokens are limited to 7 counties |
+| `/schemas/*` | Field definitions, only when the bundled catalog lacks the field |
+| `/usage`, `/usage/detailed` | One setup authentication check; remaining-lookups questions only |
+
+`/verse` (county pull dates) is CLI-only, through `regrid freshness`. Over MCP the
+skill reports each parcel's `ll_last_refresh` instead.
+
+**Options.**
+
+| Option | Where | Notes |
+| --- | --- | --- |
+| Premium dataset flags (`return_zoning` and the like) | Address, APN, owner, point, area, query | Only with the user's authorization ([premium datasets](skills/property-research/references/premium.md)) |
+| `return_count`, `return_geometry`, `offset_id` | Point, area and query only | `return_count` counts before pulling; MCP research may page with `offset_id` within the agreed budget; the CLI form is `--max-records` |
+
+**Offered by the server but deliberately not used:** POST `/report` (files a data
+issue with Regrid), `/client_token/typeahead` (creates a temporary token), the Global
+and Batch specs (out of scope), and the `/ca/*` routes (existing Canadian routes
+stay in the SDK but the skill does not use them).
+
 ## Validation and acceptance
 
 For 0.5.0, `make check` passed 727 tests with no skips, including 64 workflow

@@ -6,6 +6,10 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
+### Added
+
+- Regrid Research plugin README: MCP server coverage summary (tools, endpoints, options, and deliberately unused features), linking to the skill references.
+
 ### Changed
 
 - Regrid Research skills: richer trigger descriptions, a shorter `property-research` routing page with match/answer rules in `references/answers.md`, a single budget/ledger source in `batch.md`, and consistent "neighbour" and "premium dataset" terminology.
