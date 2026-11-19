@@ -87,7 +87,10 @@ def same_file_key(path: Path | str) -> str:
 
     Conservative on case-sensitive filesystems: names differing only by case collide.
     """
-    resolved = unicodedata.normalize("NFC", str(Path(path).resolve()))
+    try:
+        resolved = unicodedata.normalize("NFC", str(Path(path).resolve()))
+    except (RuntimeError, OSError) as exc:
+        raise MapError("Path contains a symlink loop") from exc
     return os.path.normcase(resolved).casefold()
 
 
@@ -623,6 +626,8 @@ def render(
         raise MapError("Output must not be the neighbours file")
     if not Path(output_path).parent.is_dir():
         raise MapError("Output directory does not exist")
+    if Path(output_path).is_dir():
+        raise MapError("Output path is a directory")
     try:
         document = json.loads(Path(response_path).read_text(encoding="utf-8"))
     except (ValueError, RecursionError) as exc:
@@ -727,7 +732,7 @@ def _core_value(feature: dict, name: str) -> Any:
         properties = feature.get("properties")
         for source in (properties, _fields(feature)):
             value = source.get("ll_uuid") if isinstance(source, dict) else None
-            if value is not None:
+            if value is not None and value != "":
                 return value
         return None
     properties = feature.get("properties")

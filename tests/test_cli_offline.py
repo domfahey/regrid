@@ -1,6 +1,7 @@
 """Offline CLI commands never need a token or an HTTP client."""
 
 import json
+import os
 
 import pytest
 from map_fixtures import good_feature, write_response
@@ -127,3 +128,29 @@ def test_map_neighbours_passthrough(tmp_path, capsys):
     assert cli.main(["map", str(response), str(out), "--neighbours", str(neighbours)]) == 0
     assert json.loads(capsys.readouterr().out)["neighbours"] == 1
     assert out.exists()
+
+
+def _loop(tmp_path):
+    (tmp_path / "a").symlink_to(tmp_path / "b")
+    (tmp_path / "b").symlink_to(tmp_path / "a")
+    return tmp_path / "a"
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlinks need privilege on Windows")
+@pytest.mark.parametrize("command", ["map", "export"])
+def test_symlink_loop_output_is_one_clean_line(tmp_path, capsys, command):
+    response = write_response(tmp_path / "r.json", good_feature())
+    loop = _loop(tmp_path)
+    args = [command, str(response), str(loop)]
+    if command == "export":
+        args.insert(2, "--csv")
+    assert cli.main(args) == 1
+    err = capsys.readouterr().err
+    assert err == "regrid: Path contains a symlink loop\n"
+
+
+def test_map_onto_directory_is_one_clean_line(tmp_path, capsys):
+    response = write_response(tmp_path / "r.json", good_feature())
+    (tmp_path / "out").mkdir()
+    assert cli.main(["map", str(response), str(tmp_path / "out"), "--replace"]) == 1
+    assert capsys.readouterr().err == "regrid: Output path is a directory\n"

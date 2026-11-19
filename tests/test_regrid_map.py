@@ -1156,3 +1156,32 @@ def test_export_geojson_only_columns_follow_all_fields(tmp_path):
     response = write_response(tmp_path / "r.json", good_feature(zoning="R1"))
     summary = parcel_map.export(response, geojson_path=tmp_path / "o.geojson", all_fields=True)
     assert summary["columns"] == [*parcel_map.CORE_COLUMNS, "zoning"]
+
+
+def test_export_empty_top_level_ll_uuid_falls_back_to_fields(tmp_path):
+    item = good_feature()
+    item["properties"]["ll_uuid"] = ""
+    item["properties"].setdefault("fields", {})["ll_uuid"] = "abc"
+    response = write_response(tmp_path / "r.json", item)
+    parcel_map.export(response, csv_path=tmp_path / "o.csv", geojson_path=tmp_path / "o.geojson")
+    assert _rows(tmp_path / "o.csv")[1][CORE_COLUMNS.index("ll_uuid")] == "abc"
+    assert (
+        json.loads((tmp_path / "o.geojson").read_text())["features"][0]["properties"]["ll_uuid"]
+        == "abc"
+    )
+
+
+def test_render_refuses_existing_directory(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    target = tmp_path / "out"
+    target.mkdir()
+    with pytest.raises(MapError, match="Output path is a directory"):
+        parcel_map.render(response, target, replace=True)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlinks need privilege on Windows")
+def test_same_file_key_symlink_loop(tmp_path):
+    (tmp_path / "a").symlink_to(tmp_path / "b")
+    (tmp_path / "b").symlink_to(tmp_path / "a")
+    with pytest.raises(MapError, match="symlink loop"):
+        parcel_map.same_file_key(tmp_path / "a")
