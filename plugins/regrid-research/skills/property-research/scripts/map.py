@@ -419,6 +419,16 @@ __WARNINGS__<div id="banners"></div>
 """
 
 
+def _json_for_script(value: object) -> str:
+    """JSON safe to embed in a script element: <, > and & never appear literally."""
+    return (
+        json.dumps(value, ensure_ascii=True)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
+
+
 def render_html(
     features: list[dict],
     *,
@@ -431,18 +441,8 @@ def render_html(
         _feature_data(feature, f"Candidate {number}" if candidates else None, retrieved_at)
         for number, feature in enumerate(features, 1)
     ]
-    data = (
-        json.dumps(items, ensure_ascii=True)
-        .replace("<", "\\u003c")
-        .replace(">", "\\u003e")
-        .replace("&", "\\u0026")
-    )
-    neighbour_data = (
-        json.dumps(list(neighbours), ensure_ascii=True)
-        .replace("<", "\\u003c")
-        .replace(">", "\\u003e")
-        .replace("&", "\\u0026")
-    )
+    data = _json_for_script(items)
+    neighbour_data = _json_for_script(list(neighbours))
     banners = "".join(
         f'<div class="banner" role="alert">{html.escape(text)}</div>\n' for text in warnings
     )
@@ -550,8 +550,14 @@ def render(
             uuid = props.get("ll_uuid") if isinstance(props, dict) else None
             if isinstance(uuid, str):
                 subject_ids.add(uuid)
-        neighbours, skipped = load_neighbours(neighbours_path, subject_ids)
-        warnings.extend(skipped)
+        try:
+            neighbours, skipped = load_neighbours(neighbours_path, subject_ids)
+            warnings.extend(skipped)
+        except MapError as exc:
+            warnings.append(f"Neighbours skipped: {' '.join(str(exc).split())}")
+        except OSError as exc:
+            reason = " ".join(str(exc.strerror or "unreadable").split())
+            warnings.append(f"Neighbours skipped: Neighbours file could not be read ({reason})")
     # Raises before anything is written when a parcel has neither a boundary nor a point.
     page = render_html(
         chosen,

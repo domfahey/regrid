@@ -588,8 +588,24 @@ def test_non_feature_neighbour_entries_and_bad_file(tmp_path):
     summary = parcel_map.render(response, tmp_path / "m.html", neighbours_path=near)
     assert summary["neighbours"] == 0 and len(summary["warnings"]) == 2
     near.write_text("not json", encoding="utf-8")
-    with pytest.raises(MapError, match="not valid JSON"):
-        parcel_map.render(response, tmp_path / "m2.html", neighbours_path=near)
+    summary = parcel_map.render(response, tmp_path / "m2.html", neighbours_path=near)
+    assert summary["features"] == 1 and summary["neighbours"] == 0
+    assert summary["warnings"] == ["Neighbours skipped: Neighbours file is not valid JSON"]
+    assert (tmp_path / "m2.html").exists()
+    near.write_text("{}", encoding="utf-8")
+    summary = parcel_map.render(response, tmp_path / "m3.html", neighbours_path=near)
+    assert summary["warnings"][0].startswith("Neighbours skipped: Expected a Regrid")
+
+
+def test_missing_neighbours_file_keeps_subject_map(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    summary = parcel_map.render(
+        response, tmp_path / "m.html", neighbours_path=tmp_path / "absent.json"
+    )
+    assert summary["features"] == 1 and summary["neighbours"] == 0
+    assert len(summary["warnings"]) == 1
+    assert summary["warnings"][0].startswith("Neighbours skipped: ")
+    assert "\n" not in summary["warnings"][0]
 
 
 def test_neighbours_cli_flag_from_extracted_skill(tmp_path):
