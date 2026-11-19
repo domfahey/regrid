@@ -9,6 +9,7 @@ import shutil
 import ssl
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from collections.abc import Callable
@@ -129,14 +130,20 @@ class FakeRegrid:
             do_GET = do_POST = _handle
 
             def _reject(self):
+                fake.requests.append(
+                    Recorded(
+                        self.command,
+                        urlsplit(self.path).path,
+                        {},
+                        b"",
+                        {k.lower(): v for k, v in self.headers.items()},
+                    )
+                )
                 self.send_response(405)
                 self.send_header("Content-Length", "0")
                 self.end_headers()
-                fake.requests.append(
-                    Recorded(self.command, urlsplit(self.path).path, {}, b"", dict(self.headers))
-                )
 
-            do_PUT = do_DELETE = do_PATCH = do_HEAD = _reject
+            do_PUT = do_DELETE = do_PATCH = do_HEAD = do_OPTIONS = _reject
 
         self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         self.httpd.daemon_threads = True
@@ -220,15 +227,60 @@ def regrid_server(tmp_path):
         server.close()
 
 
-def e2e_env(server: FakeRegrid, token: str | None = "secret-token") -> dict[str, str]:
-    env = os.environ.copy()
-    env["SSL_CERT_FILE"] = str(server.cert)
+# Unreachable endpoints for offline commands: they must never fall back to the real Regrid URL.
+DEAD_API = "https://127.0.0.1:9/api/v2"
+DEAD_BASE = "https://127.0.0.1:9"
+GLOBAL_VALUE_OPTIONS = ("--timeout", "--base-url", "--tiles-base-url")
+SUBCOMMANDS_RUN: set[str] = set()  # runtime record; the inventory test parses sources instead
+
+
+def subcommand_of(args: tuple[str, ...]) -> str | None:
+    """First non-option token after the global options and their values."""
+    items = iter(args)
+    for item in items:
+        if item in GLOBAL_VALUE_OPTIONS:
+            next(items, None)
+        elif not item.startswith("--"):
+            return item
+    return None
+
+
+def e2e_env(
+    cert: Path | None, home: Path | str, token: str | None = "secret-token"
+) -> dict[str, str]:
+    """Child environment: no inherited proxies, caches and home redirected into ``home``."""
+    env = {k: v for k, v in os.environ.items() if not k.lower().endswith("_proxy")}
+    if cert is not None:
+        env["SSL_CERT_FILE"] = str(cert)
     env.pop("REGRID_TOKEN", None)
     if token is not None:
         env["REGRID_TOKEN"] = token
-    # Local requests must not pass through a user's configured HTTP proxy.
-    env["NO_PROXY"] = "127.0.0.1"
+    # Local requests must not pass through a user's configured proxy.
+    env["NO_PROXY"] = env["no_proxy"] = "127.0.0.1"
+    for name in ("HOME", "USERPROFILE", "XDG_CACHE_HOME", "LOCALAPPDATA"):
+        env[name] = str(home)
     return env
+
+
+def _run(
+    argv: tuple[str, ...],
+    cert: Path | None,
+    token: str | None,
+    cwd: Path | str | None,
+    timeout: float,
+    env: dict[str, str] | None,
+) -> subprocess.CompletedProcess:
+    command = subcommand_of(argv)
+    if command:
+        SUBCOMMANDS_RUN.add(command)
+    with tempfile.TemporaryDirectory() as home:
+        return subprocess.run(
+            [sys.executable, "-m", "regrid", *argv],
+            env=env if env is not None else e2e_env(cert, home, token),
+            cwd=cwd,
+            capture_output=True,
+            timeout=timeout,
+        )
 
 
 def run_cli(
@@ -238,19 +290,16 @@ def run_cli(
     cwd: Path | str | None = None,
     timeout: float = 20,
 ) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "regrid",
-            "--base-url",
-            server.api,
-            "--tiles-base-url",
-            server.base,
-            *args,
-        ],  # fmt: skip
-        env=e2e_env(server, token),
-        cwd=cwd,
-        capture_output=True,
-        timeout=timeout,
-    )
+    argv = ("--base-url", server.api, "--tiles-base-url", server.base, *args)
+    return _run(argv, server.cert, token, cwd, timeout, None)
+
+
+def run_cli_offline(
+    *args: str,
+    env: dict[str, str] | None = None,
+    cwd: Path | str | None = None,
+    timeout: float = 20,
+) -> subprocess.CompletedProcess:
+    """Run an offline command with dead endpoints and no token or certificate."""
+    argv = ("--base-url", DEAD_API, "--tiles-base-url", DEAD_BASE, *args)
+    return _run(argv, None, None, cwd, timeout, env)

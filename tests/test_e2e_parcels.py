@@ -170,16 +170,27 @@ def test_country_default_us_and_ca_paths(server):
     assert server.requests[-1].path == "/api/v2/ca/parcels/address"
 
 
-def test_max_records_pages_over_https(server):
-    total = 5
-
-    def point(request):
+def _serve_cursor_pages(server, path, total=5):
+    def pages(request):
         limit = int(request.params["limit"][0])
         start = int(request.params.get("offset_id", ["0"])[0]) + 1  # exclusive cursor
         count = max(0, min(limit, total - start + 1))
         return parcel_response(count, start)
 
-    server.route("/api/v2/parcels/point", json=point)
+    server.route(path, json=pages)
+
+
+def _assert_three_pages(server, result):
+    data = ok(result, 3)
+    assert "regrid: up to 3 requests for 5 records" in result.stderr.decode()
+    assert (data["pages"], data["complete"]) == (3, True)
+    assert feature_ids(data) == [1, 2, 3, 4, 5]
+    assert [r.params["limit"] for r in server.requests] == [["2"], ["2"], ["1"]]
+    assert [r.params.get("offset_id") for r in server.requests] == [None, ["2"], ["4"]]
+
+
+def test_max_records_pages_over_https(server):
+    _serve_cursor_pages(server, "/api/v2/parcels/point")
     result = run_cli(
         server,
         "point",
@@ -192,12 +203,40 @@ def test_max_records_pages_over_https(server):
         "--options",
         '{"limit": 2}',
     )
-    data = ok(result, 3)
-    assert "regrid: up to 3 requests for 5 records" in result.stderr.decode()
-    assert (data["pages"], data["complete"]) == (3, True)
-    assert feature_ids(data) == [1, 2, 3, 4, 5]
-    assert [r.params["limit"] for r in server.requests] == [["2"], ["2"], ["1"]]
-    assert [r.params.get("offset_id") for r in server.requests] == [None, ["2"], ["4"]]
+    _assert_three_pages(server, result)
+
+
+def test_max_records_pages_area_get(server):
+    _serve_cursor_pages(server, "/api/v2/parcels/area")
+    result = run_cli(
+        server,
+        "area",
+        "--geojson",
+        json.dumps(POLYGON),
+        "--max-records",
+        "5",
+        "--options",
+        '{"limit": 2}',
+    )
+    _assert_three_pages(server, result)
+    assert {r.method for r in server.requests} == {"GET"}
+    assert all(json.loads(r.params["geojson"][0]) == POLYGON for r in server.requests)
+
+
+def test_max_records_pages_query(server):
+    _serve_cursor_pages(server, "/api/v2/parcels/query")
+    result = run_cli(
+        server,
+        "query",
+        "--fields",
+        '{"geoid":{"eq":"34007"}}',
+        "--max-records",
+        "5",
+        "--options",
+        '{"limit": 2}',
+    )
+    _assert_three_pages(server, result)
+    assert all(r.params["fields[geoid][eq]"] == ["34007"] for r in server.requests)
 
 
 def test_option_rejected_before_any_request(server):

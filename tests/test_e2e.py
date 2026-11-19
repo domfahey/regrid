@@ -53,9 +53,6 @@ def test_cli_real_https(server, tmp_path):
 
 @pytest.mark.parametrize("query,message", [("fail", b"HTTP 403"), ("malformed", b"invalid JSON")])
 def test_cli_errors_real_https(server, query, message):
-    def address(request):
-        return None
-
     if query == "fail":
         server.route("/api/v2/parcels/address", status=403, body=b"secret-token")
     else:

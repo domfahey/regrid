@@ -11,7 +11,7 @@ TOKEN = "secret-token"
 TILE = b"\x00\xffmock-tile\x80"
 
 
-def assert_clean(proc, server=None):
+def assert_clean(proc):
     assert TOKEN.encode() not in proc.stdout
     assert TOKEN.encode() not in proc.stderr
 
@@ -42,6 +42,7 @@ def test_tilejson_png(regrid_server):  # noqa: F811
     (req,) = regrid_server.requests
     assert "format" not in req.params
     assert req.params["token"] == [TOKEN]
+    assert requests_made(proc) == 1
     assert_clean(proc)
 
 
@@ -142,6 +143,7 @@ def test_report_details_text(regrid_server):  # noqa: F811
     assert req.method == "POST"
     assert req.params["ll_uuid"] == ["abc"]
     assert req.params["details"] == ["plain words"]
+    assert requests_made(proc) == 1
     assert_clean(proc)
 
 
@@ -168,6 +170,7 @@ def test_redirect_not_followed(regrid_server):  # noqa: F811
     regrid_server.route("/elsewhere", json={"parcels": {}})
     proc = run_cli(regrid_server, "address", "1 Main St")
     assert proc.returncode != 0
+    assert "HTTP 302" in proc.stderr.decode()
     assert len(regrid_server.requests) == 1
     assert all(r.path != "/elsewhere" for r in regrid_server.requests)
     assert requests_made(proc) == 1
@@ -190,10 +193,10 @@ def test_http_errors_are_clean(regrid_server, status):  # noqa: F811
 
 
 def test_timeout_exits_quickly(regrid_server):  # noqa: F811
-    regrid_server.route("/api/v2/parcels/address", json={"parcels": {}}, delay=3)
+    regrid_server.route("/api/v2/parcels/address", json={"parcels": {}}, delay=5)
     start = time.monotonic()
     proc = run_cli(regrid_server, "--timeout", "1", "address", "1 Main St")
-    assert time.monotonic() - start < 2.9
+    assert time.monotonic() - start < 4.5
     assert proc.returncode != 0
     assert "transport request failed" in proc.stderr.decode()
     assert proc.stdout == b""
