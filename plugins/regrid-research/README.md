@@ -118,7 +118,7 @@ example is a format guide, not real property evidence.
 
 ## Contract compatibility
 
-Version 0.5.0 keeps version `1.0` handoffs readable and adds explicit `1.1`
+Handoff version `1.0` stays readable, and version `1.1` adds explicit
 query types for scoped owner searches, points, bounding-box areas, and filters.
 Existing workflows stay at `1.0` unless explicitly upgraded. The synthetic example
 still demonstrates `1.0`; use the schema and composition guide for `1.1` shapes.
@@ -192,14 +192,20 @@ stay in the SDK but the skill does not use them).
 
 ## Validation and acceptance
 
-For 0.5.0, `make check` passed 727 tests with no skips, including 64 workflow
-helper tests and JSON Schema compatibility. Ruff formatting/lint and mypy passed;
-SDK/CLI coverage remains 98.16%. The helper uses only the standard library;
-`jsonschema` is needed only for development checks. See the
-[0.5.0 regression report](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/results/composability-0.5.0-report.json)
-for red/green evidence and smaller-model offline decisions. Those model runs do
-not establish Claude/Cowork acceptance. Local HTTPS tests were unchanged and not
-rerun for this helper/docs update; publication CI results below are historical.
+Status for 0.8.0:
+
+- Passed: structural validation (`claude plugin validate --strict`), packaging
+  tests, and the offline `make check` suite.
+- Passed: the satellite map rendered in a plain browser with synthetic data
+  (imagery, outlines, info panel and Esri credit shown; no console errors).
+- Not run: Claude Code, Claude apps and Cowork host checks of the map page and
+  command; the live Regrid geometry check (billable, needs authorization); and
+  model or Cowork acceptance.
+
+Earlier verification logs (0.2.0 to 0.5.0) live in the repository's
+[evals README](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/README.md#historical-verification).
+The helper uses only the standard library; `jsonschema` is needed only for
+development checks.
 
 Build all three artifacts from the repository root:
 
@@ -209,19 +215,15 @@ Build all three artifacts from the repository root:
 claude plugin validate ./plugins/regrid-research --strict
 ```
 
-The builder uses a file allowlist: manifest, MCP config, README, the two skill
-entrypoints, Markdown/JSON references, and the explicitly selected offline
-`property-research/scripts/workflow.py` helper. It excludes secret
-filenames and unrelated files, rejects selected symlinks and recognizable embedded
-credentials, and produces deterministic ZIPs. This is a packaging safeguard, not
-a general secret scanner. Never place a real credential in the source tree.
-
-Version 0.4.0 adds metadata-first filesystem discovery trials, without-skill
-baselines, distractor skills, model/CLI identifiers, and read traces. See the
-[discovery evaluation instructions](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/README.md). Checkpoint diagnostics now
-identify structural paths without exposing values; `workflow.py save INPUT DEST`
-validates before writing and requires `--replace` to overwrite. Python 3.10+
-and the standard library are sufficient.
+The builder uses a file allowlist: the manifest, MCP config, README, `LICENSE`,
+both skills' `SKILL.md`, their references (`*.md`, `*.json`), the bundled helpers
+`workflow.py`, `map.py`, `fields.py` and `freshness.py` under
+`property-research/scripts/`, and `commands/*.md` (Claude Code and Cowork archives
+only). The standalone skill archive carries the skill folder with its own
+`LICENSE`. It excludes secret filenames and unrelated files, rejects selected
+symlinks and recognizable embedded credentials, and produces deterministic ZIPs.
+This is a packaging safeguard, not a general secret scanner. Never place a real
+credential in the source tree.
 
 Validation gates are separate:
 
@@ -232,54 +234,6 @@ Validation gates are separate:
   **not verified in this account** until performed in an actual Cowork session.
 - Live MCP tool-schema evidence and offline behavior evaluations do not prove
   Cowork's account-specific header beta or header-name approval is available.
-
-Historical 0.4.0 verification: `make check` passed 692 tests, including 29 helper tests and 16
-discovery/runner tests. SDK coverage is 98.16% (it excludes bundled scripts).
-Both extracted plugins and the standalone skill pass strict Claude structural
-validation. The historical skill report excluded HTTPS E2E tests; the later
-[publication CI](https://github.com/domfahey/regrid/actions/runs/40680206321) passed
-`make check`, all four local HTTPS tests, plugin packaging, and package builds on
-Python 3.10 and 3.12. Local HTTPS tests also passed before publication.
-
-The [0.4.0 acceptance report](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/results/authoring-0.4.0-report.json) records
-the current external blockers: Claude CLI OAuth has expired and cannot refresh;
-Claude Desktop inspection failed with `cgWindowNotFound`. No new Claude model
-trial, baseline comparison, Cowork import, or authenticated Cowork lookup is
-claimed. After local `claude auth login`, use the discovery runner documented in
-[evals/README.md](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/README.md), then grade each retained trace.
-
-Historical 0.3.0 verification: `make check` passed 671 tests, including 24 workflow-helper regressions
-and seven packaging tests. The SDK coverage gate remains 98.16%; that percentage
-covers `src/regrid`, not the bundled helper. Workflow tests exercise shared budgets,
-uncertain reservations, evidence consistency, caller IDs, explicit retries,
-checkpoint round trips, and the helper extracted from the standalone ZIP.
-Run all research and composition fixtures with:
-
-```sh
-python3 plugins/regrid-research/evals/run.py validate --suite all
-python3 plugins/regrid-research/evals/run.py packet --suite all
-```
-
-Fixture validation checks the inputs, not model behavior. The separate blinded
-evaluation retains transcripts and semantic grading under `evals/results/`.
-The final 0.3.0 run passed all 19 scenarios and 63 criteria; see the repository's
-[final report](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/results/final-report.json). It validates five handoffs, one
-proposed checkpoint, and three proposed calls. An initial missing explanation
-about authorization after budget exhaustion was retained, corrected, and retested.
-These are offline simulated decisions, not live downstream app writes or Cowork
-acceptance tests, and no baseline comparison was run.
-
-Historical 0.2.0 verification (October 27, 2026): `make check` passed 646 tests with 98.16% combined
-line/branch coverage; both extracted plugin variants passed strict Claude
-validation. Direct MCP header authentication passed a usage-only request without
-retrieving parcels. The [blinded offline evaluation report](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/results/forward-report.json)
-records 13/13 scenarios and 40/40 criteria passed, with the evaluator transcript
-and content hashes retained. These evaluations use a synthetic tool double; the
-20-address case checks the first request and continuation plan, not a full live
-batch. No without-skill baseline was run. Evaluation files are repository-only
-and are not shipped in the plugin ZIPs; see the repository copy of this README
-for that report. The packaged live tool reference distinguishes executed calls
-from the schema-checked address example.
 
 After importing, check these cases:
 

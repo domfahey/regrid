@@ -8,6 +8,8 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ### Added
 
+- Regrid Research plugin: archives now include the repository `LICENSE` (at the root of the plugin archives and inside the standalone skill folder), and `plugin.json` declares `license`, `repository` and `homepage`. No icon is set; one is needed only for directory submission.
+
 - SDK: `RegridClient.validate_query(fields, *, paging=False, ...)` validates a query exactly as `query()` would without sending a request, and `QueryPagingError` (exported from `regrid`, a `ValueError`) marks filters that can't be paged with `offset_id`. `regrid.offline.map.write_atomic_bytes` and `regrid.offline.freshness.check_max_age_days` are new public helpers.
 
 - Regrid Research plugin README: MCP server coverage summary (tools, endpoints, options, and deliberately unused features), linking to the skill references.
@@ -15,6 +17,7 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 ### Changed
 
 - Regrid Research Claude Code package: the MCP config now uses Claude Code's native HTTP transport with an `x-regrid-token: ${REGRID_TOKEN}` header instead of an unpinned `npx -y mcp-remote` bridge. Security: the token no longer appears in process arguments, no npm package is downloaded, and Node.js is no longer required. The Cowork package is unchanged.
+- Regrid Research plugin README: "Validation and acceptance" now leads with the current 0.8.0 status, the builder allowlist lists every shipped file, and the 0.2.0 to 0.5.0 verification logs moved to a "Historical verification" section in `evals/README.md`. The map host checklist now names `results/map-hosts-0.8.0.json`.
 - Regrid Research skills: richer trigger descriptions, a shorter `property-research` routing page with match/answer rules in `references/answers.md`, a single budget/ledger source in `batch.md`, and consistent "neighbour" and "premium dataset" terminology.
 
 ### Fixed
