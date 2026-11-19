@@ -6,6 +6,7 @@ import re
 import shlex
 from pathlib import Path
 
+import httpx
 import pytest
 
 from regrid.cli import _parser
@@ -70,3 +71,45 @@ def test_command_map_is_not_empty() -> None:
 @pytest.mark.parametrize("argv", _invocations(), ids=lambda argv: " ".join(argv)[:60])
 def test_documented_invocation_parses(argv: list[str]) -> None:
     _parser().parse_args(argv)
+
+
+_OFFLINE = {"fields", "map", "export", "address-map", "report", "client-token-typeahead"}
+
+
+@pytest.mark.parametrize("argv", _invocations(), ids=lambda argv: " ".join(argv)[:60])
+def test_documented_invocation_executes(
+    argv: list[str], monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    from regrid import cli
+    from regrid.client import RegridClient
+
+    if argv[0] in _OFFLINE:
+        pytest.skip("offline command makes no request")
+    monkeypatch.setenv("REGRID_TOKEN", "test")
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "out.file").write_text(
+        '{"type":"Polygon","coordinates":[[[-75,39.9],[-75,40],[-74.9,40],[-75,39.9]]]}',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    verse = {"features": [{"properties": {"path": "/us/nj/camden"}}]}
+    transport = httpx.MockTransport(
+        lambda request: httpx.Response(
+            200,
+            json=verse if request.url.path.endswith("/verse") else {"parcels": {"features": []}},
+        )
+    )
+    monkeypatch.setattr(
+        cli,
+        "RegridClient",
+        lambda **kwargs: RegridClient(**{**kwargs, "transport": transport}),
+    )
+    concrete = {
+        "LL_UUID": "00000000-0000-4000-8000-000000000000",
+        "PATH": "/us/nj/camden/camden",
+        "@FILE": "@out.file",
+        '{"field":{"op":v}}': '{"owner":{"ilike":"smith"}}',
+        "/us/<st>/<county>": "/us/nj/camden",
+    }
+    argv = [concrete.get(tok, tok) for tok in argv]
+    assert cli.main(argv) == 0, (argv, capsys.readouterr().err)

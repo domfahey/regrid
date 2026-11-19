@@ -338,3 +338,24 @@ def test_validate_query_paging_error_has_no_context(recording_client):
     with pytest.raises(QueryPagingError) as excinfo:
         client.validate_query({"yearbuilt": {"order": "ASC"}}, paging=True, validate_fields=True)
     assert excinfo.value.__context__ is None and excinfo.value.__cause__ is None
+
+
+def test_deeply_nested_json_is_invalid_input_without_context(recording_client):
+    client, requests = recording_client
+    deep_list = "[" * 100000
+    deep_map: dict = {}
+    node = deep_map
+    for _ in range(100000):
+        node["a"] = {}
+        node = node["a"]
+    deep_geometry = {"type": "Point", "coordinates": deep_list, "x": deep_map}
+    calls = [
+        lambda: client.area(geojson=deep_list),
+        lambda: client.area(geojson=deep_geometry),
+        lambda: client.query({"yearbuilt": {"eq": deep_map}}),
+    ]
+    for call in calls:
+        with pytest.raises(ValueError) as info:
+            call()
+        assert info.value.__context__ is None
+    assert requests == []

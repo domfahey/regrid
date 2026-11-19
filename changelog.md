@@ -6,7 +6,21 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
-No changes yet.
+### Fixed
+
+- CLI and SDK:
+  - Deeply nested JSON now fails with one sanitized error instead of a traceback: in the CLI (API responses, a freshness cache, `--options`/`--fields`/`--geojson`, followed by the usual `regrid: requests made: N` line), in the SDK request encoders and validators (`geojson=`, `fields=`; a `ValueError` with no chained input), and in the `fields.py` and `freshness.py` helpers.
+  - `address-map`, `map` and `export` share one same-file check (`regrid.offline.map.same_file_key`: resolved path, Unicode NFC, case-folded), so names differing only by letter case or Unicode form are refused before any request or write.
+  - Paging keeps a response's own `pages`/`complete` values as `response_pages`/`response_complete`, never overwrites a `response_pages`/`response_complete` already in the response (it prints a note instead), de-duplicates parcels with one id rule (ids that are unhashable are accepted, and `True`, `1` and `1.0` stay distinct).
+- Offline helpers:
+  - `map.py render` reports a missing output folder clearly. Rings under 0.01 square metres are degenerate: degenerate holes and member polygons are dropped with a "Degenerate ring skipped" warning, and a parcel fails with "Polygon ring has zero area" only when no usable polygon remains.
+  - Freshness caches dated in the future are treated as stale.
+  - The field catalog rejects entries without a string name.
+- Packaging: the credential scan no longer flags words that merely contain `rg_`, and it now catches RSA, EC and OpenSSH private keys.
+- Skill guidance:
+  - Paged searches and refresh-by-path now use `authorized_retry=True`, and paged searches budget for one extra record per later page, matching the workflow helper.
+  - Single-result search examples (address, apn, owner, point) pass `limit` 1, Regrid ID and path lookups need no limit, and the notes say the CLI doesn't turn paid datasets off by default.
+- Evals: the Canadian-route check looks at path segments (including URL paths and `path=` values): a `ca` segment followed by more segments is flagged unless it follows `us`, and text such as `CA/ something` is not. A fixture now uses the real error message.
 
 ## [SDK 0.4.0][sdk-v0.4.0] and [Regrid Research 0.9.0][regrid-research-v0.9.0] - 2026-11-19
 

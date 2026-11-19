@@ -16,6 +16,7 @@ import os
 import re
 import secrets
 import sys
+import unicodedata
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -81,6 +82,15 @@ def _in_us(lon: float, lat: float) -> bool:
     )
 
 
+def same_file_key(path: Path | str) -> str:
+    """A path's identity for collision checks: resolved, NFC-normalised and case-folded.
+
+    Conservative on case-sensitive filesystems: names differing only by case collide.
+    """
+    resolved = unicodedata.normalize("NFC", str(Path(path).resolve()))
+    return os.path.normcase(resolved).casefold()
+
+
 def _validate_position(position: object) -> None:
     # RFC 7946 positions may carry altitude after longitude and latitude; it is ignored.
     if not isinstance(position, list) or len(position) < 2:
@@ -107,7 +117,13 @@ def _validate_polygon(polygon: object) -> None:
         _validate_ring(ring)
 
 
-def validate_geometry(geometry: object) -> None:
+def _polygons(geometry: dict) -> list[Any]:
+    return (
+        geometry["coordinates"] if geometry["type"] == "MultiPolygon" else [geometry["coordinates"]]
+    )
+
+
+def _validate_structure(geometry: object) -> dict:
     if not isinstance(geometry, dict):
         raise MapError("Unsupported geometry type")
     kind = geometry.get("type")
@@ -121,10 +137,43 @@ def validate_geometry(geometry: object) -> None:
             _validate_polygon(polygon)
     else:
         raise MapError("Unsupported geometry type")
+    return geometry
+
+
+def prune_geometry(geometry: object) -> tuple[dict, list[str]]:
+    """Validate a geometry and drop degenerate rings; returns (geometry, warnings).
+
+    A ring is degenerate when it encloses under 0.01 square metres. Degenerate holes and
+    degenerate member polygons are dropped, each with a warning; the geometry fails with
+    "Polygon ring has zero area" only when no non-degenerate polygon remains.
+    """
+    valid = _validate_structure(geometry)
+    warnings: list[str] = []
+    kept: list[Any] = []
+    for polygon in _polygons(valid):
+        outer, *holes = polygon
+        if _ring_area_m2(outer) < MIN_RING_AREA_M2:
+            warnings.append(DEGENERATE)
+            continue
+        solid = [hole for hole in holes if _ring_area_m2(hole) >= MIN_RING_AREA_M2]
+        warnings.extend([DEGENERATE] * (len(holes) - len(solid)))
+        kept.append([outer, *solid])
+    if not kept:
+        raise MapError("Polygon ring has zero area")
+    if not warnings:
+        return valid, []
+    coordinates = kept if valid["type"] == "MultiPolygon" else kept[0]
+    return {**valid, "coordinates": coordinates}, warnings
+
+
+def validate_geometry(geometry: object) -> None:
+    prune_geometry(geometry)
 
 
 def _wrap(delta: float) -> float:
     """Shortest longitude step, so rings crossing 180 degrees are measured correctly."""
+    if abs(delta) < 180.0:
+        return delta  # exact: wrapping would add rounding error (~0.03 m2) to tiny rings
     return (delta + 180.0) % 360.0 - 180.0
 
 
@@ -144,10 +193,7 @@ def _polygon_area_m2(polygon: list[list[list[float]]]) -> float:
 
 def geometry_area_sqft(geometry: dict) -> float:
     """Spherical area in square feet; callers must run validate_geometry first."""
-    polygons = (
-        geometry["coordinates"] if geometry["type"] == "MultiPolygon" else [geometry["coordinates"]]
-    )
-    return sum(_polygon_area_m2(polygon) for polygon in polygons) * SQFT_PER_SQM
+    return sum(_polygon_area_m2(polygon) for polygon in _polygons(geometry)) * SQFT_PER_SQM
 
 
 def _recorded_sqft(value: Any) -> float | None:
@@ -183,6 +229,8 @@ def area_check(feature: dict, tolerance: float = 0.05) -> dict[str, Any]:
 LEAFLET_BASE = "https://unpkg.com/leaflet@1.9.4/dist/"
 LEAFLET_CSS_SRI = "sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
 LEAFLET_JS_SRI = "sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+MIN_RING_AREA_M2 = 0.01
+DEGENERATE = "Degenerate ring skipped"
 MISSING = "not in record"
 NO_BOUNDARY = "No boundary on file for this parcel"
 FOOTER = (
@@ -236,9 +284,7 @@ _fallback_point = fallback_point
 def _display_geometry(geometry: dict) -> dict:
     """Shift western longitudes east when a geometry spans 180 degrees, so Leaflet draws it
     as one small shape instead of a band around the globe."""
-    polygons = (
-        geometry["coordinates"] if geometry["type"] == "MultiPolygon" else [geometry["coordinates"]]
-    )
+    polygons = _polygons(geometry)
     lons = [p[0] for polygon in polygons for ring in polygon for p in ring]
     if max(lons) - min(lons) <= 180:
         return geometry
@@ -282,7 +328,7 @@ def _feature_data(feature: dict, label: str | None, retrieved_at: str | None) ->
     }
 
 
-def _neighbour_data(feature: object) -> dict[str, Any]:
+def _neighbour_data(feature: object) -> tuple[dict[str, Any], list[str]]:
     if not isinstance(feature, dict):
         raise MapError("Neighbour is not a parcel feature")
     properties = feature.get("properties")
@@ -293,9 +339,9 @@ def _neighbour_data(feature: object) -> dict[str, Any]:
     geometry = feature.get("geometry")
     if geometry is None:
         raise MapError("Neighbour has no boundary")
-    validate_geometry(geometry)
+    geometry, dropped = prune_geometry(geometry)
     fields = _fields(feature)
-    return {
+    data = {
         "title": _text(properties.get("headline")),
         "facts": [
             ["Address", _text(properties.get("headline"))],
@@ -304,6 +350,7 @@ def _neighbour_data(feature: object) -> dict[str, Any]:
         ],
         "geometry": _display_geometry(geometry),
     }
+    return data, dropped
 
 
 def load_neighbours(path: Path, subject_ids: set[str]) -> tuple[list[dict[str, Any]], list[str]]:
@@ -324,9 +371,12 @@ def load_neighbours(path: Path, subject_ids: set[str]) -> tuple[list[dict[str, A
         if isinstance(uuid, str) and uuid in subject_ids:
             continue
         try:
-            drawn.append(_neighbour_data(feature))
+            data, dropped = _neighbour_data(feature)
         except MapError as exc:
             warnings.append(f"Neighbour {number} skipped: {exc}")
+            continue
+        drawn.append(data)
+        warnings.extend(f"Neighbour {number}: {text}" for text in dropped)
     return drawn, warnings
 
 
@@ -556,13 +606,12 @@ def render(
     replace: bool = False,
     neighbours_path: Path | None = None,
 ) -> dict[str, Any]:
-    if Path(output_path).resolve() == Path(response_path).resolve():
+    if same_file_key(output_path) == same_file_key(response_path):
         raise MapError("Output must not be the response file")
-    if (
-        neighbours_path is not None
-        and Path(output_path).resolve() == Path(neighbours_path).resolve()
-    ):
+    if neighbours_path is not None and same_file_key(output_path) == same_file_key(neighbours_path):
         raise MapError("Output must not be the neighbours file")
+    if not Path(output_path).parent.is_dir():
+        raise MapError("Output directory does not exist")
     try:
         document = json.loads(Path(response_path).read_text(encoding="utf-8"))
     except (ValueError, RecursionError) as exc:
@@ -576,6 +625,12 @@ def render(
     for number, feature in enumerate(chosen, 1):
         name = f"Candidate {number}" if all_candidates else "Parcel"
         check_mappable(feature, label=name)
+        if isinstance(feature.get("geometry"), dict):
+            geometry, dropped = prune_geometry(feature["geometry"])
+            if dropped:
+                feature = {**feature, "geometry": geometry}
+                chosen[number - 1] = feature
+                warnings.extend(f"{name}: {text}" for text in dropped)
         check = area_check(feature)
         checks.append(check)
         if check["status"] == "mismatch":
@@ -675,16 +730,12 @@ def export(
     if csv_path is None and geojson_path is None:
         raise MapError(NO_OUTPUT)
     targets = [Path(p) for p in (csv_path, geojson_path) if p is not None]
-    if len(targets) == 2 and (
-        targets[0] == targets[1]
-        or os.path.abspath(targets[0]) == os.path.abspath(targets[1])
-        or targets[0].resolve() == targets[1].resolve()
-    ):
+    if len({same_file_key(target) for target in targets}) != len(targets):
         raise MapError("CSV and GeoJSON outputs must be different files")
     for target in targets:
         if not target.parent.is_dir():
             raise MapError("Output directory does not exist")
-        if target.resolve() == Path(response_path).resolve():
+        if same_file_key(target) == same_file_key(response_path):
             raise MapError("Output must not be the response file")
     try:
         document = json.loads(Path(response_path).read_text(encoding="utf-8"))

@@ -37,6 +37,8 @@ def load_catalog(path: Path) -> list[dict]:
     entries = document.get("fields") if isinstance(document, dict) else None
     if not isinstance(entries, list) or not all(isinstance(e, dict) for e in entries):
         raise ValueError("Unrecognized field catalog format")
+    if not all(isinstance(e.get("name"), str) and e["name"] for e in entries):
+        raise ValueError("Each field catalog entry needs a non-empty string name")
     compact = [{key: entry.get(key) for key in KEYS} for entry in entries]
     return sorted(compact, key=lambda entry: str(entry["name"]))
 
@@ -79,7 +81,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         catalog = load_catalog(args.catalog or default_catalog())
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, RecursionError) as exc:
         print(f"fields: {' '.join(str(exc).split())}", file=sys.stderr)
         return 1
     if args.command == "explain":

@@ -391,3 +391,43 @@ def test_paged_search_reserves_one_attempt_per_page_with_page_limit():
     assert len(doc["attempts"]) == 3
     assert doc["budget"]["attempted_requests"] == 3
     assert doc["budget"]["returned_records"] == 30
+
+
+def _paged(max_requests, max_records):
+    query = {"query_type": "area", "bbox": [-75.2, 39.8, -75.0, 40.0]}
+    return workflow.new_workflow("paged", [query], max_requests, max_records, schema_version="1.1")
+
+
+def test_two_page_search_fits_n_plus_k_minus_one_records_and_refuses_when_short():
+    # N=8, limit=5: page 1 asks 5, page 2 asks remaining + 1 = 4, so the budget is N + K - 1 = 9.
+    doc = workflow.reserve_attempt(_paged(2, 9), ["input-000001"], 5)
+    doc = workflow.complete_attempt(doc, "attempt-000001", "success", 5)
+    with pytest.raises(ValueError, match="already attempted"):
+        workflow.reserve_attempt(doc, ["input-000001"], 4)
+    doc = workflow.reserve_attempt(doc, ["input-000001"], 4, authorized_retry=True)
+    doc = workflow.complete_attempt(doc, "attempt-000002", "success", 3)
+    workflow.validate(doc)
+    assert doc["budget"]["returned_records"] == 8
+    # One record short of N + K - 1, or one request short of K: the second page is refused.
+    short = workflow.reserve_attempt(_paged(2, 8), ["input-000001"], 5)
+    short = workflow.complete_attempt(short, "attempt-000001", "success", 5)
+    with pytest.raises(ValueError, match="Record budget"):
+        workflow.reserve_attempt(short, ["input-000001"], 4, authorized_retry=True)
+    one = workflow.reserve_attempt(_paged(1, 9), ["input-000001"], 5)
+    one = workflow.complete_attempt(one, "attempt-000001", "success", 5)
+    with pytest.raises(ValueError, match="Request budget"):
+        workflow.reserve_attempt(one, ["input-000001"], 4, authorized_retry=True)
+
+
+def test_parcels_path_refresh_of_a_resolved_input_needs_authorized_retry():
+    doc = workflow.new_workflow(
+        "refresh", [{"address": "12 Example Ave", "parcel_id": None, "scope": None}], 2, 2
+    )
+    doc = workflow.reserve_attempt(doc, ["input-000001"], 1)
+    doc = workflow.complete_attempt(doc, "attempt-000001", "success", 1)
+    with pytest.raises(ValueError, match="already attempted or resolved"):
+        workflow.reserve_attempt(doc, ["input-000001"], 1)
+    doc = workflow.reserve_attempt(doc, ["input-000001"], 1, authorized_retry=True)
+    doc = workflow.complete_attempt(doc, "attempt-000002", "success", 1)
+    workflow.validate(doc)
+    assert doc["budget"]["attempted_requests"] == 2

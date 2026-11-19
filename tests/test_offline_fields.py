@@ -137,3 +137,19 @@ def test_fields_helper_runs_from_extracted_archive(tmp_path):
     )
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["found"][0]["name"] == "owner"
+
+
+@pytest.mark.parametrize("name", [["x"], None, "", 5])
+def test_load_catalog_requires_string_names(tmp_path, name):
+    path = tmp_path / "bad.json"
+    path.write_text(json.dumps({"fields": [{"name": name}]}))
+    with pytest.raises(ValueError, match="non-empty string"):
+        fields.load_catalog(path)
+
+
+def test_deeply_nested_catalog_is_a_clean_error(tmp_path, capsys):
+    path = tmp_path / "deep.json"
+    path.write_text("[" * 200000 + "]" * 200000)
+    assert fields.main(["search", "x", "--catalog", str(path)]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("fields:") and len(err.strip().splitlines()) == 1

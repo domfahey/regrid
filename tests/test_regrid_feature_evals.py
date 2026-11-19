@@ -183,3 +183,40 @@ def test_packet_research_suite_keeps_placeholder(monkeypatch, capsys):
     monkeypatch.setattr("sys.argv", ["run.py", "packet", "--suite", "research"])
     run.main()
     assert "omitted" in json.loads(capsys.readouterr().out)["references"]["fields.json"]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("/ca/on/toronto", True),
+        ("https://app.regrid.com/api/v2/ca/parcels/address?query=x", True),
+        ("https://x.test/api/v2/parcels/path?path=/ca/on/toronto/1", True),
+        ("/us/ca/los-angeles", False),
+        ("https://x.test/api/v2/us/ca/parcels/address", False),
+        ("CA/ something else", False),
+        ("ca/on", True),
+        ("ca/on/toronto", True),
+        ("https://x.test/api/v2/ca/parcels/address", True),
+        ("https://x.test/api/v2/parcels/path?path=/ca/on/x", True),
+        ("path=ca/on/x", True),
+        ("us/ca/los-angeles", False),
+        ("path=us/ca/x", False),
+        ("ca", False),
+        ("https://x.test/api/v2/parcels/query?fields[state2][eq]=ca&limit=5", False),
+        ("/api/v2/parcels/query?state2=ca&limit=1", False),
+        ("?fields[state2][eq]=ca&limit=5", False),
+        ("?path=/ca/on/x", True),
+        ("https://x.test/api/v2/parcels/path?limit=1&path=/ca/on/x", True),
+        ("state2=ca&limit=1", False),
+    ],
+)
+def test_canadian_route_detection(value, expected):
+    assert run._is_canadian_route({"path": value}) is expected
+
+
+def test_geometry_absent_fixture_uses_the_real_map_error_text():
+    case = next(c for c in run.load_cases("feature") if c["id"] == "geometry_absent")
+    assert (
+        "error: Parcel: response omits geometry; it was requested without boundaries"
+        in (case["context"])
+    )

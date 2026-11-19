@@ -59,7 +59,7 @@ def safe_validate(model: type[RequestT], data: Any) -> RequestT:
     """Validate without exposing input values, error locations, or error context."""
     try:
         return model.model_validate(data)
-    except ValidationError:
+    except (ValidationError, RecursionError):
         pass
     # Raise outside the except block: even __context__ must not retain raw input.
     raise ValueError("Invalid Regrid request parameters")
@@ -96,7 +96,7 @@ class GeometryInput(StrictRequest):
             raise ValueError("GeoJSON requires a type")
         try:
             json.dumps(value, allow_nan=False)
-        except (TypeError, ValueError, OverflowError):
+        except (TypeError, ValueError, OverflowError, RecursionError):
             raise ValueError("GeoJSON must contain finite JSON values") from None
         return value
 
@@ -144,7 +144,7 @@ class QueryRequest(StrictRequest):
                 raise ValueError("Each field requires an operator")
         try:
             json.dumps(value, allow_nan=False)
-        except (TypeError, ValueError, OverflowError):
+        except (TypeError, ValueError, OverflowError, RecursionError):
             raise ValueError("Filters require finite JSON values") from None
         return value
 

@@ -471,3 +471,36 @@ def test_manifest_has_privacy_policy_url_and_privacy_note_ships(source, tmp_path
     cowork, code, skill = map(archive_contents, builder.build(source, tmp_path / "out"))
     assert cowork["PRIVACY.md"] == code["PRIVACY.md"] == note
     assert b"https://regrid.com/terms/privacy" in note
+
+
+def test_token_pattern_ignores_identifiers_but_catches_tokens(tmp_path):
+    root = tmp_path / "pk"
+    root.mkdir()
+    (root / "ok.md").write_text("org_default_value and my_rg_something_long\n")
+    assert builder.read_public_file(root, "ok.md")
+    for text in ("key rg_abcdefgh12345", "(rg_abcdefgh12345)", "rg_abcdefgh12345"):
+        (root / "bad.md").write_text(text)
+        with pytest.raises(ValueError, match="credential"):
+            builder.read_public_file(root, "bad.md")
+
+
+@pytest.mark.parametrize("kind", ["", "RSA ", "EC ", "OPENSSH ", "ENCRYPTED ", "PGP "])
+def test_private_key_blocks_are_rejected(tmp_path, kind):
+    suffix = " BLOCK" if kind == "PGP " else ""
+    (tmp_path / "k.md").write_text(f"-----BEGIN {kind}PRIVATE KEY{suffix}-----\n")
+    with pytest.raises(ValueError, match="credential"):
+        builder.read_public_file(tmp_path, "k.md")
+
+
+def test_paging_and_refresh_guidance_match_the_workflow_helper():
+    refs = SKILL_ROOT / "references"
+    batch = (refs / "batch.md").read_text()
+    assert (
+        "N + (K - 1) records" in batch
+        and "authorized_retry=True" in batch.split("Paged searches")[1].split("## Neighbour")[0]
+    )
+    assert "refresh" in batch.split("## Resume")[1] and (
+        "authorized_retry=True" in batch.split("An explicit refresh")[1][:600]
+    )
+    cli = (refs / "cli.md").read_text()
+    assert cli.count('"limit":1') >= 4 and "return_stacked" in cli

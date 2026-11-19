@@ -445,3 +445,28 @@ def test_non_string_path_does_not_block_neighbours(tmp_path, monkeypatch):
     seen = _install(monkeypatch, handler)
     cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"])
     assert len(seen) == 2
+
+
+def test_address_map_refuses_nfc_nfd_and_case_collisions(tmp_path, seen, capsys):
+    argv = ["address-map", "x", str(tmp_path / "café.html")]
+    argv += ["--save-response", str(tmp_path / "café.html")]
+    assert cli.main(argv) == 1
+    assert seen == [] and "different files" in capsys.readouterr().err
+    argv = [
+        "address-map",
+        "x",
+        str(tmp_path / "M.JSON"),
+        "--save-response",
+        str(tmp_path / "m.json"),
+    ]
+    assert cli.main(argv) == 1
+    assert seen == [] and "different files" in capsys.readouterr().err
+
+
+def test_map_command_refuses_case_variant_of_response(tmp_path, capsys):
+    from map_fixtures import write_response
+
+    write_response(tmp_path / "RESP.json", good_feature())
+    argv = ["map", str(tmp_path / "RESP.json"), str(tmp_path / "resp.json"), "--replace"]
+    assert cli.main(argv) == 1
+    assert "Output must not be the response file" in capsys.readouterr().err

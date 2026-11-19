@@ -564,6 +564,18 @@ def test_bad_neighbour_is_skipped_with_warning(tmp_path):
     assert summary["neighbours"] == 0 and summary["warnings"][0].startswith("Neighbour 0 skipped")
 
 
+def test_neighbour_degenerate_rings_are_dropped_with_warning(tmp_path):
+    multi = {
+        "type": "MultiPolygon",
+        "coordinates": [square(lon=-75.0289)["coordinates"], [_sliver(-75.02, 39.91)]],
+    }
+    response = write_response(tmp_path / "r.json", good_feature())
+    near = write_response(tmp_path / "n.json", _other(multi))
+    summary = parcel_map.render(response, tmp_path / "m.html", neighbours_path=near)
+    assert summary["neighbours"] == 1
+    assert "Neighbour 0: Degenerate ring skipped" in summary["warnings"]
+
+
 def test_neighbour_data_is_escaped_and_styled(tmp_path):
     hostile = _other(square(lon=-75.0289), owner="</script><b>&x")
     response = write_response(tmp_path / "r.json", good_feature())
@@ -911,3 +923,99 @@ def test_check_mappable_matches_render_messages():
         parcel_map.check_mappable(
             {"properties": {"path": "/ca/x"}, "geometry": None}, label="Candidate 2"
         )
+
+
+def test_render_missing_output_directory_is_clean_error(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    with pytest.raises(MapError, match="Output directory does not exist"):
+        parcel_map.render(response, tmp_path / "nodir" / "o.html")
+
+
+def test_zero_area_ring_is_rejected(tmp_path):
+    point = [-75.03, 39.9]
+    degenerate = _other({"type": "Polygon", "coordinates": [[point] * 4]})
+    with pytest.raises(MapError, match="zero area"):
+        parcel_map.render(write_response(tmp_path / "r.json", degenerate), tmp_path / "m.html")
+    collinear = [[-75.03, 39.9], [-75.02, 39.9], [-75.01, 39.9], [-75.03, 39.9]]
+    with pytest.raises(MapError, match="zero area"):
+        parcel_map.validate_geometry({"type": "Polygon", "coordinates": [collinear]})
+
+
+def _ring(points):
+    return {"type": "Polygon", "coordinates": [[*points, points[0]]]}
+
+
+def test_zero_area_check_is_precise_at_real_coordinates():
+    lon, lat, d = -122.4194, 37.7749, 2.7e-6  # about 0.3 m
+    small = _ring([[lon, lat], [lon + d, lat], [lon + d, lat + d], [lon, lat + d]])
+    parcel_map.validate_geometry(small)
+    parcel_map.validate_geometry(
+        _ring([[179.95, 52.0], [-179.95, 52.0], [-179.95, 52.1], [179.95, 52.1]])
+    )
+    for bad in (
+        _ring([[lon, lat], [lon + d, lat + d], [lon + 2 * d, lat + 2 * d]]),
+        _ring([[lon, lat], [lon + d, lat], [lon, lat]]),
+        _ring([[lon, lat], [lon + 0.01, lat], [lon + 0.02, lat], [lon + 0.01, lat]]),
+    ):
+        with pytest.raises(MapError, match="zero area"):
+            parcel_map.validate_geometry(bad)
+
+
+def _sliver(lon, lat):
+    d = 1e-9  # about 1e-4 m, area far below 0.01 m2
+    return [[lon, lat], [lon + d, lat], [lon + d, lat + d], [lon, lat + d], [lon, lat]]
+
+
+def test_sliver_hole_is_dropped_with_a_warning(tmp_path):
+    geometry = square()
+    geometry["coordinates"].append(_sliver(-75.0295, 39.9005))
+    item = _other(geometry, ll_gissqft=expected_sqft())
+    summary = parcel_map.render(write_response(tmp_path / "r.json", item), tmp_path / "m.html")
+    assert summary["warnings"] == ["Parcel: Degenerate ring skipped"]
+    assert summary["area_checks"][0]["status"] == "ok"
+
+
+def test_sliver_member_polygon_is_dropped_but_others_remain(tmp_path):
+    multi = {
+        "type": "MultiPolygon",
+        "coordinates": [square()["coordinates"], [_sliver(-75.02, 39.91)]],
+    }
+    item = _other(multi, ll_gissqft=expected_sqft())
+    summary = parcel_map.render(write_response(tmp_path / "r.json", item), tmp_path / "m.html")
+    assert summary["warnings"] == ["Parcel: Degenerate ring skipped"]
+    assert summary["area_checks"][0]["status"] == "ok"
+    pruned, dropped = parcel_map.prune_geometry(multi)
+    assert len(pruned["coordinates"]) == 1 and len(dropped) == 1
+
+
+def test_only_degenerate_polygons_still_fail(tmp_path):
+    multi = {"type": "MultiPolygon", "coordinates": [[_sliver(-75.02, 39.91)]]}
+    with pytest.raises(MapError, match="Polygon ring has zero area"):
+        parcel_map.validate_geometry(multi)
+
+
+def test_same_file_key_folds_case_and_unicode(tmp_path):
+    assert parcel_map.same_file_key(tmp_path / "RESP.json") == parcel_map.same_file_key(
+        tmp_path / "resp.json"
+    )
+    nfc, nfd = "café.json", "café.json"
+    assert parcel_map.same_file_key(tmp_path / nfc) == parcel_map.same_file_key(tmp_path / nfd)
+    assert parcel_map.same_file_key(tmp_path / "a.json") != parcel_map.same_file_key(
+        tmp_path / "b.json"
+    )
+
+
+def test_render_refuses_case_variant_of_response(tmp_path):
+    response = write_response(tmp_path / "RESP.json", good_feature())
+    with pytest.raises(MapError, match="Output must not be the response file"):
+        parcel_map.render(response, tmp_path / "resp.json", replace=True)
+
+
+def test_export_refuses_unicode_variant_targets(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    with pytest.raises(MapError, match="must be different files"):
+        parcel_map.export(
+            response, csv_path=tmp_path / "café.out", geojson_path=tmp_path / "café.out"
+        )
+    with pytest.raises(MapError, match="Output must not be the response file"):
+        parcel_map.export(response, csv_path=tmp_path / "R.JSON", replace=True)

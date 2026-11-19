@@ -14,7 +14,8 @@ MCP_URL = "https://support.regrid.com/mcp"
 SKILLS = ("property-research", "setup")
 BASE_FILES = (".claude-plugin/plugin.json", ".mcp.json", "README.md", "PRIVACY.md")
 LICENSE_FILE = "LICENSE"  # read from the plugin source directory
-TOKEN_PATTERN = re.compile(rb"rg_[A-Za-z0-9_-]{8,}")
+TOKEN_PATTERN = re.compile(rb"(?<![A-Za-z0-9_])rg_[A-Za-z0-9_-]{8,}")
+PRIVATE_KEY_PATTERN = re.compile(rb"-----BEGIN [A-Z ]*PRIVATE KEY(?: BLOCK)?-----")
 
 
 def read_public_file(root: Path, relative: str) -> bytes:
@@ -25,7 +26,7 @@ def read_public_file(root: Path, relative: str) -> bytes:
         if path.is_symlink():
             raise ValueError(f"Symlink not allowed in package: {relative}")
     data = path.read_bytes()
-    if TOKEN_PATTERN.search(data) or b"-----BEGIN PRIVATE KEY-----" in data:
+    if TOKEN_PATTERN.search(data) or PRIVATE_KEY_PATTERN.search(data):
         raise ValueError(f"Possible credential in package file: {relative}")
     return data
 
