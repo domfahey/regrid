@@ -139,6 +139,54 @@ These are skill instructions, not server-enforced spending limits. Regrid's
 account limits and permissions still apply. Returned records consume API usage.
 Regrid requires disabling model training/data sharing before using its data with AI.
 
+## MCP server coverage
+
+The plugin has two skills, `property-research` and `setup`, plus the
+`/regrid-research:address-map` command, which drives `property-research`. The tool
+guide is `skills/property-research/references/mcp-tools.md`, and `setup` reads it too.
+
+**MCP tools.** Only `execute-request` makes API calls; the other six use no request
+allowance.
+
+| MCP tool | What it does | Costs requests? | Used by |
+| --- | --- | --- | --- |
+| `list-specs` | Lists the API specs (US, Global, Batch) | No | property-research, setup |
+| `list-endpoints` | Lists the paths in one spec | No | property-research |
+| `search-endpoints` | Finds a path across all specs | No | property-research |
+| `get-endpoint` | Gets an endpoint's exact parameters before a call | No | property-research, setup |
+| `search` | Searches Regrid's documentation | No | property-research, setup |
+| `fetch` | Reads one documentation page | No | property-research, setup |
+| `execute-request` | Makes the actual API call | Yes | property-research, setup (usage check only), `/address-map` |
+
+**API endpoints reached through `execute-request`:**
+
+| Endpoint | Used by | How |
+| --- | --- | --- |
+| `/parcels/address` | property-research, `/address-map` | Address lookup (1 record), plus the satellite map |
+| `/parcels/apn` | property-research | APN lookup within a county |
+| `/parcels/owner` | property-research | Owner search within an area |
+| `/parcels/point` | property-research, `/address-map` with neighbours | Point or radius search; neighbours are 100 m and up to 25 records |
+| `/parcels/area` | property-research | Search inside a GeoJSON area |
+| `/parcels/query` | property-research | Field-filter search; at least one filter required |
+| `/parcels/{ll_uuid}` | property-research | Lookup by Regrid ID |
+| `/parcels/path` | property-research | Refresh by Regrid path, and the second step of address suggestions |
+| `/parcels/typeahead` | property-research | Address suggestions (Enterprise tokens only) |
+| `/verse` | property-research, CLI only | County pull dates through `regrid freshness`; too large to pass through chat |
+| `/schemas/*` | property-research | Field definitions, only when the bundled catalog lacks the field |
+| `/usage` | setup | One authentication check |
+| `/usage/detailed` | property-research | Only for "how many lookups are left" questions |
+| Paid-dataset options (`return_zoning` and the like) | property-research | Only with the user's authorization (`premium.md`) |
+| `return_count` and `offset_id` | property-research | Count before pulling; paging in the CLI via `--max-records` |
+
+**Offered by the server but deliberately not used:**
+
+| Feature | Why |
+| --- | --- |
+| POST `/report` | It files a data issue with Regrid (an external change) |
+| `/client_token/typeahead` | It creates a temporary token |
+| Global and Batch specs | Out of scope (US only); the skill says never to use them |
+| `/ca/*` routes | US only; the SDK keeps the existing Canadian routes but the skill doesn't use them |
+
 ## Validation and acceptance
 
 For 0.5.0, `make check` passed 727 tests with no skips, including 64 workflow
