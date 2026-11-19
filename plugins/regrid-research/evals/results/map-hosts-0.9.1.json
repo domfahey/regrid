@@ -1,0 +1,9 @@
+{
+  "plugin_version": "0.9.1",
+  "hosts": {
+    "claude_code": "not_run",
+    "claude_apps": "not_run",
+    "cowork": "not_run"
+  },
+  "notes": "Map render verified 2026-11-19 in a plain browser (not a Claude host) with the 0.9.1 code: synthetic US response rendered with `regrid map --neighbours` and opened from localhost in Chromium (Playwright). Esri imagery loaded (30 tiles), subject outline plus 2 neighbour outlines drawn, info panel showed all facts with hostile owner text rendered as plain text, Esri attribution visible, no console errors except the test server's missing favicon. claude_code, claude_apps and cowork hosts: not run (need the user's apps). Live Regrid geometry check and live /mcp connection over the native HTTP transport: not run (need the user's token)."
+}

@@ -2,9 +2,19 @@
 
 User-visible changes are grouped by release using the categories from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version numbering follows [Semantic Versioning](https://semver.org/); the current `0.x` API remains under development.
 
-The Python SDK/CLI and the Regrid Research plugin are versioned independently. The latest tagged releases are SDK `0.4.0` (`sdk-v0.4.0`) and Regrid Research `0.9.0` (`regrid-research-v0.9.0`); the first were SDK `0.3.0` and Regrid Research `0.8.0`. Keep pending changes under Unreleased until the next release is prepared.
+The Python SDK/CLI and the Regrid Research plugin are versioned independently. The latest tagged releases are SDK `0.4.1` (`sdk-v0.4.1`) and Regrid Research `0.9.1` (`regrid-research-v0.9.1`); the first were SDK `0.3.0` and Regrid Research `0.8.0`. Keep pending changes under Unreleased until the next release is prepared.
 
 ## Unreleased
+
+No changes yet.
+
+## [SDK 0.4.1][sdk-v0.4.1] and [Regrid Research 0.9.1][regrid-research-v0.9.1] - 2026-11-19
+
+Patch release with the fixes from the second 24-hour bug audit (PR #15). Unverified at release:
+- the live geometry check and a live `/mcp` connection over the native HTTP transport
+- the Claude Code, Claude apps and Cowork map host checks (the map page passed a plain-browser render check)
+- the live `offset_id` paging cursor
+- model and Cowork acceptance evaluations
 
 ### Fixed
 
@@ -226,3 +236,5 @@ Describe user-facing changes rather than copying commit logs. Add repository com
 [regrid-research-v0.8.0]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.8.0
 [sdk-v0.4.0]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.0
 [regrid-research-v0.9.0]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.0
+[sdk-v0.4.1]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.1
+[regrid-research-v0.9.1]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.1
