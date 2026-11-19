@@ -628,3 +628,19 @@ def test_existing_response_keys_are_never_overwritten(monkeypatch, capsys):
         "(response_pages/response_complete already present)"
     )
     assert err.splitlines().count(note) == 1
+
+
+@pytest.mark.parametrize(
+    ("existing", "kept", "dropped"),
+    [("response_pages", "complete", "pages"), ("response_complete", "pages", "complete")],
+)
+def test_paging_note_names_only_the_key_not_kept(monkeypatch, capsys, existing, kept, dropped):
+    page = _page([1, 2], pages="s", complete="c", **{existing: "mine"})
+    _paged(monkeypatch, page, page)
+    assert cli.main([*POINT, "--max-records", "2", "--options", '{"limit":2}']) == 0
+    lines = capsys.readouterr().err.splitlines()
+    assert (
+        f"regrid: paging note: response {dropped} not kept (response_{dropped} already present)"
+        in lines
+    )
+    assert f"regrid: paging note: response {kept} kept as response_{kept}" in lines

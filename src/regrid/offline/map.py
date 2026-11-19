@@ -328,7 +328,7 @@ def _feature_data(feature: dict, label: str | None, retrieved_at: str | None) ->
     }
 
 
-def _neighbour_data(feature: object) -> dict[str, Any]:
+def _neighbour_data(feature: object) -> tuple[dict[str, Any], list[str]]:
     if not isinstance(feature, dict):
         raise MapError("Neighbour is not a parcel feature")
     properties = feature.get("properties")
@@ -339,9 +339,9 @@ def _neighbour_data(feature: object) -> dict[str, Any]:
     geometry = feature.get("geometry")
     if geometry is None:
         raise MapError("Neighbour has no boundary")
-    geometry, _dropped = prune_geometry(geometry)
+    geometry, dropped = prune_geometry(geometry)
     fields = _fields(feature)
-    return {
+    data = {
         "title": _text(properties.get("headline")),
         "facts": [
             ["Address", _text(properties.get("headline"))],
@@ -350,6 +350,7 @@ def _neighbour_data(feature: object) -> dict[str, Any]:
         ],
         "geometry": _display_geometry(geometry),
     }
+    return data, dropped
 
 
 def load_neighbours(path: Path, subject_ids: set[str]) -> tuple[list[dict[str, Any]], list[str]]:
@@ -370,9 +371,12 @@ def load_neighbours(path: Path, subject_ids: set[str]) -> tuple[list[dict[str, A
         if isinstance(uuid, str) and uuid in subject_ids:
             continue
         try:
-            drawn.append(_neighbour_data(feature))
+            data, dropped = _neighbour_data(feature)
         except MapError as exc:
             warnings.append(f"Neighbour {number} skipped: {exc}")
+            continue
+        drawn.append(data)
+        warnings.extend(f"Neighbour {number}: {text}" for text in dropped)
     return drawn, warnings
 
 

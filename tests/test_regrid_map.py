@@ -564,6 +564,18 @@ def test_bad_neighbour_is_skipped_with_warning(tmp_path):
     assert summary["neighbours"] == 0 and summary["warnings"][0].startswith("Neighbour 0 skipped")
 
 
+def test_neighbour_degenerate_rings_are_dropped_with_warning(tmp_path):
+    multi = {
+        "type": "MultiPolygon",
+        "coordinates": [square(lon=-75.0289)["coordinates"], [_sliver(-75.02, 39.91)]],
+    }
+    response = write_response(tmp_path / "r.json", good_feature())
+    near = write_response(tmp_path / "n.json", _other(multi))
+    summary = parcel_map.render(response, tmp_path / "m.html", neighbours_path=near)
+    assert summary["neighbours"] == 1
+    assert "Neighbour 0: Degenerate ring skipped" in summary["warnings"]
+
+
 def test_neighbour_data_is_escaped_and_styled(tmp_path):
     hostile = _other(square(lon=-75.0289), owner="</script><b>&x")
     response = write_response(tmp_path / "r.json", good_feature())

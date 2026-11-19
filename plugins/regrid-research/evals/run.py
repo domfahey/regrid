@@ -31,17 +31,28 @@ def _strings(value: object):
             yield from _strings(item)
 
 
+def _has_canadian_segment(path: str) -> bool:
+    parts = path.strip().lower().split("/")
+    for i, part in enumerate(parts[:-1]):
+        if part != "ca" or (i and parts[i - 1] == "us"):
+            continue
+        if parts[i + 1][:1].strip():
+            return True
+    return False
+
+
 def _is_canadian_route(arguments: dict) -> bool:
     """True when a `ca` path segment is followed by more segments and is not /us/ca/ (California).
 
-    Works on path-like strings, URL paths and query values such as path=/ca/on/x.
+    Checks path-like strings, URL paths and path= parameter values. Other query values
+    (state2=ca, fields[state2][eq]=ca) are California filters, never routes.
     """
     for text in _strings(arguments):
-        parts = re.split(r"[/?&=#]", text.strip().lower())
-        for i, part in enumerate(parts[:-1]):
-            if part != "ca" or (i and parts[i - 1] == "us"):
+        for chunk in re.split(r"[?&#]", text):
+            key, sep, value = chunk.partition("=")
+            if sep and key.strip().lower() != "path":
                 continue
-            if parts[i + 1][:1].strip():
+            if _has_canadian_segment(value if sep else chunk):
                 return True
     return False
 

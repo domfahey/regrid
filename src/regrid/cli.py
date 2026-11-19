@@ -452,18 +452,18 @@ def _paged_search(
         pages += 1
         if pages == 1:
             merged = _copy_first_page(result)
-            if any(f"response_{key}" in merged for key in ("pages", "complete") if key in merged):
-                print(
-                    "regrid: paging note: response pages/complete not kept "
-                    "(response_pages/response_complete already present)",
-                    file=sys.stderr,
-                )
-            elif "pages" in merged or "complete" in merged:
-                print(
-                    "regrid: paging note: response pages/complete kept as "
-                    "response_pages/response_complete",
-                    file=sys.stderr,
-                )
+            present = [key for key in ("pages", "complete") if key in merged]
+            lost = [key for key in present if f"response_{key}" in merged]
+            moved = [key for key in present if key not in lost]
+            for keys, text in ((lost, "not kept"), (moved, "kept")):
+                if keys:
+                    names = "/".join(keys)
+                    renamed = "/".join(f"response_{key}" for key in keys)
+                    detail = f"({renamed} already present)" if keys is lost else f"as {renamed}"
+                    print(
+                        f"regrid: paging note: response {names} {text} {detail}",
+                        file=sys.stderr,
+                    )
         else:
             _merge_page(merged, result, noted)
         new = []
