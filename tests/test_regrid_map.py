@@ -153,3 +153,19 @@ def test_area_check_flags_mismatch():
     corrupted["coordinates"][0][2][1] = 39.911  # ring stays closed: only index 2 changes
     result = parcel_map.area_check(feature(corrupted, ll_gissqft=expected_sqft()))
     assert result["status"] == "mismatch"
+
+
+def test_oversized_integer_coordinates_raise_map_error():
+    huge = 10**400
+    geometry = {
+        "type": "Polygon",
+        "coordinates": [[[-75.03, 39.9], [huge, 39.9], [-75.029, 39.901], [-75.03, 39.9]]],
+    }
+    with pytest.raises(MapError, match="finite numbers"):
+        parcel_map.validate_geometry(geometry)
+
+
+def test_oversized_integer_recorded_area_is_unavailable():
+    result = parcel_map.area_check(feature(square(), ll_gissqft=10**400))
+    assert result["status"] == "unavailable"
+    assert result["recorded_sqft"] is None

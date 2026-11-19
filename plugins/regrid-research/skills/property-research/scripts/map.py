@@ -1,4 +1,4 @@
-"""Offline parcel geometry validation and area cross-checks. Never calls APIs or reads credentials."""
+"""Offline parcel geometry validation and area cross-checks; no network or credentials."""
 
 from __future__ import annotations
 
@@ -31,14 +31,20 @@ def load_features(document: object) -> list[dict]:
     return features
 
 
-def _finite_number(value: object) -> bool:
-    return type(value) in {int, float} and math.isfinite(value)
+def _finite(value: object) -> float | None:
+    if type(value) not in {int, float}:
+        return None
+    try:
+        number = float(value)
+    except OverflowError:
+        return None
+    return number if math.isfinite(number) else None
 
 
 def _validate_position(position: object) -> None:
     if not isinstance(position, list) or len(position) != 2:
         raise MapError("Geometry positions must be [longitude, latitude] pairs")
-    if not all(_finite_number(value) for value in position):
+    if not all(_finite(value) is not None for value in position):
         raise MapError("Geometry coordinates must be finite numbers")
     lon, lat = position
     if not any(
@@ -94,6 +100,7 @@ def _polygon_area_m2(polygon: list[list[list[float]]]) -> float:
 
 
 def geometry_area_sqft(geometry: dict) -> float:
+    """Spherical area in square feet; callers must run validate_geometry first."""
     polygons = (
         geometry["coordinates"] if geometry["type"] == "MultiPolygon" else [geometry["coordinates"]]
     )
@@ -101,20 +108,17 @@ def geometry_area_sqft(geometry: dict) -> float:
 
 
 def _recorded_sqft(value: Any) -> float | None:
-    if isinstance(value, bool):
-        return None
     if isinstance(value, str):
         try:
             value = float(value)
         except ValueError:
             return None
-    if not isinstance(value, (int, float)):
-        return None
-    number = float(value)
-    return number if math.isfinite(number) and number > 0 else None
+    number = _finite(value)
+    return number if number is not None and number > 0 else None
 
 
 def area_check(feature: dict, tolerance: float = 0.05) -> dict[str, Any]:
+    """Compare computed and recorded area; callers must run validate_geometry first."""
     geometry = feature.get("geometry")
     fields = (feature.get("properties") or {}).get("fields") or {}
     recorded = _recorded_sqft(fields.get("ll_gissqft"))
