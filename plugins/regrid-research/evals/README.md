@@ -246,7 +246,7 @@ the shipped helper still requires only Python 3.10+ and the standard library.
 
 ## Satellite map host checklist
 
-Run per host (Claude Code, Claude apps, Cowork) with the 0.8.0 archive:
+Run per host (Claude Code, Claude apps, Cowork) with the 0.9.0 archive:
 
 1. Run `/regrid-research:address-map <US address>` (or render a saved response) and
    open the page.
@@ -254,7 +254,7 @@ Run per host (Claude Code, Claude apps, Cowork) with the 0.8.0 archive:
    credit all show.
 3. Check the browser console for blocked scripts or tile errors.
 4. Record `verified`, `failed` or `not_run` per host in
-   `results/map-hosts-0.8.0.json`, with notes. Leave `not_run` without evidence.
+   `results/map-hosts-0.9.0.json`, with notes. Leave `not_run` without evidence.
 
 `--suite feature` adds eight map, export, field-explanation, freshness, typo, and
 out-of-scope scenarios (`feature-cases.json`, grader-only `feature-rubric.json`);
@@ -265,7 +265,7 @@ validation checks structure only, not model behavior.
 ## Historical verification
 
 Verification logs moved from the shipped plugin README. They describe
-earlier plugin versions and are not current status; the 0.8.0 status is in the
+earlier plugin versions and are not current status; the current status is in the
 plugin README's "Validation and acceptance" section.
 
 Historical 0.5.0 verification: `make check` passed 727 tests with no skips, including 64 workflow
