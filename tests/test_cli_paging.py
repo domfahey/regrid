@@ -43,7 +43,7 @@ def test_normal_paging(monkeypatch, capsys):
     assert "offset_id" not in seen[0].url.params
     assert seen[1].url.params["offset_id"] == "10"
     assert seen[2].url.params["offset_id"] == "20"
-    assert "regrid: up to 3 requests for 5 records" in err
+    assert "regrid: up to 4 requests for 5 records" in err
     assert "regrid: requests made: 3" in err
     assert "secret" not in err
 
@@ -262,3 +262,139 @@ def test_page_without_parcels_or_features_is_empty(monkeypatch, capsys, body):
     assert cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}']) == 0
     data = json.loads(capsys.readouterr().out)
     assert data["parcels"]["features"] == [] and data["complete"] is True
+
+
+def fc(ids):
+    return {"type": "FeatureCollection", "features": feats(*ids)}
+
+
+def test_top_level_feature_collections_merge_across_pages(monkeypatch, capsys):
+    bodies = [
+        {"parcels": fc([1, 2]), "buildings": fc([11]), "zoning": None},
+        {"parcels": fc([3, 4]), "buildings": fc([12]), "zoning": fc([21])},
+    ]
+    install_bodies(monkeypatch, bodies)
+    assert cli.main([*POINT, "--max-records", "4", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert [f["id"] for f in data["buildings"]["features"]] == [11, 12]
+    assert [f["id"] for f in data["zoning"]["features"]] == [21]
+
+
+@pytest.mark.parametrize("bad", ["a", -5, True, 1.5])
+def test_invalid_cursor_id_stops_with_partial(monkeypatch, capsys, bad):
+    seen = install(monkeypatch, [feats(5, bad), feats(3, 4)])
+    assert cli.main([*POINT, "--max-records", "4", "--options", '{"limit":2}']) == 0
+    out, err = capsys.readouterr()
+    assert len(seen) == 1
+    assert "regrid: paging stopped: no cursor in response" in err
+    data = json.loads(out)
+    assert data["complete"] is False and len(data["parcels"]["features"]) == 2
+
+
+def test_order_filter_with_paging_rejected_before_request(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 2)])
+    argv = ["query", "--fields", '{"geoid":{"order":"ASC"}}', "--validate-fields"]
+    assert cli.main([*argv, "--max-records", "4", "--options", '{"limit":2}']) == 1
+    err = capsys.readouterr().err
+    assert seen == [] and err.count("regrid: requests made:") == 1
+    assert "requests made: 0" in err and len(err.strip().splitlines()) == 2
+
+
+def test_request_limit_capped_to_remaining(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 2), feats(3)])
+    assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
+    assert [r.url.params["limit"] for r in seen] == ["2", "2"]  # later pages: remaining + 1
+    seen = install(monkeypatch, [feats(1, 2, 3, 4, 5)])
+    assert cli.main([*POINT, "--max-records", "5", "--options", '{"limit":100}']) == 0
+    assert seen[0].url.params["limit"] == "5"
+    assert "up to 1 requests for 5 records" in capsys.readouterr().err
+
+
+def test_return_count_with_max_records_rejected(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 2)])
+    opts = '{"limit":2,"return_count":true}'
+    assert cli.main([*POINT, "--max-records", "4", "--options", opts]) == 1
+    err = capsys.readouterr().err
+    assert seen == [] and err.count("regrid: requests made:") == 1
+    assert "requests made: 0" in err
+
+
+def test_duplicate_ids_within_page_deduplicated(monkeypatch, capsys):
+    install(monkeypatch, [feats(1, 1)])
+    assert cli.main([*POINT, "--max-records", "4", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert [f["id"] for f in data["parcels"]["features"]] == [1]
+
+
+def test_inclusive_cursor_still_reaches_exact_total(monkeypatch, capsys):
+    ids = list(range(1, 20))
+    seen = []
+
+    def handle(request):
+        seen.append(request)
+        start = request.url.params.get("offset_id")
+        rows = [i for i in ids if start is None or i >= int(start)]
+        rows = rows[: int(request.url.params["limit"])]
+        return httpx.Response(
+            200, json={"parcels": {"type": "FeatureCollection", "features": feats(*rows)}}
+        )
+
+    monkeypatch.setenv("REGRID_TOKEN", "secret")
+    monkeypatch.setattr(
+        cli, "RegridClient", lambda **kw: RegridClient(**kw, transport=httpx.MockTransport(handle))
+    )
+    assert cli.main([*POINT, "--max-records", "5", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert [f["id"] for f in data["parcels"]["features"]] == [1, 2, 3, 4, 5]
+    assert data["complete"] is True
+    assert seen[0].url.params["limit"] == "2"
+    assert all(int(r.url.params["limit"]) <= 2 for r in seen)
+    remaining = 5
+    for r, got in zip(seen, (2, 1, 1, 1)):
+        assert int(r.url.params["limit"]) <= remaining + 1 or r is seen[0]
+        remaining -= got
+
+
+def _counting(monkeypatch, handler):
+    seen = []
+
+    def handle(request):
+        seen.append(request)
+        return handler(request, len(seen))
+
+    monkeypatch.setenv("REGRID_TOKEN", "secret")
+    monkeypatch.setattr(
+        cli, "RegridClient", lambda **kw: RegridClient(**kw, transport=httpx.MockTransport(handle))
+    )
+    return seen
+
+
+def _inclusive(request, _n, inclusive=True):
+    start = request.url.params.get("offset_id")
+    low = 0 if start is None else int(start) + (0 if inclusive else 1)
+    rows = [i for i in range(1, 5000) if i >= low][: int(request.url.params["limit"])]
+    body = {"parcels": {"type": "FeatureCollection", "features": feats(*rows)}}
+    return httpx.Response(200, json=body)
+
+
+@pytest.mark.parametrize("inclusive", [True, False])
+@pytest.mark.parametrize(("total", "limit"), [(5, 2), (1000, 2), (7, 3), (3, 5)])
+def test_printed_cap_is_enforced_maximum(monkeypatch, capsys, inclusive, total, limit):
+    seen = _counting(monkeypatch, lambda r, n: _inclusive(r, n, inclusive))
+    opts = json.dumps({"limit": limit})
+    assert cli.main([*POINT, "--max-records", str(total), "--options", opts]) == 0
+    out, err = capsys.readouterr()
+    cap = int(err.split("regrid: up to ")[1].split()[0])
+    assert len(seen) <= cap
+    assert json.loads(out)["complete"] is True
+    if inclusive and total > limit:
+        assert len(seen) == cap
+    assert cap <= max(total, 1)
+
+
+def test_limit_one_inclusive_cursor_stops_after_two_requests(monkeypatch, capsys):
+    seen = _counting(monkeypatch, _inclusive)
+    assert cli.main([*POINT, "--max-records", "5", "--options", '{"limit":1}']) == 0
+    out, err = capsys.readouterr()
+    assert len(seen) == 2
+    assert "cursor did not advance" in err and json.loads(out)["complete"] is False
