@@ -20,6 +20,7 @@ Processing APIs are out of scope and not implemented.
 - [Operation coverage](docs/api-coverage.md): all 33 supplied OpenAPI operations and parameter profiles.
 - [Parcel schema guidance](docs/parcel-schema-guidance.md): field meanings, standardized alternatives, and coverage limitations.
 - [Response models](docs/model-coverage.md) and [UTFGrid](docs/utfgrid.md): typed fields and tileserver discovery.
+- [Plugin feature audit](docs/plugin-feature-audit-2026-11-19.md) and [todos](todos.md): MCP/CLI coverage audit and its remaining open items.
 
 ## Installation
 
@@ -79,6 +80,8 @@ uv add /absolute/path/to/regrid
 | `make e2e` | Run subprocess and real local HTTPS tests |
 | `make check` | Run lint, format-check, typecheck, and the coverage-gated mocked suite |
 | `uv build` | Build wheel and source archives into `dist/` |
+| `.venv/bin/python scripts/sync_skill_helpers.py [--check]` | Copy `src/regrid/offline/*.py` into the skill's `scripts/` (byte-identical); `--check` fails on drift |
+| `.venv/bin/python scripts/generate_skill_fields.py [--check]` | Regenerate the skill's compact `references/fields.json` from the packaged field catalog |
 
 Coverage includes every SDK and CLI module; XML output is written to ignored `coverage.xml`. E2E tests are separate from `make check`: they require `openssl` and permission to bind a localhost port, generate temporary TLS keys, and verify TLS using a temporary trusted certificate. They do not contact Regrid or incur API charges. Run `make check && make e2e` for the full offline suite. `make live` is a separate, explicitly invoked service check that can incur a parcel charge. Override `PYTHON` if using a virtual environment other than `.venv`.
 
@@ -112,7 +115,7 @@ Every API command prints `regrid: requests made: N` to stderr (JSON on stdout is
 
 `regrid map RESPONSE OUTPUT [--feature N] [--all-candidates] [--retrieved-at ISO] [--neighbours FILE] [--replace]` renders offline with no request (the output may not be the response or neighbours file). `regrid freshness` reuses its `/verse` cache for 30 days (`--max-age-days N`) and only for the same `--base-url`; an older cache is refetched with one request and a stderr note. `regrid address-map ADDRESS OUTPUT [--path SCOPE] [--save-response FILE] [--retrieved-at ISO] [--replace]` makes one address request, prints `regrid: requests made: N` to stderr, and saves the response next to the page unless `--save-response` is given. Pages load Leaflet and Esri imagery in the viewer's browser.
 
-Every SDK method has a CLI command: `point`, `area`, `address`, `apn`, `owner`, `query`, `parcel`, `parcel-path`, `typeahead`, `client-token-typeahead`, `schema`, `verse`, `usage`, `report`, `tilejson`, `tile`, and `grid`. Use `<command> --help` for arguments. `python -m regrid` is equivalent to the installed command.
+Every SDK method has a CLI command: `point`, `area`, `address`, `apn`, `owner`, `query`, `parcel`, `parcel-path`, `typeahead`, `client-token-typeahead`, `schema`, `verse`, `usage`, `report`, `tilejson`, `tile`, and `grid`. Workflow commands build on them: `address-map` and `freshness` make API requests, while `map`, `export` and `fields` run offline with no token or client. The offline helpers live in the standard-library-only `regrid.offline` package (`map`, `fields`, `freshness`), which is also the source of the plugin's bundled scripts. Use `<command> --help` for arguments. `python -m regrid` is equivalent to the installed command.
 
 Use `--country ca` where Canadian endpoints are supported. `--options` accepts an object or `@file` containing JSON for supported SDK keyword parameters. `--fields` and `--geojson` also accept JSON or `@file`. Report details accept structured `--details` or plain `--details-text`; `report` submits an external data issue. The `client-token-typeahead` command intentionally prints the newly generated temporary token in its JSON response, so handle that output as a credential.
 
@@ -238,7 +241,7 @@ UTFGrid discovery makes one metadata request and one grid request. Pass previous
 
 ## Cost and credentials
 
-The client performs no automatic retries or pagination. Parcel retrieval can incur charges per returned record. Applications should enforce call and record budgets, use geographic restrictions for broad searches, and handle cursors explicitly where supported. Usage responses describe consumption, not a documented remaining account balance.
+The SDK client performs no automatic retries or pagination. The CLI's opt-in `--max-records` pages only up to a precomputed request cap and reports every request on stderr. Parcel retrieval can incur charges per returned record. Applications should enforce call and record budgets, use geographic restrictions for broad searches, and handle cursors explicitly where supported. Usage responses describe consumption, not a documented remaining account balance.
 
 Premium dataset defaults depend on API behavior and account access. Set supported flags such as `return_zoning`, `return_matched_buildings`, `return_matched_addresses`, and `return_enhanced_ownership` explicitly when controlling returned datasets. The SDK sends `return_parcels=True` by default on endpoints supporting that option because the supplied specification has conflicting defaults; pass `return_parcels=False` explicitly when needed. These controls do not guarantee billing outcomes. Count-request billing and retrieval behavior require verification before relying on them as cost controls.
 
@@ -257,6 +260,19 @@ Catch `RegridError` for SDK failures, `RegridHTTPError` for non-success HTTP sta
 Invalid local arguments raise `ValueError` or `TypeError`. The client checks limits, coordinate ranges, supported options, and tile indices. Geometry topology, polygon area, and account permissions remain server-validated. Field/operator checks are available locally through opt-in US catalog validation; the server remains authoritative for current query support. Response dictionaries preserve unexpected and county-specific fields.
 
 ## Verification status
+
+For Regrid Research 0.8.0 and SDK 0.3.0 (PR #6, merged as `619394a`):
+- **Tests:** `make check` passed **1106 tests** with **97.94%** SDK/CLI coverage, and `make e2e` passed 4.
+- **CI:** passed on Python 3.10 and 3.12, plus a new Windows job for the offline helper and CLI tests.
+- **Plugin:** the three 0.8.0 archives passed `claude plugin validate --strict`, and 19 packet fixtures validated.
+- **Map host check:** the satellite map was checked in a browser with synthetic data and passed; see `plugins/regrid-research/evals/results/map-hosts-0.8.0.json`.
+- **Not run:**
+  - the live geometry check (`make live`)
+  - the Claude apps and Cowork map checks
+  - the live `offset_id` paging cursor
+  - model and Cowork acceptance evals
+
+The earlier records below describe previous versions:
 
 For the 0.5.0 implementation in `b4b7e94`, local `make check` passed **727 tests**
 with no skips, including **64 workflow-helper tests** and required JSON Schema
@@ -293,7 +309,7 @@ make live
 REGRID_LIVE_ADDRESS="your complete US property address" make live
 ```
 
-The runner fetches the public parcel schema, records usage, looks up one address with `limit=1` and premium datasets disabled, validates the same response using Pydantic and opt-in parcel fields, then checks usage again. It makes at most four requests with no retries, pagination, or expanded searches. A parcel lookup may incur a charge. A single result is not proof of an exact address match, and usage can lag or include concurrent clients. Schema type drift is reported as a count.
+The runner fetches the public parcel schema, records usage, looks up one address with `limit=1` and premium datasets disabled, validates the same response using Pydantic and opt-in parcel fields, then checks usage again. It makes at most four requests with no retries, pagination, or expanded searches. A parcel lookup may incur a charge. A single result is not proof of an exact address match, and usage can lag or include concurrent clients. Schema type drift is reported as a count. After the lookup it prints whether the parcel's geometry is present, null (no boundary on file) or absent (the satellite map would fail), without printing coordinates.
 
 Output contains only status and aggregate counts, not credentials, addresses, owners, response bodies, or exception details. HTTP logging is disabled in the runner process. The underlying `regrid.live` module exits 2 for a missing or placeholder token before any network request, 1 for request/validation failures, and 0 on success. The Makefile recipe wraps any nonzero module or environment-loader result in a generic failure; do not rely on the module's exit code propagating through `make live`. If lookup or validation fails, final usage is still attempted. Tiles and premium datasets are not tested. This target runs separately from ordinary checks and local HTTPS E2E tests.
 
@@ -318,6 +334,14 @@ records observed MCP schemas and a successful authenticated usage-only call.
 [Offline evaluations](plugins/regrid-research/evals/README.md) test research decisions
 using synthetic saved responses. Neither proves Cowork import or account-specific
 header availability; those remain unverified. No credentials enter the packages.
+
+Regrid Research 0.6.0 to 0.8.0 add:
+- **Maps:** an interactive satellite parcel map (`scripts/map.py`, also `regrid map`) and the `/regrid-research:address-map` command for the address → data → map flow. Neighbouring outlines are opt-in.
+- **Export:** CSV and GeoJSON (`map.py export`, also `regrid export`).
+- **Field catalog:** `scripts/fields.py`, with `references/fields.json`.
+- **County freshness:** pull dates via the CLI (`regrid freshness`).
+- **Guidance:** paid datasets, address suggestions, refresh by Regrid path, count before pulling, and paging.
+- **CLI path:** `references/cli.md` lets Claude Code run lookups through the `regrid` CLI under the same request budget.
 
 Regrid Research 0.5.0 includes versioned handoffs, separate lookup/match statuses,
 shared budgets, evidence reuse, and explicitly requested checkpoints. It adds

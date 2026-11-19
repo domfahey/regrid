@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-Python source lives in `src/regrid/`. `client.py` owns HTTPX transport, authentication, and raw responses; `endpoints.py` maps API operations. Strict request validation lives in `requests.py` and `config.py`. `models.py` defines Pydantic response models; `typed.py` exposes `TypedRegridClient`. `cli.py` and `__main__.py` provide command-line entry points.
+Python source lives in `src/regrid/`. `client.py` owns HTTPX transport, authentication, and raw responses; `endpoints.py` maps API operations. Strict request validation lives in `requests.py` and `config.py`. `models.py` defines Pydantic response models; `typed.py` exposes `TypedRegridClient`. `cli.py` and `__main__.py` provide command-line entry points. `offline/` holds the standard-library-only helpers (`map.py`, `fields.py`, `freshness.py`). They never import `regrid` and are the source of the skill's bundled scripts.
 
 Tests live in `tests/`, grouped by module. Consult `README.md` for usage, `architecture.md` for design boundaries, and `REFERENCE.md` for supplied API details. Build artifacts belong in ignored `dist/`. Canonical Claude skills, contracts, helper scripts, and evaluation fixtures live in `plugins/regrid-research/`; `scripts/build_claude_plugins.py` builds the three plugin/skill archive variants.
 
@@ -21,18 +21,20 @@ Processing API support unless the user explicitly asks.
 - `make e2e`: run CLI subprocess and local HTTPS tests; requires OpenSSL and localhost socket access.
 - `uv build`: produce wheel and source archives.
 - `.venv/bin/regrid --help`: inspect CLI commands without calling Regrid.
+- `.venv/bin/python scripts/sync_skill_helpers.py [--check]`: copy `src/regrid/offline/*.py` into the skill's `scripts/`. Edit only the `src/regrid/offline/` source, never the skill copy; a test fails on drift.
+- `.venv/bin/python scripts/generate_skill_fields.py [--check]`: regenerate the skill's `references/fields.json` after editing `src/regrid/data/parcel_fields.json`.
 
 ## Coding Style & Naming Conventions
 
 Target Python 3.10+. Use four-space indentation, 100-character lines, and type annotations. Use `snake_case` for functions/modules and `PascalCase` for classes. Let Ruff manage formatting and imports.
 
-Preserve dictionary responses and CLI JSON compatibility. Keep strict, endpoint-specific request models separate from forward-compatible response models. Retain unknown response fields and distinguish omitted values from explicit nulls.
+Preserve dictionary responses and CLI JSON compatibility. CLI commands that call the API end stderr with `regrid: requests made: N`, counted with `RegridClient.request_count`; offline commands (`map`, `export`, `fields`) never construct a client. Check output paths before sending any request, and never overwrite a response file with its own output. Keep strict, endpoint-specific request models separate from forward-compatible response models. Retain unknown response fields and distinguish omitted values from explicit nulls.
 
 ## Testing Guidelines
 
 Use pytest with `test_*.py` files and `test_*` functions. Add regression tests for behavior changes, especially request serialization, validation, and credential redaction. Use `httpx.MockTransport`; ordinary tests must not contact Regrid.
 
-`make test` requires at least 90% combined line and branch coverage for `src/regrid`. Bundled skill helpers are tested but excluded from that coverage percentage. Mark HTTPS integration tests `e2e`; they run separately. Report blocked tests explicitly rather than treating them as passed.
+`make test` requires at least 90% combined line and branch coverage for `src/regrid`; keep it at or above 95%. `src/regrid/offline/` counts toward coverage. The skill-only `workflow.py` is tested but excluded. Windows CI runs the offline helper and CLI tests, so mark POSIX-only assertions with `skipif(os.name == "nt")`. Mark HTTPS integration tests `e2e`; they run separately. Report blocked tests explicitly rather than treating them as passed.
 
 ## Plugin Changes
 
@@ -41,7 +43,8 @@ handoff compatibility and shared request accounting; changes to the schema and
 helper must agree. The SDK and plugin have independent versions.
 
 - Build archives: `.venv/bin/python scripts/build_claude_plugins.py`.
-- Focused checks: `.venv/bin/python -m pytest tests/test_claude_plugins.py tests/test_regrid_workflow.py tests/test_regrid_workflow_composition.py`.
+- Focused checks: `.venv/bin/python -m pytest tests/test_claude_plugins.py tests/test_regrid_workflow.py tests/test_regrid_workflow_composition.py tests/test_regrid_map.py tests/test_skill_helper_sync.py tests/test_cli_docs.py`.
+- Plugin commands live in `plugins/regrid-research/commands/`. They ship in the Claude Code and Cowork archives, not the standalone skill. `references/cli.md`'s command map is checked against the real CLI parser.
 - Validate packet fixtures: `.venv/bin/python plugins/regrid-research/evals/run.py validate --suite all`.
 - Validate plugin structure, when Claude CLI is installed: `claude plugin validate ./plugins/regrid-research --strict`.
 
@@ -50,7 +53,8 @@ JSON Schema validator. The shipped helper remains standard-library-only. Follow
 [evals/README.md](plugins/regrid-research/evals/README.md) for discovery and
 composability scenarios; the packet fixture command above does not execute those
 model evaluations. Report fixture validation, structural checks, offline model
-decisions, and actual Claude/Cowork acceptance separately. Never label a skipped
+decisions, and actual Claude/Cowork acceptance separately. Record map host checks
+in `evals/results/map-hosts-<version>.json` as `verified`, `failed` or `not_run`. Never label a skipped
 or blocked gate passed. Do not invoke credentialed or model-billed evaluations
 without task authorization. Keep generated ZIPs and credentials out of commits.
 
