@@ -265,6 +265,54 @@ def _feature_data(feature: dict, label: str | None, retrieved_at: str | None) ->
     }
 
 
+def _neighbour_data(feature: object) -> dict[str, Any]:
+    if not isinstance(feature, dict):
+        raise MapError("Neighbour is not a parcel feature")
+    properties = feature.get("properties")
+    properties = properties if isinstance(properties, dict) else {}
+    path = properties.get("path")
+    if isinstance(path, str) and not path.startswith("/us/"):
+        raise MapError(OUTSIDE_US)
+    geometry = feature.get("geometry")
+    if geometry is None:
+        raise MapError("Neighbour has no boundary")
+    validate_geometry(geometry)
+    fields = _fields(feature)
+    return {
+        "title": _text(properties.get("headline")),
+        "facts": [
+            ["Address", _text(properties.get("headline"))],
+            ["Owner", _text(fields.get("owner"))],
+            ["Parcel number", _text(fields.get("parcelnumb"))],
+        ],
+        "geometry": _display_geometry(geometry),
+    }
+
+
+def load_neighbours(path: Path, subject_ids: set[str]) -> tuple[list[dict[str, Any]], list[str]]:
+    """Drawable neighbour outlines and a warning for each skipped entry."""
+    try:
+        document = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (ValueError, RecursionError) as exc:
+        raise MapError("Neighbours file is not valid JSON") from exc
+    parcels = document.get("parcels") if isinstance(document, dict) else None
+    features = parcels.get("features") if isinstance(parcels, dict) else None
+    if not isinstance(features, list):
+        raise MapError("Expected a Regrid parcel response with parcels.features")
+    drawn: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    for number, feature in enumerate(features):
+        properties = feature.get("properties") if isinstance(feature, dict) else None
+        uuid = properties.get("ll_uuid") if isinstance(properties, dict) else None
+        if isinstance(uuid, str) and uuid in subject_ids:
+            continue
+        try:
+            drawn.append(_neighbour_data(feature))
+        except MapError as exc:
+            warnings.append(f"Neighbour {number} skipped: {exc}")
+    return drawn, warnings
+
+
 _PAGE = """<!doctype html>
 <html lang="en">
 <head>
@@ -297,6 +345,7 @@ __WARNINGS__<div id="banners"></div>
 </div>
 <footer>__FOOTER__</footer>
 <script src="__BASE__leaflet.js" integrity="__JS_SRI__" crossorigin=""></script>
+<script type="application/json" id="neighbour-data">__NEIGHBOURS__</script>
 <script type="application/json" id="parcel-data">__DATA__</script>
 <script>
 (function () {
@@ -307,6 +356,17 @@ __WARNINGS__<div id="banners"></div>
     maxZoom: 19,
     attribution: "__ATTRIBUTION__"
   }).addTo(map);
+  var neighbours = JSON.parse(document.getElementById("neighbour-data").textContent);
+  neighbours.forEach(function (item) {
+    var layer = L.geoJSON(item.geometry, {
+      style: { color: "#ffffff", weight: 1, fillOpacity: 0.05 }
+    });
+    var popup = document.createElement("div");
+    popup.appendChild(el("strong", item.title));
+    popup.appendChild(factList(item));
+    layer.bindPopup(popup);
+    layer.addTo(map);
+  });
   var group = L.featureGroup().addTo(map);
   var panel = document.getElementById("panel");
   var banners = document.getElementById("banners");
@@ -359,23 +419,30 @@ __WARNINGS__<div id="banners"></div>
 """
 
 
+def _json_for_script(value: object) -> str:
+    """JSON safe to embed in a script element: <, > and & never appear literally."""
+    return (
+        json.dumps(value, ensure_ascii=True)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
+
+
 def render_html(
     features: list[dict],
     *,
     candidates: bool,
     retrieved_at: str | None,
     warnings: Sequence[str] = (),
+    neighbours: Sequence[dict[str, Any]] = (),
 ) -> str:
     items = [
         _feature_data(feature, f"Candidate {number}" if candidates else None, retrieved_at)
         for number, feature in enumerate(features, 1)
     ]
-    data = (
-        json.dumps(items, ensure_ascii=True)
-        .replace("<", "\\u003c")
-        .replace(">", "\\u003e")
-        .replace("&", "\\u0026")
-    )
+    data = _json_for_script(items)
+    neighbour_data = _json_for_script(list(neighbours))
     banners = "".join(
         f'<div class="banner" role="alert">{html.escape(text)}</div>\n' for text in warnings
     )
@@ -388,6 +455,7 @@ def render_html(
         "__COLORS__": json.dumps(list(COLORS)),
         "__TILES__": TILE_URL,
         "__ATTRIBUTION__": ATTRIBUTION,
+        "__NEIGHBOURS__": neighbour_data,
         "__DATA__": data,
     }
     page = _PAGE
@@ -444,6 +512,7 @@ def render(
     all_candidates: bool = False,
     retrieved_at: str | None = None,
     replace: bool = False,
+    neighbours_path: Path | None = None,
 ) -> dict[str, Any]:
     try:
         document = json.loads(Path(response_path).read_text(encoding="utf-8"))
@@ -473,15 +542,36 @@ def render(
                 f"{name}: area mismatch: boundary area differs from the recorded parcel area "
                 f"({check['computed_sqft']:,.0f} vs {check['recorded_sqft']:,.0f} sq ft)"
             )
+    neighbours: list[dict[str, Any]] = []
+    if neighbours_path is not None:
+        subject_ids = set()
+        for feature in chosen:
+            props = feature.get("properties")
+            uuid = props.get("ll_uuid") if isinstance(props, dict) else None
+            if isinstance(uuid, str):
+                subject_ids.add(uuid)
+        try:
+            neighbours, skipped = load_neighbours(neighbours_path, subject_ids)
+            warnings.extend(skipped)
+        except MapError as exc:
+            warnings.append(f"Neighbours skipped: {' '.join(str(exc).split())}")
+        except OSError as exc:
+            reason = " ".join(str(exc.strerror or "unreadable").split())
+            warnings.append(f"Neighbours skipped: Neighbours file could not be read ({reason})")
     # Raises before anything is written when a parcel has neither a boundary nor a point.
     page = render_html(
-        chosen, candidates=all_candidates, retrieved_at=retrieved_at, warnings=warnings
+        chosen,
+        candidates=all_candidates,
+        retrieved_at=retrieved_at,
+        warnings=warnings,
+        neighbours=neighbours,
     )
     output = Path(output_path)
     _write_atomic(output, page, replace=replace)
     return {
         "output": str(output),
         "features": len(chosen),
+        "neighbours": len(neighbours),
         "area_checks": checks,
         "warnings": warnings,
     }
@@ -497,6 +587,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     cmd.add_argument("--all-candidates", action="store_true")
     cmd.add_argument("--retrieved-at", metavar="ISO")
     cmd.add_argument("--replace", action="store_true")
+    cmd.add_argument("--neighbours", type=Path, metavar="FILE", help="neighbouring parcels")
     args = parser.parse_args(argv)
     try:
         summary = render(
@@ -506,6 +597,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             all_candidates=args.all_candidates,
             retrieved_at=args.retrieved_at,
             replace=args.replace,
+            neighbours_path=args.neighbours,
         )
     except (MapError, OSError) as exc:
         message = " ".join(str(exc).split())

@@ -209,7 +209,7 @@ def test_null_geometry_with_point_and_without(tmp_path):
 
 
 def test_invalid_geometry_is_rejected_before_rendering(tmp_path):
-    bad = feature({"type": "Point", "coordinates": [-75.03, 39.9]})
+    bad = _other({"type": "Point", "coordinates": [-75.03, 39.9]})
     with pytest.raises(MapError, match="Unsupported geometry"):
         parcel_map.render(write_response(tmp_path / "r.json", bad), tmp_path / "m.html")
 
@@ -525,3 +525,110 @@ def test_module_runs_as_script(tmp_path):
     )
     assert proc.returncode == 0, proc.stderr
     assert (tmp_path / "m.html").exists()
+
+
+def _other(geometry, n=2, **fields):
+    """A neighbour: the fixture feature with a different ll_uuid than the subject."""
+    item = feature(geometry, **fields)
+    item["properties"]["ll_uuid"] = f"00000000-0000-4000-8000-00000000000{n}"
+    return item
+
+
+def _page_blocks(page_path):
+    page = page_path.read_text(encoding="utf-8")
+    blocks = {}
+    for name in ("parcel-data", "neighbour-data"):
+        match = re.search(rf'<script type="application/json" id="{name}">(.*?)</script>', page)
+        blocks[name] = None if match is None else match.group(1)
+    return page, blocks
+
+
+def test_neighbours_drawn_and_subject_excluded(tmp_path):
+    subject = good_feature()
+    others = [_other(square(lon=-75.0289, lat=39.9)), subject]
+    response = write_response(tmp_path / "r.json", subject)
+    near = write_response(tmp_path / "n.json", *others)
+    summary = parcel_map.render(response, tmp_path / "m.html", neighbours_path=near)
+    assert summary["neighbours"] == 1 and summary["features"] == 1
+    assert len(summary["area_checks"]) == 1
+    _, blocks = _page_blocks(tmp_path / "m.html")
+    assert len(json.loads(blocks["neighbour-data"])) == 1
+
+
+def test_bad_neighbour_is_skipped_with_warning(tmp_path):
+    bad = _other({"type": "Point", "coordinates": [-75.03, 39.9]})
+    response = write_response(tmp_path / "r.json", good_feature())
+    near = write_response(tmp_path / "n.json", bad)
+    summary = parcel_map.render(response, tmp_path / "m.html", neighbours_path=near)
+    assert summary["neighbours"] == 0 and summary["warnings"][0].startswith("Neighbour 0 skipped")
+
+
+def test_neighbour_data_is_escaped_and_styled(tmp_path):
+    hostile = _other(square(lon=-75.0289), owner="</script><b>&x")
+    response = write_response(tmp_path / "r.json", good_feature())
+    near = write_response(tmp_path / "n.json", hostile)
+    parcel_map.render(response, tmp_path / "m.html", neighbours_path=near)
+    page, blocks = _page_blocks(tmp_path / "m.html")
+    raw = blocks["neighbour-data"]
+    assert "<" not in raw and ">" not in raw and "&" not in raw
+    assert '"#ffffff"' in page and "fillOpacity: 0.05" in page
+
+
+def test_no_neighbours_keeps_summary_and_page_compatible(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    summary = parcel_map.render(response, tmp_path / "m.html")
+    assert summary["neighbours"] == 0
+    _, blocks = _page_blocks(tmp_path / "m.html")
+    assert json.loads(blocks["neighbour-data"]) == []
+
+
+def test_non_feature_neighbour_entries_and_bad_file(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    near = tmp_path / "n.json"
+    near.write_text(json.dumps({"parcels": {"features": ["x", None]}}), encoding="utf-8")
+    summary = parcel_map.render(response, tmp_path / "m.html", neighbours_path=near)
+    assert summary["neighbours"] == 0 and len(summary["warnings"]) == 2
+    near.write_text("not json", encoding="utf-8")
+    summary = parcel_map.render(response, tmp_path / "m2.html", neighbours_path=near)
+    assert summary["features"] == 1 and summary["neighbours"] == 0
+    assert summary["warnings"] == ["Neighbours skipped: Neighbours file is not valid JSON"]
+    assert (tmp_path / "m2.html").exists()
+    near.write_text("{}", encoding="utf-8")
+    summary = parcel_map.render(response, tmp_path / "m3.html", neighbours_path=near)
+    assert summary["warnings"][0].startswith("Neighbours skipped: Expected a Regrid")
+
+
+def test_missing_neighbours_file_keeps_subject_map(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    summary = parcel_map.render(
+        response, tmp_path / "m.html", neighbours_path=tmp_path / "absent.json"
+    )
+    assert summary["features"] == 1 and summary["neighbours"] == 0
+    assert len(summary["warnings"]) == 1
+    assert summary["warnings"][0].startswith("Neighbours skipped: ")
+    assert "\n" not in summary["warnings"][0]
+
+
+def test_neighbours_cli_flag_from_extracted_skill(tmp_path):
+    from zipfile import ZipFile
+
+    build_path = SCRIPT.parents[5] / "scripts/build_claude_plugins.py"
+    spec = importlib.util.spec_from_file_location("map_test_builder_nb", build_path)
+    assert spec and spec.loader
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    archives = builder.build(SCRIPT.parents[3], tmp_path / "archives")
+    with ZipFile(archives[-1]) as archive:
+        archive.extractall(tmp_path / "extracted")
+    helper = tmp_path / "extracted/property-research/scripts/map.py"
+    response = write_response(tmp_path / "r.json", good_feature())
+    near = write_response(tmp_path / "n.json", _other(square(lon=-75.0289)))
+    output = tmp_path / "map.html"
+    result = subprocess.run(
+        [sys.executable, "-I", str(helper), "render", str(response), str(output)]
+        + ["--neighbours", str(near)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["neighbours"] == 1
