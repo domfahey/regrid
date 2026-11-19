@@ -448,7 +448,9 @@ def test_one_script_path_convention():
 
 def test_command_uses_skill_prefixed_paths_and_states_hosts():
     text = (PLUGIN / "commands/address-map.md").read_text()
-    assert '"${CLAUDE_PLUGIN_ROOT}/skills/property-research"' in text
+    assert "`${CLAUDE_PLUGIN_ROOT}/skills/property-research`" in text
+    # Quotes belong at the call site only; a quoted definition would nest quotes there.
+    assert '"${CLAUDE_PLUGIN_ROOT}' not in text
     assert "elsewhere it is\nthe property-research skill folder" in text
     assert 'python3 "<skill>/scripts/map.py" render' in text
     assert not re.search(r"(?<!<skill>/)(?<![\w/.-])(scripts|references)/", text)
