@@ -82,8 +82,8 @@ Before an open-ended point, area or query search, an optional `return_count=true
 is one request and zero records: it reports how many parcels match, so the user can
 set the record budget. Page with `offset_id` only within that budget and one task.
 
-Schemas: use `scripts/fields.py explain FIELD` first (offline). Call `/schemas/*` only
-when `fields.py` lacks the field, one request each, reserved as a diagnostic.
+Schemas: use `python3 <skill>/scripts/fields.py explain FIELD` first (offline). Call
+`/schemas/*` only when `fields.py` lacks the field, one request each, reserved as a diagnostic.
 
 Detailed usage: `/usage/detailed` only for "how many lookups are left" questions;
 never per-token breakdowns (they can expose token fragments). `/usage` serves setup checks.

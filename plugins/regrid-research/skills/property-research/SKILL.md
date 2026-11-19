@@ -1,9 +1,12 @@
 ---
 name: property-research
-description: Looks up recorded owners, parcel IDs, sale and assessment details, zoning, and parcel boundaries for US properties with Regrid, and draws satellite parcel maps with optional neighbouring parcels. Exports results to CSV or GeoJSON, runs geographic parcel searches, and reports county data freshness (county pull dates via the CLI or a supplied /verse file; otherwise the parcel's ll_last_refresh). Use for US address, APN, owner-name, "who owns", parcel map or boundary, and property-research requests.
+description: Looks up recorded owners, parcel IDs, sale and assessment details, zoning, and parcel boundaries for US properties with Regrid, and draws satellite parcel maps with optional neighbouring parcels. Exports results to CSV or GeoJSON, runs geographic parcel searches, and reports county data freshness (county pull dates via the CLI or a supplied /verse file; otherwise the parcel's ll_last_refresh). Use for US address, APN, owner-name, "who owns", parcel map or boundary, and property-research requests. Do not use for non-US properties, Regrid Batch API jobs, filing data-issue reports, or market-value appraisals and legal ownership opinions.
 ---
 
 # Regrid property research
+
+In this skill, `<skill>` means the property-research skill folder (the one that
+contains `SKILL.md` and `scripts/`); run helpers as `python3 <skill>/scripts/<name>.py ...`.
 
 Scope is US parcels only. For a property outside the United States, say it is
 outside this skill's scope; do not search Canadian, international, or batch APIs.
@@ -12,9 +15,7 @@ Research with existing evidence first; use the connected Regrid MCP server at
 https://support.regrid.com/mcp only when retrieval is needed. Before the first
 live lookup, read [the tool reference](references/mcp-tools.md), discover
 the tools exposed in this session, and inspect the relevant input schema.
-The live schema takes precedence over saved examples. Discover once per session;
-refresh only after a schema mismatch.
-Public documentation access does not establish authenticated access.
+The live schema takes precedence over saved examples. Discover once per session.
 
 Load supporting resources only for the relevant task:
 
@@ -27,20 +28,19 @@ Load supporting resources only for the relevant task:
 - Request and record budgets, multiple inputs, or checkpoints: [batch and resume](references/batch.md).
 - Map, boundary, or neighbouring parcels: [map guide](references/map.md). The
   `/regrid-research:address-map` command runs this flow for one address.
-- Spreadsheet or GeoJSON requested: `scripts/map.py export` from the saved response
+- Spreadsheet or GeoJSON requested: `python3 <skill>/scripts/map.py export` from the saved response
   ([map guide](references/map.md#export)), with no extra requests.
 - MCP tools missing in Claude Code but the `regrid` CLI available, files (export/freshness), tiles, or county pull dates (CLI only, even when MCP is connected): [CLI guide](references/cli.md).
 - Ambiguous or mistyped address: suggestions flow in the [tool guide](references/mcp-tools.md).
-- Field meaning: run `scripts/fields.py explain FIELD` (it reads the
-  [field catalog](references/fields.json)); only fields it lacks justify a
-  `/schemas/*` request.
+- Field meaning: run `python3 <skill>/scripts/fields.py explain FIELD`; do not read
+  `references/fields.json` (large; [data file used by fields.py](references/fields.json) — don't open it).
+  Only fields it lacks justify a `/schemas/*` request.
 - Zoning, enhanced ownership, matched buildings or addresses requested: [premium datasets](references/premium.md).
-- Offline validation or saving: run [workflow.py](scripts/workflow.py) as described in
-  the batch reference; requires Python 3.10+ and only the standard library.
+- Offline validation or saving: `<skill>/scripts/workflow.py`, per [batch and resume](references/batch.md) (Python 3.10+, standard library only).
 - Live schema unavailable or mismatched: [raw tool schemas](references/tools.json) and
   [endpoint parameters](references/endpoints.json).
 
-Keep direct single-property answers short; do not create files without a reason.
+Keep direct single-property answers short; create files only with a reason.
 
 ## When the connection is unavailable
 
@@ -68,9 +68,8 @@ failure, or silently switch data sources.
    arguments, not just the handoff. If the exposed tool cannot express it, stop
    and report that limitation; never issue an unscoped substitute. Keep requests
    read-only. Do not submit issue reports or other external changes as part of research.
-3. For one-property research start with `limit=1`. Explicitly disable stacked
-   results and premium datasets when the selected endpoint supports those flags
-   and the user has not requested them. Omit geometry unless needed; when a map is
+3. For one-property research start with `limit=1`. Disable stacked results and
+   premium datasets when supported and not requested. Omit geometry unless needed; when a map is
    requested keep it, passing `return_geometry=true` where supported
    ([map guide](references/map.md)). Never paste geometry into chat.
    Only pass options the endpoint supports.
