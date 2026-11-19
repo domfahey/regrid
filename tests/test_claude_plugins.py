@@ -173,8 +173,8 @@ def test_host_results_never_claim_unrun_checks():
 
 
 def test_versions():
-    assert json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())["version"] == "0.8.0"
-    assert regrid.__version__ == "0.3.0"
+    assert json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())["version"] == "0.9.0"
+    assert regrid.__version__ == "0.4.0"
 
 
 def test_premium_guide_covers_every_flag_and_requires_authorization():
@@ -398,13 +398,13 @@ def test_manifest_carries_distribution_metadata():
 def test_shipped_readme_leads_with_current_status_and_omits_history():
     readme = (PLUGIN / "README.md").read_text()
     section = readme.split("## Validation and acceptance", 1)[1]
-    assert section.lstrip().startswith("Status for 0.8.0")
+    assert section.lstrip().startswith("Status for 0.9.0")
     assert "Historical 0.4.0" not in readme
     assert "Historical 0.3.0" not in readme
     history = (PLUGIN / "evals/README.md").read_text()
     assert "## Historical verification" in history
     assert "Historical 0.2.0 verification" in history
-    assert "results/map-hosts-0.8.0.json" in history
+    assert "results/map-hosts-0.9.0.json" in history
     assert "map-hosts-0.7.0.json" not in history
 
 
