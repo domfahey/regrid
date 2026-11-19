@@ -77,7 +77,9 @@ def test_unknown_county_exits_1_without_retry(tmp_path, verse_server, capsys):
     assert "/us/nj/nowhere" in captured.err and captured.out == ""
     # A cached unknown county is reported without another request.
     assert cli.main(args) == 1
-    assert len(verse_server) == 1 and "requests made: 0" in capsys.readouterr().err
+    assert len(verse_server) == 1
+    err = capsys.readouterr().err
+    assert "requests made: 0" in err and "use --refresh" in err
 
 
 def test_bad_path_makes_no_request(tmp_path, verse_server, capsys):
@@ -106,3 +108,21 @@ def test_default_cache_location_from_environment(tmp_path, verse_server, monkeyp
     assert cli.main(["freshness", "--path", "/us/nj/camden"]) == 0
     capsys.readouterr()
     assert (tmp_path / "regrid" / "verse.json").exists()
+
+
+def test_unwritable_cache_keeps_result(tmp_path, verse_server, capsys):
+    blocker = tmp_path / "file"
+    blocker.write_text("x")
+    args = ["freshness", "--path", "/us/nj/camden", "--cache", str(blocker / "sub" / "v.json")]
+    assert cli.main(args) == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["cache"] == "miss"
+    assert "requests made: 1" in captured.err
+    assert "regrid: warning: verse cache not saved" in captured.err
+    assert str(tmp_path) not in captured.err
+
+
+def test_missing_token_makes_no_request(tmp_path, verse_server, monkeypatch, capsys):
+    monkeypatch.delenv("REGRID_TOKEN")
+    assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", str(tmp_path / "v")]) == 1
+    assert verse_server == [] and "requests made: 0" in capsys.readouterr().err

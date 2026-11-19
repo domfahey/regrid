@@ -57,6 +57,11 @@ def _run_fields(args: dict[str, Any]) -> None:
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 
+def _count_requests(client: RegridClient, sent: list[int]) -> None:
+    # Count requests as httpx is about to send them, so failures before sending count 0.
+    client._http.event_hooks["request"].append(lambda request: sent.append(1))
+
+
 def _address_map(args: dict[str, Any], sent: list[int], saved: list[Path]) -> None:
     output = Path(args["output"])
     response_path = Path(args["save_response"] or output.with_suffix(".json"))
@@ -86,8 +91,7 @@ def _address_map(args: dict[str, Any], sent: list[int], saved: list[Path]) -> No
         base_url=args["base_url"],
         tiles_base_url=args["tiles_base_url"],
     ) as client:
-        # Count requests as httpx is about to send them, so failures before sending count 0.
-        client._http.event_hooks["request"].append(lambda request: sent.append(1))
+        _count_requests(client, sent)
         result = client.address(args["address"], **options)
     body = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
     with open(response_path, "w" if replace else "x", encoding="utf-8") as handle:
@@ -142,12 +146,22 @@ def _freshness(args: dict[str, Any], sent: list[int]) -> None:
             base_url=args["base_url"],
             tiles_base_url=args["tiles_base_url"],
         ) as client:
-            client._http.event_hooks["request"].append(lambda request: sent.append(1))
+            _count_requests(client, sent)
             verse = client.verse(return_geometry=False)
         retrieved_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         state = "miss"
-        county_freshness.write_cache(cache_path, retrieved_at, verse)
-    dates = county_freshness.county_dates(verse, county)
+        try:
+            county_freshness.write_cache(cache_path, retrieved_at, verse)
+        except OSError:
+            print("regrid: warning: verse cache not saved", file=sys.stderr)
+    try:
+        dates = county_freshness.county_dates(verse, county)
+    except county_freshness.FreshnessError as exc:
+        if state == "hit":
+            raise ValueError(
+                "County not found in cached verse response; use --refresh to refetch"
+            ) from exc
+        raise
     print(
         json.dumps(
             {**dates, "verse_retrieved_at": retrieved_at, "cache": state},
