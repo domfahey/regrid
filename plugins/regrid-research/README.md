@@ -199,9 +199,11 @@ Status for 0.9.3:
 - Passed: the satellite map rendered in a plain browser with synthetic data
   (imagery, outlines, info panel and Esri credit shown; no console errors);
   see `evals/results/map-hosts-0.9.3.json`.
+- Passed (live, authorized, 2026-11-19): a default address lookup includes the
+  parcel `geometry`, and `offset_id` paging uses the feature `id` as an exclusive
+  cursor.
 - Not run: Claude Code, Claude apps and Cowork host checks of the map page and
-  command; the live Regrid geometry check (billable, needs authorization); and
-  model or Cowork acceptance.
+  command; a live `/mcp` connection; and model or Cowork acceptance.
 
 Earlier verification logs (0.2.0 to 0.5.0) live in the repository's
 [evals README](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/README.md#historical-verification).
