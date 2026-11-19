@@ -94,7 +94,7 @@ def same_file_key(path: Path | str) -> str:
         os.stat(path)
     except RuntimeError as exc:  # Python <= 3.12 resolve() on a symlink loop
         raise MapError("Path contains a symlink loop") from exc
-    except FileNotFoundError:
+    except (FileNotFoundError, NotADirectoryError):  # missing output; reported by the caller
         pass
     except OSError as exc:
         if exc.errno == errno.ELOOP or getattr(exc, "winerror", None) == 1921:

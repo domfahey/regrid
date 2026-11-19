@@ -1226,3 +1226,11 @@ def test_core_value_keeps_empty_ll_uuid_as_given():
     assert core({"properties": {"ll_uuid": "", "fields": {}}}, "ll_uuid") == ""
     assert core({"properties": {"fields": {}}}, "ll_uuid") is None
     assert core({"properties": {"ll_uuid": "", "fields": {"ll_uuid": "b"}}}, "ll_uuid") == "b"
+
+
+def test_render_output_under_a_regular_file_reports_missing_directory(tmp_path):
+    response = write_response(tmp_path / "response.json", good_feature())
+    parent = tmp_path / "file"
+    parent.write_text("x")
+    with pytest.raises(MapError, match="^Output directory does not exist$"):
+        parcel_map.render(response, parent / "out.html")
