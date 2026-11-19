@@ -132,7 +132,7 @@ def _recorded_sqft(value: Any) -> float | None:
 def area_check(feature: dict, tolerance: float = 0.05) -> dict[str, Any]:
     """Compare computed and recorded area; callers must run validate_geometry first."""
     geometry = feature.get("geometry")
-    fields = (feature.get("properties") or {}).get("fields") or {}
+    fields = _fields(feature)
     recorded = _recorded_sqft(fields.get("ll_gissqft"))
     computed = None if geometry is None else geometry_area_sqft(geometry)
     if computed is None or recorded is None:
@@ -377,7 +377,7 @@ def _write_atomic(path: Path, content: str, *, replace: bool) -> None:
             handle.write(content)
             umask = os.umask(0)
             os.umask(umask)
-            os.chmod(handle.fileno(), 0o666 & ~umask)
+        os.chmod(handle.name, 0o666 & ~umask)
         os.replace(handle.name, path)
     except BaseException:
         Path(handle.name).unlink(missing_ok=True)
@@ -401,7 +401,7 @@ def render(
     if not all(isinstance(feature, dict) for feature in features):
         raise MapError("Expected a Regrid parcel response with parcels.features")
     chosen = select_features(features, index=index, all_candidates=all_candidates)
-    candidates = len(chosen) > 1
+    candidates = all_candidates
     checks: list[dict[str, Any]] = []
     warnings: list[str] = []
     for number, feature in enumerate(chosen, 1):

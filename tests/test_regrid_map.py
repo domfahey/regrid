@@ -367,3 +367,47 @@ def test_skill_links_map_reference():
     assert "scripts/map.py" in guide
     assert "--all-candidates" in guide
     assert "verbatim" in guide
+
+
+def test_chmod_by_path_works_when_fd_chmod_is_unsupported(tmp_path, monkeypatch):
+    real_chmod = os.chmod
+
+    def path_only_chmod(target, mode, *args, **kwargs):
+        if isinstance(target, int):
+            raise TypeError("chmod: path should be string, bytes or os.PathLike, not int")
+        return real_chmod(target, mode, *args, **kwargs)
+
+    monkeypatch.setattr(parcel_map.os, "chmod", path_only_chmod)
+    response = write_response(tmp_path / "r.json", good_feature())
+    parcel_map.render(response, tmp_path / "m.html")
+    assert (tmp_path / "m.html").exists()
+
+
+def test_single_feature_all_candidates_is_labelled_candidate(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    parcel_map.render(response, tmp_path / "m.html", all_candidates=True)
+    assert "Candidate 1" in (tmp_path / "m.html").read_text(encoding="utf-8")
+    parcel_map.render(response, tmp_path / "n.html")
+    assert "Candidate" not in (tmp_path / "n.html").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "properties",
+    ["x", {"fields": [1]}, {"fields": "x"}, [1]],
+)
+def test_malformed_properties_do_not_traceback(tmp_path, properties):
+    bad = {"type": "Feature", "geometry": square(), "properties": properties}
+    assert parcel_map.area_check(bad)["status"] == "unavailable"
+    response = write_response(tmp_path / "r.json", bad)
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), "render", str(response), str(tmp_path / "m.html")],
+        capture_output=True,
+        text=True,
+    )
+    assert "Traceback" not in result.stderr
+
+
+def test_missing_fact_renders_not_in_record(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    parcel_map.render(response, tmp_path / "m.html")
+    assert "not in record" in (tmp_path / "m.html").read_text(encoding="utf-8")

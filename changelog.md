@@ -28,7 +28,7 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 
 ### Changed
 
-- Regrid Research 0.6.0 adds the satellite map step to the research skill, ships `map.py` in every archive variant, and keeps the existing request budget and handoff schemas unchanged.
+- Regrid Research 0.6.0 adds satellite parcel maps (see Added); request budget and handoff schemas are unchanged.
 
 - Regrid Research MCP references re-audited against the live server (Regrid Support 2.3.1, November 18, 2026): all seven tools are documented with their role and request accounting; spec titles now carry the ` (reference)` suffix; `fetch` uses `project/section/slug` IDs, an optional `format`, and reports unknown IDs without `isError`; `endpoints.json` now covers the APN, owner, point, area, query, and Regrid ID endpoints the skill advertises, in addition to address and usage.
 
