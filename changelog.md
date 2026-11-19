@@ -46,6 +46,9 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 
 ### Fixed
 
+- Reject `ll_updated_at` timestamps whose time-zone offset minutes are 60–99 (previously accepted and silently normalized).
+- Regrid Research workflow helper: `reserve_attempt` rejects non-list or non-string input IDs instead of splitting a string into characters; `set_result` raises `ValidationError` for non-object rows and unknown input IDs; `reconcile_attempt` reports "Only uncertain attempts can be reconciled" or "Attempt already reconciled" instead of a misleading budget-counter error. `ValidationError` remains a `ValueError` subclass.
+- Discovery eval runners ignore blank stream-JSON lines and tolerate explicit nulls in `message`, `content`, `name`, and `input` instead of failing or crashing.
 - Restrict automatic parcel-search limits to parcel routes so public address-schema requests receive no search parameters.
 - Reject non-finite upstream JSON numbers before serialization can silently convert them to null.
 - `TypedRegridClient.grid()` accepts the `TileJSON` model returned by `TypedRegridClient.tilejson()` as `metadata`.

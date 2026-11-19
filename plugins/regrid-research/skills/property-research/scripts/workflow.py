@@ -409,6 +409,11 @@ def reconcile_attempt(
     # Validate proof and uniqueness before calculating counters, using the validator as authority.
     attempt = next((a for a in result["attempts"] if a["attempt_id"] == attempt_id), None)
     _require(attempt is not None, "Unknown reconciliation attempt")
+    _require(attempt["state"] == "uncertain", "Only uncertain attempts can be reconciled")
+    _require(
+        all(entry["attempt_id"] != attempt_id for entry in document["reconciliations"]),
+        "Attempt already reconciled",
+    )
     _require(
         isinstance(proof, dict) and _integer(proof.get("returned_records")),
         "Missing reconciliation proof count",
@@ -461,6 +466,10 @@ def reserve_attempt(
     _require(
         kind == "lookup" or document["schema_version"] == "1.1",
         "Diagnostic requires explicit schema upgrade",
+    )
+    _require(
+        isinstance(input_ids, list) and all(isinstance(item, str) for item in input_ids),
+        "Input IDs must be a list of strings",
     )
     _require(
         (bool(input_ids) or kind == "diagnostic") and len(set(input_ids)) == len(input_ids),
@@ -527,6 +536,7 @@ def complete_attempt(
 def set_result(document: Document, row: Document) -> Document:
     """Attach supplied/retrieved evidence without creating or refunding an API attempt."""
     validate(document)
+    _require(isinstance(row, dict), "Result row must be an object")
     result = deepcopy(document)
     for index, current in enumerate(result["results"]):
         if current["input_id"] == row.get("input_id"):
@@ -541,7 +551,7 @@ def set_result(document: Document, row: Document) -> Document:
             result["results"][index] = deepcopy(row)
             validate(result)
             return result
-    raise ValueError("Unknown input ID")
+    raise ValidationError("Unknown input ID")
 
 
 def reuse_result(document: Document, source_id: str, target_id: str) -> Document:

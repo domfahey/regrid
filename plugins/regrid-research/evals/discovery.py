@@ -111,21 +111,37 @@ def stage(case_id: str, variant: str, output: Path) -> dict[str, Any]:
     return {"case_id": case_id, "variant": variant, "files": hashes}
 
 
+def extract_calls(events: list[dict[str, Any]]) -> tuple[set[str], list[dict[str, Any]]]:
+    """Collect models and tool calls, tolerating null or malformed stream-json fields."""
+    models: set[str] = set()
+    calls: list[dict[str, Any]] = []
+    for event in events:
+        message = event.get("message") if isinstance(event, dict) else None
+        if not isinstance(message, dict):
+            continue
+        model = message.get("model")
+        if isinstance(model, str) and model:
+            models.add(model)
+        content = message.get("content")
+        for block in content if isinstance(content, list) else []:
+            if isinstance(block, dict) and block.get("type") == "tool_use":
+                tool_input = block.get("input")
+                calls.append(
+                    {
+                        "name": block.get("name"),
+                        "input": tool_input if isinstance(tool_input, dict) else {},
+                    }
+                )
+    return models, calls
+
+
 def record(manifest: dict[str, Any], trace: Path, model: str, cli_version: str) -> dict[str, Any]:
     """Preserve raw stream-json and extract observed tool calls without grading."""
     if not model.strip() or model in {"haiku", "sonnet", "opus"} or not cli_version.strip():
         raise ValueError("An explicit model ID and CLI version are required")
     raw = trace.read_text()
     events = [json.loads(line) for line in raw.splitlines() if line.strip()]
-    calls = []
-    observed_models = set()
-    for event in events:
-        message = event.get("message", {})
-        if message.get("model"):
-            observed_models.add(message["model"])
-        for block in message.get("content", []):
-            if isinstance(block, dict) and block.get("type") == "tool_use":
-                calls.append({"name": block["name"], "input": block.get("input", {})})
+    observed_models, calls = extract_calls(events)
     return {
         **manifest,
         "requested_model": model,

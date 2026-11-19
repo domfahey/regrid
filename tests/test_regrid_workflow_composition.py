@@ -314,3 +314,17 @@ def test_json_schema_and_runtime_agree_on_versioned_structural_contract():
         assert not validator.is_valid(doc)
         with pytest.raises(ValueError):
             workflow.validate(doc)
+
+
+def test_reconciliation_reports_actual_reason_not_budget_counters():
+    doc = workflow.upgrade_workflow(legacy())
+    doc = workflow.reserve_attempt(doc, ["input-000001"], 1)
+    for state in ["success", "error"]:
+        settled = workflow.complete_attempt(doc, "attempt-000001", state, 0)
+        with pytest.raises(workflow.ValidationError, match="Only uncertain attempts"):
+            workflow.reconcile_attempt(settled, "attempt-000001", proof(), evidence_verified=True)
+    reconciled = workflow.reconcile_attempt(
+        workflow.upgrade_workflow(uncertain()), "attempt-000001", proof(), evidence_verified=True
+    )
+    with pytest.raises(workflow.ValidationError, match="already reconciled"):
+        workflow.reconcile_attempt(reconciled, "attempt-000001", proof(), evidence_verified=True)

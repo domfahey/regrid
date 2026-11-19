@@ -64,6 +64,8 @@ def text_output(value: str | bytes | None) -> str:
 def parse_trace(raw: str) -> tuple[list[dict[str, Any]], int]:
     events, invalid = [], 0
     for line in raw.splitlines():
+        if not line.strip():
+            continue
         try:
             event = json.loads(line)
             if not isinstance(event, dict):
@@ -136,14 +138,7 @@ def run_trial(
         except OSError as exc:
             raw, stderr = "", str(exc)
         events, invalid = parse_trace(raw)
-        models, calls = set(), []
-        for event in events:
-            message = event.get("message", {})
-            if message.get("model"):
-                models.add(message["model"])
-            for block in message.get("content", []):
-                if isinstance(block, dict) and block.get("type") == "tool_use":
-                    calls.append({"name": block.get("name"), "input": block.get("input", {})})
+        models, calls = discovery.extract_calls(events)
         results = [event for event in events if event.get("type") == "result"]
         if (
             returncode == 0

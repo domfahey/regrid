@@ -28,7 +28,7 @@ def _date_string(value: str) -> str:
 
 
 _TIMESTAMP = re.compile(
-    r"(\d\d\d\d-\d\d-\d\d)[Tt ](\d\d:\d\d:\d\d)(?:\.(\d+))?(?:([Zz])|([+-]\d\d)(?::?(\d\d))?)",
+    r"(\d\d\d\d-\d\d-\d\d)[Tt ](\d\d:\d\d:\d\d)(?:\.(\d+))?(?:([Zz])|([+-]\d\d)(?::?([0-5]\d))?)",
     re.ASCII,
 )
 
