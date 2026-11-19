@@ -1,4 +1,6 @@
 import json
+import os
+import sys
 
 import httpx
 import pytest
@@ -373,3 +375,26 @@ def test_replace_does_not_write_through_symlink(tmp_path, monkeypatch, capsys):
     assert "parcels" in json.loads(resp.read_text())
     assert "parcels" in json.loads(neigh.read_text())
     assert [p.name for p in tmp_path.iterdir() if p.name.startswith(".")] == []
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX umask")
+def test_saved_response_follows_umask(tmp_path, seen):
+    old = os.umask(0o022)
+    try:
+        assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 0
+    finally:
+        os.umask(old)
+    assert (tmp_path / "m.json").stat().st_mode & 0o777 == 0o644
+
+
+def test_save_json_race_reports_exists(tmp_path, monkeypatch, capsys):
+    _install(monkeypatch, lambda r: httpx.Response(200, json={"parcels": {"features": []}}))
+    real = os.path.lexists
+    target = str(tmp_path / "m.json")
+    # Pre-check passes, then the file appears before the final link.
+    monkeypatch.setattr(os.path, "lexists", lambda p: False if str(p) == target else real(p))
+    (tmp_path / "m.json").write_text("other")
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 1
+    err = capsys.readouterr().err
+    assert "exists; pass --replace" in err and "Could not write" not in err
+    assert (tmp_path / "m.json").read_text() == "other"

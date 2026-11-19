@@ -7,7 +7,6 @@ import json
 import math
 import os
 import sys
-import tempfile
 from datetime import datetime, timezone
 from importlib.resources import files
 from pathlib import Path
@@ -112,24 +111,8 @@ def _error_message(exc: Exception, *, os_error: str, type_error: str) -> str:
 
 
 def _save_json(path: Path, text: str, *, replace: bool) -> None:
-    """Write atomically via a same-directory temp file; never follow a symlink at ``path``."""
-    handle, temp_name = tempfile.mkstemp(dir=path.parent, prefix=".regrid-", suffix=".tmp")
-    temp = Path(temp_name)
-    try:
-        with os.fdopen(handle, "w", encoding="utf-8") as stream:
-            stream.write(text)
-        if replace:
-            os.replace(temp, path)
-            return
-        try:
-            os.link(temp, path)  # atomic and never overwrites
-        except FileExistsError:
-            raise ValueError(f"{path} exists; pass --replace to overwrite it") from None
-        except OSError:  # hard links unsupported: exclusive create still never overwrites
-            with open(path, "x", encoding="utf-8") as stream:
-                stream.write(text)
-    finally:
-        temp.unlink(missing_ok=True)
+    """Write atomically (umask-respecting, never following a symlink at ``path``)."""
+    parcel_map.write_atomic_bytes(path, text.encode("utf-8"), replace=replace)
 
 
 def _subject_mappable(result: Any) -> bool:
@@ -287,19 +270,37 @@ def _is_collection(value: Any) -> bool:
     return isinstance(value, dict) and isinstance(value.get("features"), list)
 
 
-def _merge_page(merged: dict[str, Any], result: dict[str, Any]) -> None:
+def _merge_page(merged: dict[str, Any], result: dict[str, Any], noted: set[str]) -> None:
     """Fold a later page's top-level lists and FeatureCollections into the merged response."""
     for key, value in result.items():
         if key == "parcels":
             continue
         current = merged.get(key)
-        if isinstance(value, list) and isinstance(current, list):
-            current.extend(value)
+        if isinstance(value, list):
+            if merged.get(key) is None:
+                merged[key] = list(value)
+            elif isinstance(current, list):
+                current.extend(value)
+            else:
+                _shape_note(key, noted)
         elif _is_collection(value):
-            if isinstance(current, dict) and _is_collection(current):
-                current["features"].extend(value["features"])
-            elif current is None:
+            if merged.get(key) is None:
                 merged[key] = {**value, "features": list(value["features"])}
+            elif isinstance(current, dict) and _is_collection(current):
+                current["features"].extend(value["features"])
+            else:
+                _shape_note(key, noted)
+        elif isinstance(current, list) or _is_collection(current):
+            _shape_note(key, noted)
+
+
+def _shape_note(key: str, noted: set[str]) -> None:
+    if key not in noted:
+        noted.add(key)
+        print(
+            f"regrid: paging note: {key} shape changed; later pages ignored for it",
+            file=sys.stderr,
+        )
 
 
 def _copy_first_page(result: dict[str, Any]) -> dict[str, Any]:
@@ -324,12 +325,18 @@ def _validate_paging(command: str, args: dict[str, Any], options: dict[str, Any]
 
         try:
             validated = safe_validate(QueryRequest, {"fields": args.get("fields")}).fields
+        except ValueError as exc:
+            raise _PagingError(_error_message(exc, os_error="", type_error="")) from None
+        country = "ca" if args.get("country") == "ca" else "us"
+        unknown = bool(args.get("allow_unknown_fields"))
+        try:
             validate_catalog_filters(
-                validated,
-                country="ca" if args.get("country") == "ca" else "us",
-                allow_unknown=bool(args.get("allow_unknown_fields")),
-                paging=True,
+                validated, country=country, allow_unknown=unknown, paging=False
             )
+        except ValueError as exc:
+            raise _PagingError(_error_message(exc, os_error="", type_error="")) from None
+        try:
+            validate_catalog_filters(validated, country=country, allow_unknown=unknown, paging=True)
         except ValueError:
             raise _PagingError("--max-records is incompatible with these query filters") from None
 
@@ -364,6 +371,7 @@ def _paged_search(
     features: list[Any] = []
     seen_ids: set[Any] = set()
     merged: dict[str, Any] = {}
+    noted: set[str] = set()
     pages = 0
     cursor: Any = None
     complete = False
@@ -380,7 +388,7 @@ def _paged_search(
         if pages == 1:
             merged = _copy_first_page(result)
         else:
-            _merge_page(merged, result)
+            _merge_page(merged, result, noted)
         new = []
         for feature in page:
             fid = _feature_id(feature)

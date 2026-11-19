@@ -498,6 +498,11 @@ def _write_atomic(path: Path, content: str, *, replace: bool) -> None:
     _write_atomic_bytes(path, content.encode("utf-8"), replace=replace)
 
 
+def write_atomic_bytes(path: Path, data: bytes, *, replace: bool) -> None:
+    """Write ``data`` atomically; without ``replace`` never overwrite (raises MapError)."""
+    _write_atomic_bytes(path, data, replace=replace)
+
+
 def _write_atomic_bytes(path: Path, data: bytes, *, replace: bool) -> None:
     if not replace and os.path.lexists(path):
         raise MapError(EXISTS)

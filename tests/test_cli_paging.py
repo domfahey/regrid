@@ -398,3 +398,55 @@ def test_limit_one_inclusive_cursor_stops_after_two_requests(monkeypatch, capsys
     out, err = capsys.readouterr()
     assert len(seen) == 2
     assert "cursor did not advance" in err and json.loads(out)["complete"] is False
+
+
+def test_paging_validation_surfaces_non_paging_errors(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 2)])
+    argv = ["query", "--fields", '{"nope_field":{"eq":"x"}}', "--validate-fields"]
+    assert cli.main([*argv, "--max-records", "4", "--options", '{"limit":2}']) == 1
+    err = capsys.readouterr().err
+    assert seen == [] and "requests made: 0" in err
+    assert "Field is not queryable in the local catalog" in err
+    assert "incompatible" not in err and "nope_field" not in err
+    order = ["query", "--fields", '{"yearbuilt":{"order":"ASC"}}', "--validate-fields"]
+    assert cli.main([*order, "--max-records", "4", "--options", '{"limit":2}']) == 1
+    assert "--max-records is incompatible with these query filters" in capsys.readouterr().err
+
+
+def _paged(monkeypatch, first, second):
+    pages = [first, second]
+    seen = []
+
+    def handle(request):
+        seen.append(request)
+        return httpx.Response(200, json=pages[min(len(seen), 2) - 1])
+
+    monkeypatch.setenv("REGRID_TOKEN", "secret")
+    monkeypatch.setattr(
+        cli, "RegridClient", lambda **kw: RegridClient(**kw, transport=httpx.MockTransport(handle))
+    )
+
+
+def _page(ids, **extra):
+    return {"parcels": {"type": "FeatureCollection", "features": feats(*ids)}, **extra}
+
+
+def test_merge_adds_keys_first_seen_on_later_pages(monkeypatch, capsys):
+    coll = {"type": "FeatureCollection", "features": [{"id": 9}]}
+    _paged(monkeypatch, _page([1, 2]), _page([2, 3], extras=[1], buildings=coll))
+    assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["extras"] == [1] and data["buildings"]["features"] == [{"id": 9}]
+
+
+def test_merge_shape_mismatch_keeps_first_and_notes_once(monkeypatch, capsys):
+    first = _page([1, 2], extras=[1], buildings={"features": [{"id": 8}]})
+    second = _page([2, 3], extras={"a": 1}, buildings=[5])
+    _paged(monkeypatch, first, second)
+    assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
+    out, err = capsys.readouterr()
+    data = json.loads(out)
+    assert data["extras"] == [1] and data["buildings"]["features"] == [{"id": 8}]
+    assert "regrid: paging note: extras shape changed; later pages ignored for it" in err
+    assert "regrid: paging note: buildings shape changed; later pages ignored for it" in err
+    assert err.count("paging note: extras") == 1
