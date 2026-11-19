@@ -236,6 +236,57 @@ def _parse_page(result: Any) -> list[Any]:
     return page
 
 
+def _is_collection(value: Any) -> bool:
+    return isinstance(value, dict) and isinstance(value.get("features"), list)
+
+
+def _merge_page(merged: dict[str, Any], result: dict[str, Any]) -> None:
+    """Fold a later page's top-level lists and FeatureCollections into the merged response."""
+    for key, value in result.items():
+        if key == "parcels":
+            continue
+        current = merged.get(key)
+        if isinstance(value, list) and isinstance(current, list):
+            current.extend(value)
+        elif _is_collection(value):
+            if isinstance(current, dict) and _is_collection(current):
+                current["features"].extend(value["features"])
+            elif current is None:
+                merged[key] = {**value, "features": list(value["features"])}
+
+
+def _copy_first_page(result: dict[str, Any]) -> dict[str, Any]:
+    merged: dict[str, Any] = {}
+    for key, value in result.items():
+        if key != "parcels" and isinstance(value, list):
+            merged[key] = list(value)
+        elif key != "parcels" and _is_collection(value):
+            merged[key] = {**value, "features": list(value["features"])}
+        else:
+            merged[key] = value
+    return merged
+
+
+def _validate_paging(command: str, args: dict[str, Any], options: dict[str, Any]) -> None:
+    """Run page 2's catalog validation up front so it cannot fail after page 1 is billed."""
+    if options.get("return_count") is not None:
+        raise _PagingError("--max-records conflicts with return_count")
+    if command == "query" and args.get("validate_fields"):
+        from .query_catalog import validate_catalog_filters
+        from .requests import QueryRequest, safe_validate
+
+        try:
+            validated = safe_validate(QueryRequest, {"fields": args.get("fields")}).fields
+            validate_catalog_filters(
+                validated,
+                country="ca" if args.get("country") == "ca" else "us",
+                allow_unknown=bool(args.get("allow_unknown_fields")),
+                paging=True,
+            )
+        except ValueError:
+            raise _PagingError("--max-records is incompatible with these query filters") from None
+
+
 def _feature_id(feature: Any) -> Any:
     return feature.get("id") if isinstance(feature, dict) else None
 
@@ -258,6 +309,7 @@ def _paged_search(
         raise _PagingError("--max-records is not supported for POST point searches")
     if "offset_id" in options:
         raise _PagingError("--max-records conflicts with offset_id")
+    _validate_paging(command, args, options)
     requests_cap = -(-total // limit)
     print(f"regrid: up to {requests_cap} requests for {total} records", file=sys.stderr)
     features: list[Any] = []
@@ -268,35 +320,34 @@ def _paged_search(
     complete = False
     state = progress if progress is not None else {}
     while pages < requests_cap and len(features) < total:
-        page_options = dict(options) if cursor is None else {**options, "offset_id": cursor}
+        page_options = {**options, "limit": min(limit, total - len(features))}
+        if cursor is not None:
+            page_options["offset_id"] = cursor
         result = getattr(client, command)(**args, **page_options)
         page = _parse_page(result)
         pages += 1
         if pages == 1:
-            merged = {
-                key: list(value) if isinstance(value, list) and key != "parcels" else value
-                for key, value in result.items()
-            }
+            merged = _copy_first_page(result)
         else:
-            for key, value in result.items():
-                if (
-                    key != "parcels"
-                    and isinstance(value, list)
-                    and isinstance(merged.get(key), list)
-                ):
-                    merged[key].extend(value)
-        new = [f for f in page if _feature_id(f) is None or _feature_id(f) not in seen_ids]
-        seen_ids.update(_feature_id(f) for f in new if _feature_id(f) is not None)
+            _merge_page(merged, result)
+        new = []
+        for feature in page:
+            fid = _feature_id(feature)
+            if fid is not None:
+                if fid in seen_ids:
+                    continue
+                seen_ids.add(fid)
+            new.append(feature)
         features.extend(new)
         state.update(merged=merged, features=features[:total], pages=pages)
-        if len(page) < limit or len(features) >= total:
+        if len(page) < page_options["limit"] or len(features) >= total:
             complete = True
             break
         if not new:
             print("regrid: paging stopped: cursor did not advance", file=sys.stderr)
             break
         last = _feature_id(page[-1])
-        if last is None:
+        if type(last) is not int or last < 0:
             print("regrid: paging stopped: no cursor in response", file=sys.stderr)
             break
         if last == cursor:

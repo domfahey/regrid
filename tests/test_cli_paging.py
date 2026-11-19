@@ -262,3 +262,65 @@ def test_page_without_parcels_or_features_is_empty(monkeypatch, capsys, body):
     assert cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}']) == 0
     data = json.loads(capsys.readouterr().out)
     assert data["parcels"]["features"] == [] and data["complete"] is True
+
+
+def fc(ids):
+    return {"type": "FeatureCollection", "features": feats(*ids)}
+
+
+def test_top_level_feature_collections_merge_across_pages(monkeypatch, capsys):
+    bodies = [
+        {"parcels": fc([1, 2]), "buildings": fc([11]), "zoning": None},
+        {"parcels": fc([3, 4]), "buildings": fc([12]), "zoning": fc([21])},
+    ]
+    install_bodies(monkeypatch, bodies)
+    assert cli.main([*POINT, "--max-records", "4", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert [f["id"] for f in data["buildings"]["features"]] == [11, 12]
+    assert [f["id"] for f in data["zoning"]["features"]] == [21]
+
+
+@pytest.mark.parametrize("bad", ["a", -5, True, 1.5])
+def test_invalid_cursor_id_stops_with_partial(monkeypatch, capsys, bad):
+    seen = install(monkeypatch, [feats(5, bad), feats(3, 4)])
+    assert cli.main([*POINT, "--max-records", "4", "--options", '{"limit":2}']) == 0
+    out, err = capsys.readouterr()
+    assert len(seen) == 1
+    assert "regrid: paging stopped: no cursor in response" in err
+    data = json.loads(out)
+    assert data["complete"] is False and len(data["parcels"]["features"]) == 2
+
+
+def test_order_filter_with_paging_rejected_before_request(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 2)])
+    argv = ["query", "--fields", '{"geoid":{"order":"ASC"}}', "--validate-fields"]
+    assert cli.main([*argv, "--max-records", "4", "--options", '{"limit":2}']) == 1
+    err = capsys.readouterr().err
+    assert seen == [] and err.count("regrid: requests made:") == 1
+    assert "requests made: 0" in err and len(err.strip().splitlines()) == 2
+
+
+def test_request_limit_capped_to_remaining(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 2), feats(3)])
+    assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
+    assert [r.url.params["limit"] for r in seen] == ["2", "1"]
+    seen = install(monkeypatch, [feats(1, 2, 3, 4, 5)])
+    assert cli.main([*POINT, "--max-records", "5", "--options", '{"limit":100}']) == 0
+    assert seen[0].url.params["limit"] == "5"
+    assert "up to 1 requests for 5 records" in capsys.readouterr().err
+
+
+def test_return_count_with_max_records_rejected(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 2)])
+    opts = '{"limit":2,"return_count":true}'
+    assert cli.main([*POINT, "--max-records", "4", "--options", opts]) == 1
+    err = capsys.readouterr().err
+    assert seen == [] and err.count("regrid: requests made:") == 1
+    assert "requests made: 0" in err
+
+
+def test_duplicate_ids_within_page_deduplicated(monkeypatch, capsys):
+    install(monkeypatch, [feats(1, 1)])
+    assert cli.main([*POINT, "--max-records", "4", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert [f["id"] for f in data["parcels"]["features"]] == [1]
