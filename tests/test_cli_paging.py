@@ -149,11 +149,116 @@ def test_cursor_not_advancing_stops(monkeypatch, capsys):
     out, err = capsys.readouterr()
     assert code == 0 and len(seen) == 2
     assert "regrid: paging stopped: cursor did not advance" in err
-    assert json.loads(out)["complete"] is True
+    assert json.loads(out)["complete"] is False
 
 
-def test_repeated_first_feature_stops(monkeypatch, capsys):
-    seen = install(monkeypatch, [feats(1, 7), feats(1, 8), feats(3, 4)])
+def test_page_adding_nothing_new_stops_incomplete(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 7), feats(1, 7), feats(3, 4)])
     assert cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}']) == 0
-    assert len(seen) == 2
-    assert "cursor did not advance" in capsys.readouterr().err
+    out, err = capsys.readouterr()
+    assert len(seen) == 2 and "cursor did not advance" in err
+    data = json.loads(out)
+    assert data["complete"] is False and [f["id"] for f in data["parcels"]["features"]] == [1, 7]
+
+
+def test_inclusive_offset_page_is_deduplicated(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 10), feats(10, 11)])
+    assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert [f["id"] for f in data["parcels"]["features"]] == [1, 10, 11]
+    assert data["complete"] is True and len(seen) == 2
+
+
+def test_features_without_id_are_kept(monkeypatch, capsys):
+    bare = [{"type": "Feature"}, {"type": "Feature", "id": 5}]
+    install(monkeypatch, [bare, [{"type": "Feature"}]])
+    assert cli.main([*POINT, "--max-records", "9", "--options", '{"limit":2}']) == 0
+    assert len(json.loads(capsys.readouterr().out)["parcels"]["features"]) == 3
+
+
+def test_incomplete_when_request_cap_reached_short_of_total(monkeypatch, capsys):
+    install(monkeypatch, [feats(1, 2), feats(2, 3)])
+    assert cli.main([*POINT, "--max-records", "4", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["complete"] is False and len(data["parcels"]["features"]) == 3
+
+
+def test_missing_cursor_is_incomplete(monkeypatch, capsys):
+    install(monkeypatch, [[{"type": "Feature"}, {"type": "Feature"}]])
+    assert cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}']) == 0
+    assert json.loads(capsys.readouterr().out)["complete"] is False
+
+
+def test_short_and_full_results_are_complete(monkeypatch, capsys):
+    install(monkeypatch, [feats(1, 2), feats(3)])
+    assert cli.main([*POINT, "--max-records", "9", "--options", '{"limit":2}']) == 0
+    assert json.loads(capsys.readouterr().out)["complete"] is True
+
+
+def install_bodies(monkeypatch, bodies):
+    seen = []
+
+    def handle(request):
+        seen.append(request)
+        return httpx.Response(200, json=bodies[min(len(seen), len(bodies)) - 1])
+
+    monkeypatch.setenv("REGRID_TOKEN", "secret")
+    monkeypatch.setattr(
+        cli, "RegridClient", lambda **kw: RegridClient(**kw, transport=httpx.MockTransport(handle))
+    )
+    return seen
+
+
+def test_other_top_level_keys_are_preserved(monkeypatch, capsys):
+    def body(ids, buildings):
+        return {
+            "parcels": {"type": "FeatureCollection", "features": feats(*ids), "extra": 1},
+            "zoning": {"note": "first"},
+            "buildings": buildings,
+            "status": "ok",
+        }
+
+    install_bodies(monkeypatch, [body((1, 2), [{"b": 1}]), body((3, 4), [{"b": 2}])])
+    assert cli.main([*POINT, "--max-records", "4", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["zoning"] == {"note": "first"} and data["status"] == "ok"
+    assert data["buildings"] == [{"b": 1}, {"b": 2}]
+    assert data["parcels"]["extra"] == 1 and data["parcels"]["type"] == "FeatureCollection"
+    assert [f["id"] for f in data["parcels"]["features"]] == [1, 2, 3, 4]
+    assert data["pages"] == 2 and data["complete"] is True
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"parcels": "oops"},
+        {"parcels": {"features": "oops"}},
+        {"parcels": {"features": [{"id": [1]}]}},
+    ],
+)
+def test_malformed_later_page_returns_partial(monkeypatch, capsys, bad):
+    good = {"parcels": {"type": "FeatureCollection", "features": feats(1, 10)}}
+    seen = install_bodies(monkeypatch, [good, bad])
+    code = cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}'])
+    out, err = capsys.readouterr()
+    assert code == 1 and len(seen) == 2
+    data = json.loads(out)
+    assert data["complete"] is False and data["pages"] == 1
+    assert [f["id"] for f in data["parcels"]["features"]] == [1, 10]
+    assert err.count("requests made:") == 1 and "Traceback" not in err
+    assert err.rstrip().splitlines()[-1] == "regrid: requests made: 2"
+
+
+def test_malformed_first_page_prints_no_partial(monkeypatch, capsys):
+    install_bodies(monkeypatch, [{"parcels": []}])
+    code = cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}'])
+    out, err = capsys.readouterr()
+    assert code == 1 and out == "" and "requests made: 1" in err
+
+
+@pytest.mark.parametrize("body", [{}, {"parcels": {"type": "FeatureCollection"}}])
+def test_page_without_parcels_or_features_is_empty(monkeypatch, capsys, body):
+    install_bodies(monkeypatch, [body])
+    assert cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["parcels"]["features"] == [] and data["complete"] is True

@@ -1,10 +1,12 @@
 import json
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import pytest
 
 from regrid import cli
 from regrid.client import RegridClient
+from regrid.offline import freshness
 
 VERSE = {
     "type": "FeatureCollection",
@@ -103,8 +105,9 @@ def test_corrupt_cache_is_refetched(tmp_path, verse_server, capsys):
 
 
 def test_default_cache_location_from_environment(tmp_path, verse_server, monkeypatch, capsys):
+    # The default directory comes from LOCALAPPDATA on Windows and XDG_CACHE_HOME elsewhere.
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
-    monkeypatch.delenv("LOCALAPPDATA", raising=False)
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
     assert cli.main(["freshness", "--path", "/us/nj/camden"]) == 0
     capsys.readouterr()
     assert (tmp_path / "regrid" / "verse.json").exists()
@@ -146,3 +149,69 @@ def test_freshness_keeps_result_when_cache_cannot_be_serialized(tmp_path, monkey
     assert "verse cache not saved" in captured.err
     assert captured.err.count("requests made") == 1 and "requests made: 1" in captured.err
     assert not cache.exists() and list(tmp_path.iterdir()) == []
+
+
+DEFAULT_BASE = "https://app.regrid.com/api/v2"
+
+
+def _aged(days):
+    when = datetime.now(timezone.utc) - timedelta(days=days)
+    return when.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def test_cache_stores_base_url(tmp_path, verse_server, capsys):
+    cache = tmp_path / "verse.json"
+    assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", str(cache)]) == 0
+    assert json.loads(cache.read_text())["base_url"] == DEFAULT_BASE
+
+
+def test_old_cache_is_refetched_and_reported(tmp_path, verse_server, capsys):
+    cache = tmp_path / "verse.json"
+    freshness.write_cache(cache, _aged(40), VERSE, DEFAULT_BASE)
+    assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", str(cache)]) == 0
+    captured = capsys.readouterr()
+    assert len(verse_server) == 1 and "requests made: 1" in captured.err
+    assert "older than 30 days" in captured.err
+    out = json.loads(captured.out)
+    assert out["cache"] == "miss" and out["verse_retrieved_at"] != _aged(40)
+
+
+def test_max_age_days_extends_cache_lifetime(tmp_path, verse_server, capsys):
+    cache = tmp_path / "verse.json"
+    freshness.write_cache(cache, _aged(40), VERSE, DEFAULT_BASE)
+    args = ["freshness", "--path", "/us/nj/camden", "--cache", str(cache)]
+    assert cli.main([*args, "--max-age-days", "60"]) == 0
+    captured = capsys.readouterr()
+    assert verse_server == [] and json.loads(captured.out)["cache"] == "hit"
+    assert "requests made: 0" in captured.err
+    assert cli.main([*args, "--max-age-days", "10"]) == 0
+    assert len(verse_server) == 1
+
+
+def test_recent_cache_is_a_hit(tmp_path, verse_server, capsys):
+    cache = tmp_path / "verse.json"
+    freshness.write_cache(cache, _aged(29), VERSE, DEFAULT_BASE)
+    assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", str(cache)]) == 0
+    assert verse_server == [] and json.loads(capsys.readouterr().out)["cache"] == "hit"
+
+
+def test_unparseable_timestamp_is_refetched(tmp_path, verse_server, capsys):
+    cache = tmp_path / "verse.json"
+    freshness.write_cache(cache, "yesterday", VERSE, DEFAULT_BASE)
+    assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", str(cache)]) == 0
+    assert len(verse_server) == 1
+
+
+def test_different_base_url_is_a_miss(tmp_path, verse_server, capsys):
+    cache = tmp_path / "verse.json"
+    freshness.write_cache(cache, _aged(1), VERSE, "https://other.example/api/v2")
+    assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", str(cache)]) == 0
+    assert len(verse_server) == 1 and json.loads(capsys.readouterr().out)["cache"] == "miss"
+    assert json.loads(cache.read_text())["base_url"] == DEFAULT_BASE
+
+
+def test_cache_without_base_url_is_a_miss(tmp_path, verse_server, capsys):
+    cache = tmp_path / "verse.json"
+    cache.write_text(json.dumps({"retrieved_at": _aged(1), "response": VERSE}))
+    assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", str(cache)]) == 0
+    assert len(verse_server) == 1

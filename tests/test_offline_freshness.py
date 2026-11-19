@@ -144,3 +144,22 @@ def test_helper_cli_main_guard(tmp_path):
         text=True,
     )
     assert result.returncode == 0 and "Camden" in result.stdout
+
+
+def test_cache_base_url_round_trip_and_mismatch(tmp_path):
+    cache = tmp_path / "verse.json"
+    freshness.write_cache(cache, "2026-11-19T00:00:00Z", VERSE, "https://a.example")
+    assert freshness.read_cache(cache, "https://a.example") == ("2026-11-19T00:00:00Z", VERSE)
+    assert freshness.read_cache(cache, "https://b.example") is None
+    assert freshness.read_cache(cache) == ("2026-11-19T00:00:00Z", VERSE)
+
+
+def test_is_stale():
+    from datetime import datetime, timezone
+
+    now = datetime(2026, 11, 19, tzinfo=timezone.utc)
+    assert not freshness.is_stale("2026-10-25T00:00:00Z", 30, now)
+    assert freshness.is_stale("2026-10-19T00:00:00Z", 30, now)
+    assert freshness.is_stale("garbage", 30, now)
+    assert not freshness.is_stale("2026-10-19T00:00:00Z", 60, now)
+    assert freshness.is_stale("2026-10-19T00:00:00", 30, now) is True  # naive treated as UTC

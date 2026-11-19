@@ -91,7 +91,36 @@ def test_main_default_catalog_and_errors(tmp_path, capsys):
     assert fields.main(["explain", "owner", "--catalog", str(tmp_path / "none.json")]) == 1
     assert capsys.readouterr().err.startswith("fields: ")
     # Default catalog sits at ../references/fields.json relative to the script.
-    assert fields.DEFAULT_CATALOG.name == "fields.json"
+    assert fields.DEFAULT_CATALOG.name in {"fields.json", "parcel_fields.json"}
+
+
+def test_default_catalog_prefers_references_then_packaged_data(tmp_path):
+    here = tmp_path / "pkg" / "offline"
+    here.mkdir(parents=True)
+    with pytest.raises(FileNotFoundError, match="No field catalog found"):
+        fields.default_catalog(here)
+    data = here.parent / "data"
+    data.mkdir()
+    (data / "parcel_fields.json").write_text("{}")
+    assert fields.default_catalog(here) == data / "parcel_fields.json"
+    refs = here.parent / "references"
+    refs.mkdir()
+    (refs / "fields.json").write_text("{}")
+    assert fields.default_catalog(here) == refs / "fields.json"
+
+
+def test_main_reports_missing_default_catalog(monkeypatch, capsys):
+    def missing(*args):
+        raise FileNotFoundError("No field catalog found")
+
+    monkeypatch.setattr(fields, "default_catalog", missing)
+    assert fields.main(["search", "owner"]) == 1
+    assert "fields: No field catalog found" in capsys.readouterr().err
+
+
+def test_sdk_copy_falls_back_to_packaged_catalog():
+    assert fields.DEFAULT_CATALOG == ROOT / "src/regrid/data/parcel_fields.json"
+    assert fields.load_catalog(fields.DEFAULT_CATALOG)
 
 
 def test_fields_helper_runs_from_extracted_archive(tmp_path):

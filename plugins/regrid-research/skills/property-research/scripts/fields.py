@@ -12,7 +12,22 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-DEFAULT_CATALOG = Path(__file__).resolve().parent.parent / "references" / "fields.json"
+
+def default_catalog(here: Path | None = None) -> Path:
+    """The skill's ../references/fields.json, else the SDK's packaged ../data/parcel_fields.json."""
+    base = (Path(__file__).resolve().parent if here is None else here).parent
+    for candidate in (base / "references" / "fields.json", base / "data" / "parcel_fields.json"):
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(
+        "No field catalog found (expected ../references/fields.json or ../data/parcel_fields.json)"
+    )
+
+
+try:
+    DEFAULT_CATALOG = default_catalog()
+except FileNotFoundError:
+    DEFAULT_CATALOG = Path(__file__).resolve().parent.parent / "references" / "fields.json"
 KEYS = ("name", "datatype", "tier", "category", "description")
 
 
@@ -51,7 +66,7 @@ def search(catalog: list[dict], term: str) -> list[dict]:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Explain or search Regrid parcel fields offline.")
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--catalog", type=Path, default=DEFAULT_CATALOG, help="Catalog JSON file")
+    common.add_argument("--catalog", type=Path, help="Catalog JSON file (default: bundled catalog)")
     commands = parser.add_subparsers(dest="command", required=True)
     explain_parser = commands.add_parser(
         "explain", parents=[common], help="Show definitions of named fields"
@@ -63,7 +78,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     search_parser.add_argument("term")
     args = parser.parse_args(argv)
     try:
-        catalog = load_catalog(args.catalog)
+        catalog = load_catalog(args.catalog or default_catalog())
     except (OSError, ValueError) as exc:
         print(f"fields: {' '.join(str(exc).split())}", file=sys.stderr)
         return 1

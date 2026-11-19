@@ -12,6 +12,7 @@ import os
 import sys
 import tempfile
 from collections.abc import Mapping, Sequence
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -65,8 +66,22 @@ def default_cache_path(env: Mapping[str, str] | None = None, os_name: str | None
     return Path(base) / "regrid" / "verse.json"
 
 
-def read_cache(path: Path) -> tuple[str, dict] | None:
-    """Return ``(retrieved_at, response)`` or None if the cache is absent or unusable."""
+def is_stale(retrieved_at: str, max_age_days: float, now: datetime | None = None) -> bool:
+    """True when ``retrieved_at`` is older than ``max_age_days`` or cannot be parsed."""
+    try:
+        when = datetime.fromisoformat(retrieved_at.replace("Z", "+00:00"))
+    except ValueError:
+        return True
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return (now or datetime.now(timezone.utc)) - when > timedelta(days=max_age_days)
+
+
+def read_cache(path: Path, base_url: str | None = None) -> tuple[str, dict] | None:
+    """Return ``(retrieved_at, response)`` or None if the cache is absent or unusable.
+
+    When ``base_url`` is given, a cache stored for a different (or no) base URL is a miss.
+    """
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -76,14 +91,17 @@ def read_cache(path: Path) -> tuple[str, dict] | None:
     retrieved_at, response = data.get("retrieved_at"), data.get("response")
     if not isinstance(retrieved_at, str) or not isinstance(response, dict):
         return None
+    if base_url is not None and data.get("base_url") != base_url:
+        return None
     return retrieved_at, response
 
 
-def write_cache(path: Path, retrieved_at: str, response: dict) -> None:
+def write_cache(path: Path, retrieved_at: str, response: dict, base_url: str | None = None) -> None:
     """Atomically write the cache; the directory is created private where supported."""
     path = Path(path)
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    body = json.dumps({"retrieved_at": retrieved_at, "response": response}, allow_nan=False)
+    document = {"retrieved_at": retrieved_at, "base_url": base_url, "response": response}
+    body = json.dumps(document, allow_nan=False)
     handle, temp_name = tempfile.mkstemp(dir=path.parent, prefix=".verse-", suffix=".tmp")
     try:
         with os.fdopen(handle, "w", encoding="utf-8") as temp:

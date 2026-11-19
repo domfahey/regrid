@@ -243,6 +243,14 @@ def test_neighbours_skipped_without_coordinates(tmp_path, monkeypatch, capsys):
     assert not (tmp_path / "m.neighbours.json").exists()
 
 
+@pytest.mark.parametrize("fields", [{"lat": 0, "lon": 0}, {"lat": 95, "lon": -75}])
+def test_neighbours_skipped_for_out_of_us_coordinates(tmp_path, monkeypatch, capsys, fields):
+    seen = _two_stage(monkeypatch, fields)
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 0
+    err = capsys.readouterr().err
+    assert len(seen) == 1 and "regrid: neighbours skipped: subject has no coordinates" in err
+
+
 def test_no_flag_makes_one_request(tmp_path, monkeypatch, capsys):
     seen = _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03})
     assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 0

@@ -62,7 +62,7 @@ def _finite(value: object) -> float | None:
     return number if math.isfinite(number) else None
 
 
-def _parse_finite(value: object) -> float | None:
+def parse_finite(value: object) -> float | None:
     """A finite number from a JSON number or numeric string; anything else is None."""
     if isinstance(value, str):
         try:
@@ -70,6 +70,9 @@ def _parse_finite(value: object) -> float | None:
         except ValueError:
             return None
     return _finite(value)
+
+
+_parse_finite = parse_finite
 
 
 def _in_us(lon: float, lat: float) -> bool:
@@ -211,12 +214,16 @@ def _text(value: object) -> str:
     return MISSING if value is None or value == "" else str(value)
 
 
-def _fallback_point(feature: dict) -> list[float] | None:
+def fallback_point(feature: dict) -> list[float] | None:
+    """The feature's numeric (lat, lon) fields when inside US bounds, else None."""
     fields = _fields(feature)
     lat, lon = _parse_finite(fields.get("lat")), _parse_finite(fields.get("lon"))
     if lat is None or lon is None or not _in_us(lon, lat):
         return None
     return [lat, lon]
+
+
+_fallback_point = fallback_point
 
 
 def _display_geometry(geometry: dict) -> dict:
@@ -520,6 +527,13 @@ def render(
     replace: bool = False,
     neighbours_path: Path | None = None,
 ) -> dict[str, Any]:
+    if Path(output_path).resolve() == Path(response_path).resolve():
+        raise MapError("Output must not be the response file")
+    if (
+        neighbours_path is not None
+        and Path(output_path).resolve() == Path(neighbours_path).resolve()
+    ):
+        raise MapError("Output must not be the neighbours file")
     try:
         document = json.loads(Path(response_path).read_text(encoding="utf-8"))
     except (ValueError, RecursionError) as exc:

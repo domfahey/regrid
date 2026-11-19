@@ -54,13 +54,16 @@ pull dates are not available over MCP; say they need the CLI. Report dates only 
 never label data stale.
 
 ```
-regrid freshness --path /us/<st>/<county> [--cache FILE] [--refresh]
+regrid freshness --path /us/<st>/<county> [--cache FILE] [--refresh] [--max-age-days N]
 ```
 
 stdout is JSON: `path`, `county`, `state`, `last_refresh`, `assessor_data_date`,
 `usps_data_date`, `verse_retrieved_at`, `cache` (`hit` or `miss`). The `/verse`
 response is cached in `~/.cache/regrid/verse.json` (`%LOCALAPPDATA%\regrid\verse.json`
-on Windows) and reused unless `--refresh` is given or no cache exists.
+on Windows) and reused unless `--refresh` is given, no cache exists, the cache was
+stored for a different `--base-url`, or it is older than 30 days (`--max-age-days N`
+changes the limit); an old cache is refetched automatically with one request and a
+stderr note.
 
 ## Ledger
 

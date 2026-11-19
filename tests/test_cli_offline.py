@@ -93,3 +93,13 @@ def test_export_cli_non_finite_is_one_line(tmp_path, capsys):
     err = capsys.readouterr().err
     assert err.startswith("regrid: ") and err.count("\n") == 1
     assert not (tmp_path / "o.geojson").exists()
+
+
+def test_map_neighbours_passthrough(tmp_path, capsys):
+    response = write_response(tmp_path / "r.json", good_feature())
+    other = good_feature()
+    other["properties"]["ll_uuid"] = "00000000-0000-4000-8000-000000000002"
+    neighbours = write_response(tmp_path / "n.json", good_feature(), other)
+    out = tmp_path / "m.html"
+    assert cli.main(["map", str(response), str(out), "--neighbours", str(neighbours)]) == 0
+    assert json.loads(capsys.readouterr().out)["neighbours"] == 1

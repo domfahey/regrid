@@ -835,3 +835,24 @@ def test_export_refuses_output_equal_to_response(tmp_path, replace):
     with pytest.raises(MapError, match="response"):
         parcel_map.export(response, geojson_path=response, replace=replace)
     assert response.read_text() == before
+
+
+@pytest.mark.parametrize("replace", [False, True])
+def test_render_refuses_output_equal_to_response_or_neighbours(tmp_path, replace):
+    response = write_response(tmp_path / "r.json", good_feature())
+    neighbours = write_response(tmp_path / "n.json", good_feature())
+    before = (response.read_text(), neighbours.read_text())
+    alias = tmp_path / "sub" / ".." / "r.json"
+    (tmp_path / "sub").mkdir()
+    with pytest.raises(MapError, match="response"):
+        parcel_map.render(response, alias, replace=replace)
+    with pytest.raises(MapError, match="neighbours"):
+        parcel_map.render(response, neighbours, replace=replace, neighbours_path=neighbours)
+    assert (response.read_text(), neighbours.read_text()) == before
+
+
+def test_public_point_helpers():
+    assert parcel_map.parse_finite(" 1.5 ") == 1.5 and parcel_map.parse_finite("x") is None
+    inside = good_feature(lat=39.9, lon=-75.03)
+    assert parcel_map.fallback_point(inside) == [39.9, -75.03]
+    assert parcel_map.fallback_point(good_feature(lat=0, lon=0)) is None
