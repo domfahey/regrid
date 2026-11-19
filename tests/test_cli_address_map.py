@@ -183,3 +183,110 @@ def test_transport_failure_counts_one(tmp_path, monkeypatch, capsys):
     assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 1
     err = capsys.readouterr().err
     assert len(seen) == 1 and "requests made: 1" in err and "secret" not in err
+
+
+def _two_stage(monkeypatch, subject_fields, neighbour_status=200):
+    subject = good_feature(**subject_fields)
+    other = good_feature()
+    other["properties"]["ll_uuid"] = "00000000-0000-4000-8000-000000000002"
+
+    def handler(request):
+        if request.url.path.endswith("/parcels/point"):
+            return httpx.Response(
+                neighbour_status, json={"parcels": {"features": [subject, other]}}
+            )
+        return httpx.Response(200, json={"parcels": {"features": [subject]}})
+
+    return _install(monkeypatch, handler)
+
+
+def test_neighbours_second_request_exact_params(tmp_path, monkeypatch, capsys):
+    seen = _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03})
+    out = tmp_path / "m.html"
+    assert cli.main(["address-map", "x", str(out), "--neighbours"]) == 0
+    assert len(seen) == 2 and seen[1].url.path == "/api/v2/parcels/point"
+    params = dict(seen[1].url.params)
+    params.pop("token")
+    assert params == {
+        "lat": "39.9",
+        "lon": "-75.03",
+        "radius": "100",
+        "limit": "25",
+        "return_geometry": "true",
+        "return_parcels": "true",
+        "return_stacked": "false",
+        "return_zoning": "false",
+        "return_matched_buildings": "false",
+        "return_matched_addresses": "false",
+        "return_enhanced_ownership": "false",
+    }
+    captured = capsys.readouterr()
+    assert "requests made: 2" in captured.err
+    assert json.loads((tmp_path / "m.neighbours.json").read_text())["parcels"]
+    summary = json.loads(captured.out)
+    assert summary["neighbours"] == 1
+    assert summary["neighbours_response"] == str(tmp_path / "m.neighbours.json")
+
+
+def test_neighbours_string_coordinates_count_as_numeric(tmp_path, monkeypatch, capsys):
+    seen = _two_stage(monkeypatch, {"lat": "39.9", "lon": "-75.03"})
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 0
+    assert len(seen) == 2 and dict(seen[1].url.params)["lat"] == "39.9"
+
+
+def test_neighbours_skipped_without_coordinates(tmp_path, monkeypatch, capsys):
+    seen = _two_stage(monkeypatch, {"lat": "n/a"})
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 0
+    err = capsys.readouterr().err
+    assert len(seen) == 1 and "requests made: 1" in err
+    assert "regrid: neighbours skipped: subject has no coordinates" in err
+    assert not (tmp_path / "m.neighbours.json").exists()
+
+
+def test_no_flag_makes_one_request(tmp_path, monkeypatch, capsys):
+    seen = _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03})
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 0
+    assert len(seen) == 1 and "requests made: 1" in capsys.readouterr().err
+    assert not (tmp_path / "m.neighbours.json").exists()
+
+
+def test_existing_neighbours_file_refuses_before_request(tmp_path, monkeypatch, capsys):
+    seen = _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03})
+    (tmp_path / "m.neighbours.json").write_text("keep")
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 1
+    assert seen == [] and "requests made: 0" in capsys.readouterr().err
+    assert (tmp_path / "m.neighbours.json").read_text() == "keep"
+
+
+def test_neighbours_file_ignored_without_flag(tmp_path, monkeypatch):
+    seen = _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03})
+    (tmp_path / "m.neighbours.json").write_text("keep")
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 0
+    assert len(seen) == 1
+
+
+def test_neighbours_path_colliding_with_response_refused(tmp_path, monkeypatch, capsys):
+    seen = _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03})
+    argv = ["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]
+    argv += ["--save-response", str(tmp_path / "m.neighbours.json")]
+    assert cli.main(argv) == 1
+    assert seen == [] and "different files" in capsys.readouterr().err
+
+
+def test_neighbours_failure_keeps_response_and_counts_two(tmp_path, monkeypatch, capsys):
+    seen = _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03}, neighbour_status=500)
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 1
+    err = capsys.readouterr().err
+    assert len(seen) == 2 and "requests made: 2" in err and "response saved to" in err
+    assert (tmp_path / "m.json").exists() and not (tmp_path / "m.html").exists()
+
+
+def test_neighbours_without_parcels_makes_no_second_request(tmp_path, monkeypatch, capsys):
+    seen = _install(
+        monkeypatch, lambda request: httpx.Response(200, json={"parcels": {"features": []}})
+    )
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 1
+    err = capsys.readouterr().err
+    assert len(seen) == 1 and "requests made: 1" in err
+    assert "Response contains no parcels" in err and "neighbours skipped" not in err
+    assert not (tmp_path / "m.neighbours.json").exists()

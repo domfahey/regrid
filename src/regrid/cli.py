@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 from datetime import datetime, timezone
@@ -57,16 +58,45 @@ def _run_fields(args: dict[str, Any]) -> None:
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 
-def _address_map(args: dict[str, Any], sent: list[int], saved: list[Path]) -> None:
+def _finite_float(value: object) -> float | None:
+    """A finite float from a JSON number or numeric string; anything else is None."""
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        return None
+    try:
+        number = float(value.strip() if isinstance(value, str) else value)
+    except (ValueError, OverflowError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _subject_point(result: Any) -> tuple[float, float] | None:
+    """Return the first parcel's numeric (lat, lon) fields, or None."""
+    try:
+        features = parcel_map.load_features(result)
+    except ValueError:
+        return None
+    properties = features[0].get("properties") if features else None
+    fields = properties.get("fields") if isinstance(properties, dict) else None
+    if not isinstance(fields, dict):
+        return None
+    lat, lon = _finite_float(fields.get("lat")), _finite_float(fields.get("lon"))
+    return None if lat is None or lon is None else (lat, lon)
+
+
+def _address_map(
+    args: dict[str, Any], sent: list[int], saved: list[Path], notes: list[str]
+) -> None:
     output = Path(args["output"])
     response_path = Path(args["save_response"] or output.with_suffix(".json"))
+    neighbours_path = output.with_name(f"{output.stem}.neighbours.json")
     replace = args["replace"]
-    if response_path.resolve() == output.resolve():
+    targets = [response_path, output] + ([neighbours_path] if args["neighbours"] else [])
+    if len({target.resolve() for target in targets}) != len(targets):
         raise ValueError("Saved response and map output must be different files")
-    for target in (response_path, output):
+    for target in targets:
         if not target.parent.is_dir():
             raise ValueError("Output directory does not exist")
-    for target in (response_path, output):
+    for target in targets:
         if not replace and os.path.lexists(target):
             raise ValueError(f"{target} exists; pass --replace to overwrite it")
     options: dict[str, Any] = {
@@ -86,19 +116,53 @@ def _address_map(args: dict[str, Any], sent: list[int], saved: list[Path]) -> No
         base_url=args["base_url"],
         tiles_base_url=args["tiles_base_url"],
     ) as client:
+        neighbours_file: Path | None = None
         try:
             result = client.address(args["address"], **options)
+            body = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+            with open(response_path, "w" if replace else "x", encoding="utf-8") as handle:
+                handle.write(body)
+            saved.append(response_path)
+            if args["neighbours"]:
+                point = _subject_point(result)
+                if point is None:
+                    if parcel_map.load_features(result):
+                        notes.append("neighbours skipped: subject has no coordinates")
+                else:
+                    around = client.point(
+                        lat=point[0],
+                        lon=point[1],
+                        radius=100,
+                        limit=25,
+                        return_geometry=True,
+                        return_parcels=True,
+                        return_stacked=False,
+                        return_zoning=False,
+                        return_matched_buildings=False,
+                        return_matched_addresses=False,
+                        return_enhanced_ownership=False,
+                    )
+                    text = json.dumps(around, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+                    with open(neighbours_path, "w" if replace else "x", encoding="utf-8") as handle:
+                        handle.write(text)
+                    neighbours_file = neighbours_path
         finally:
             sent.append(client.request_count)
-    body = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
-    with open(response_path, "w" if replace else "x", encoding="utf-8") as handle:
-        handle.write(body)
-    saved.append(response_path)
     retrieved_at = args["retrieved_at"] or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    summary = parcel_map.render(response_path, output, retrieved_at=retrieved_at, replace=replace)
+    summary = parcel_map.render(
+        response_path,
+        output,
+        retrieved_at=retrieved_at,
+        replace=replace,
+        neighbours_path=neighbours_file,
+    )
     print(
         json.dumps(
-            {"response": str(response_path), **summary},
+            {
+                "response": str(response_path),
+                **({"neighbours_response": str(neighbours_file)} if neighbours_file else {}),
+                **summary,
+            },
             indent=2,
             ensure_ascii=False,
             allow_nan=False,
@@ -109,9 +173,10 @@ def _address_map(args: dict[str, Any], sent: list[int], saved: list[Path]) -> No
 def _run_address_map(args: dict[str, Any]) -> int:
     sent: list[int] = []
     saved: list[Path] = []
+    notes: list[str] = []
     message = None
     try:
-        _address_map(args, sent, saved)
+        _address_map(args, sent, saved, notes)
     except (RegridError, ValueError, TypeError, OSError) as exc:  # MapError is a ValueError
         if isinstance(exc, RegridError):
             message = str(exc)
@@ -122,6 +187,8 @@ def _run_address_map(args: dict[str, Any]) -> int:
         else:
             message = " ".join(str(exc).split())
     print(f"regrid: requests made: {sent[0] if sent else 0}", file=sys.stderr)
+    for note in notes:
+        print(f"regrid: {note}", file=sys.stderr)
     if message is not None and saved:
         print(f"regrid: response saved to {saved[0]}", file=sys.stderr)
     if message is not None:
@@ -288,6 +355,11 @@ def _parser() -> argparse.ArgumentParser:
     address_map.add_argument("--path", help="Regrid path scope, e.g. /us/nj/camden")
     address_map.add_argument("--save-response", metavar="FILE", help="Response JSON destination")
     address_map.add_argument("--retrieved-at", metavar="ISO", help="Retrieval timestamp to show")
+    address_map.add_argument(
+        "--neighbours",
+        action="store_true",
+        help="Also fetch neighbouring parcels (one extra request, up to 25 records)",
+    )
     address_map.add_argument("--replace", action="store_true", help="Overwrite existing outputs")
     option_commands = {
         "point",
