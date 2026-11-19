@@ -258,7 +258,7 @@ def test_tile(requests, tmp_path, capsys):
 def test_invalid(argv, requests, capsys):
     assert cli.main(argv) == 1
     captured = capsys.readouterr()
-    assert "secret" not in captured.err
+    assert captured.err == "regrid: Invalid input or output file\nregrid: requests made: 0\n"
     assert captured.out == ""
     assert not requests
 
@@ -332,9 +332,14 @@ def test_blank_token_public_schema_succeeds(requests, monkeypatch, token, capsys
 
 def test_parser_help_error(capsys):
     assert cli.main(["--help"]) == 0
-    assert "REGRID_TOKEN" in capsys.readouterr().out
+    captured = capsys.readouterr()
+    assert captured.out.startswith("usage: ")
+    assert "REGRID_TOKEN" in captured.out
+    assert captured.err == ""
     assert cli.main([]) == 2
-    assert "required" in capsys.readouterr().err
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err.rstrip().endswith("error: the following arguments are required: command")
 
 
 def test_module_entry(monkeypatch, requests, capsys):
@@ -364,9 +369,12 @@ def test_base_urls_and_report_text(requests):
         == 0
     )
     assert str(requests[0].url).startswith("https://example.test/v2/report?")
+    assert requests[0].method == "POST"
     assert requests[0].url.params["details"] == "Please check this parcel"
     assert cli.main(["--tiles-base-url", "https://tiles.example.test", "tilejson"]) == 0
+    assert len(requests) == 2
     assert requests[1].url.host == "tiles.example.test"
+    assert requests[1].url.path == "/api/v1/parcels"
 
 
 def test_json_argument_error_does_not_retain_input_context():

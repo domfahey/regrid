@@ -53,15 +53,26 @@ def test_requires_limit(monkeypatch, capsys):
     seen = install(monkeypatch, [feats(1)])
     assert cli.main([*POINT, "--max-records", "5"]) == 1
     assert seen == []
-    assert "limit" in capsys.readouterr().err
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == (
+        "regrid: --max-records requires a positive count and an integer limit in --options\n"
+        "regrid: requests made: 0\n"
+    )
 
 
 def test_repeated_cursor_stops_at_k(monkeypatch, capsys):
     seen = install(monkeypatch, [feats(1, 7), feats(7, 7)])
     code = cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}'])
+    out, err = capsys.readouterr()
     assert code == 0
     assert len(seen) == 2
-    assert "requests made: 2" in capsys.readouterr().err
+    assert seen[1].url.params["offset_id"] == "7"
+    data = json.loads(out)
+    assert [f["id"] for f in data["parcels"]["features"]] == [1, 7]
+    assert data["complete"] is False and data["pages"] == 2
+    assert "regrid: paging stopped: cursor did not advance" in err
+    assert err.splitlines()[-1] == "regrid: requests made: 2"
 
 
 def test_missing_cursor_stops(monkeypatch, capsys):
@@ -71,51 +82,90 @@ def test_missing_cursor_stops(monkeypatch, capsys):
     assert code == 0
     assert len(seen) == 1
     assert "regrid: paging stopped: no cursor in response" in err
-    assert json.loads(out)["pages"] == 1
+    data = json.loads(out)
+    assert data["pages"] == 1 and data["complete"] is False
+    assert len(data["parcels"]["features"]) == 2
 
 
-def test_short_page_stops(monkeypatch):
-    seen = install(monkeypatch, [feats(1, 2), feats(3)])
+def test_short_page_stops_and_is_complete(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 2), feats(3), feats(4, 5)])
     assert cli.main([*POINT, "--max-records", "9", "--options", '{"limit":2}']) == 0
+    out, err = capsys.readouterr()
     assert len(seen) == 2
+    assert seen[1].url.params["offset_id"] == "2"
+    data = json.loads(out)
+    assert [f["id"] for f in data["parcels"]["features"]] == [1, 2, 3]
+    assert data["complete"] is True and data["pages"] == 2
+    assert err.splitlines()[-1] == "regrid: requests made: 2"
 
 
-@pytest.mark.parametrize(
-    "argv",
-    [
-        ["point", "--geojson", '{"type":"Point","coordinates":[0,0]}', "--method", "POST"],
-        ["owner", "smith"],
-        ["address", "1 Main"],
-    ],
-)
-def test_unsupported_rejected_before_request(monkeypatch, argv):
+def test_post_point_rejected_before_request(monkeypatch, capsys):
     seen = install(monkeypatch, [feats(1)])
-    assert cli.main([*argv, "--max-records", "5", "--options", '{"limit":2}']) in (1, 2)
-    assert seen == []
+    argv = ["point", "--geojson", '{"type":"Point","coordinates":[0,0]}', "--method", "POST"]
+    assert cli.main([*argv, "--max-records", "5", "--options", '{"limit":2}']) == 1
+    captured = capsys.readouterr()
+    assert seen == [] and captured.out == ""
+    assert captured.err == (
+        "regrid: --max-records is not supported for POST point searches\nregrid: requests made: 0\n"
+    )
 
 
-@pytest.mark.parametrize("value", ["0", "-1", "x"])
-def test_bad_max_records(monkeypatch, value):
+@pytest.mark.parametrize("argv", [["owner", "smith"], ["address", "1 Main"]])
+def test_max_records_unavailable_on_other_commands(monkeypatch, capsys, argv):
     seen = install(monkeypatch, [feats(1)])
-    assert cli.main([*POINT, "--max-records", value, "--options", '{"limit":2}']) in (1, 2)
-    assert seen == []
+    assert cli.main([*argv, "--max-records", "5", "--options", '{"limit":2}']) == 2
+    captured = capsys.readouterr()
+    assert seen == [] and captured.out == ""
+    assert "unrecognized arguments: --max-records 5" in captured.err
+
+
+@pytest.mark.parametrize("value", ["0", "-1"])
+def test_non_positive_max_records(monkeypatch, capsys, value):
+    seen = install(monkeypatch, [feats(1)])
+    assert cli.main([*POINT, "--max-records", value, "--options", '{"limit":2}']) == 1
+    captured = capsys.readouterr()
+    assert seen == [] and captured.out == ""
+    assert captured.err == (
+        "regrid: --max-records requires a positive count and an integer limit in --options\n"
+        "regrid: requests made: 0\n"
+    )
+
+
+def test_non_integer_max_records(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1)])
+    assert cli.main([*POINT, "--max-records", "x", "--options", '{"limit":2}']) == 2
+    captured = capsys.readouterr()
+    assert seen == [] and captured.out == ""
+    assert "argument --max-records: invalid int value: 'x'" in captured.err
 
 
 @pytest.mark.parametrize("limit", ['"2"', "0", "true"])
-def test_bad_limit(monkeypatch, limit):
+def test_bad_limit(monkeypatch, capsys, limit):
     seen = install(monkeypatch, [feats(1)])
     assert cli.main([*POINT, "--max-records", "5", "--options", '{"limit":%s}' % limit]) == 1
-    assert seen == []
+    captured = capsys.readouterr()
+    assert seen == [] and captured.out == ""
+    assert captured.err == (
+        "regrid: --max-records requires a positive count and an integer limit in --options\n"
+        "regrid: requests made: 0\n"
+    )
 
 
-def test_area_and_query(monkeypatch):
+def test_area_and_query(monkeypatch, capsys):
     seen = install(monkeypatch, [feats(1, 2), feats(3, 4)])
     geo = '{"type":"Point","coordinates":[1,2]}'
     area = ["area", "--geojson", geo, "--max-records", "4", "--options", '{"limit":2}']
     assert cli.main(area) == 0
+    area_data = json.loads(capsys.readouterr().out)
+    assert [f["id"] for f in area_data["parcels"]["features"]] == [1, 2, 3, 4]
     query = ["query", "--fields", '{"geoid":{"eq":"48113"}}', "--max-records", "2"]
     assert cli.main([*query, "--options", '{"limit":2}']) == 0
     assert len(seen) == 3
+    assert [r.url.path for r in seen] == ["/api/v2/parcels/area"] * 2 + ["/api/v2/parcels/query"]
+    assert [r.url.params["limit"] for r in seen] == ["2", "2", "2"]
+    assert [r.url.params.get("offset_id") for r in seen] == [None, "2", None]
+    assert seen[0].url.params["geojson"] == geo
+    assert seen[2].url.params["fields[geoid][eq]"] == "48113"
 
 
 def test_mid_paging_error_prints_partial(monkeypatch, capsys):
@@ -185,7 +235,12 @@ def test_features_without_id_are_kept(monkeypatch, capsys):
     bare = [{"type": "Feature"}, {"type": "Feature", "id": 5}]
     install(monkeypatch, [bare, [{"type": "Feature"}]])
     assert cli.main([*POINT, "--max-records", "9", "--options", '{"limit":2}']) == 0
-    assert len(json.loads(capsys.readouterr().out)["parcels"]["features"]) == 3
+    data = json.loads(capsys.readouterr().out)
+    assert data["parcels"]["features"] == [
+        {"type": "Feature"},
+        {"type": "Feature", "id": 5},
+        {"type": "Feature"},
+    ]
 
 
 def test_incomplete_when_request_cap_reached_short_of_total(monkeypatch, capsys):
@@ -195,16 +250,12 @@ def test_incomplete_when_request_cap_reached_short_of_total(monkeypatch, capsys)
     assert data["complete"] is False and len(data["parcels"]["features"]) == 3
 
 
-def test_missing_cursor_is_incomplete(monkeypatch, capsys):
-    install(monkeypatch, [[{"type": "Feature"}, {"type": "Feature"}]])
-    assert cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}']) == 0
-    assert json.loads(capsys.readouterr().out)["complete"] is False
-
-
-def test_short_and_full_results_are_complete(monkeypatch, capsys):
-    install(monkeypatch, [feats(1, 2), feats(3)])
-    assert cli.main([*POINT, "--max-records", "9", "--options", '{"limit":2}']) == 0
-    assert json.loads(capsys.readouterr().out)["complete"] is True
+def test_full_result_at_requested_total_is_complete(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 2), feats(3, 4)])
+    assert cli.main([*POINT, "--max-records", "4", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert len(seen) == 2 and data["complete"] is True and data["pages"] == 2
+    assert [f["id"] for f in data["parcels"]["features"]] == [1, 2, 3, 4]
 
 
 def install_bodies(monkeypatch, bodies):
