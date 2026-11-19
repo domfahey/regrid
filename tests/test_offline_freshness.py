@@ -202,3 +202,18 @@ def test_cache_normalises_trailing_slash_in_base_url(tmp_path):
     expected = ("2026-11-19T00:00:00Z", VERSE)
     assert freshness.read_cache(cache, "https://a.example//") == expected
     assert freshness.read_cache(cache, "https://a.example") == expected
+
+
+def test_future_retrieved_at_is_stale():
+    from datetime import datetime, timezone
+
+    now = datetime(2026, 11, 1, tzinfo=timezone.utc)
+    assert freshness.is_stale("2999-01-01T00:00:00Z", 30, now)
+    assert freshness.is_stale("2026-11-01T00:10:00Z", 30, now)
+    assert not freshness.is_stale("2026-11-01T00:02:00Z", 30, now)  # small clock skew
+
+
+def test_read_cache_treats_deeply_nested_json_as_corrupt(tmp_path):
+    path = tmp_path / "verse.json"
+    path.write_text("[" * 200000 + "]" * 200000)
+    assert freshness.read_cache(path) is None

@@ -37,6 +37,8 @@ def load_catalog(path: Path) -> list[dict]:
     entries = document.get("fields") if isinstance(document, dict) else None
     if not isinstance(entries, list) or not all(isinstance(e, dict) for e in entries):
         raise ValueError("Unrecognized field catalog format")
+    if not all(isinstance(e.get("name"), str) and e["name"] for e in entries):
+        raise ValueError("Each field catalog entry needs a non-empty string name")
     compact = [{key: entry.get(key) for key in KEYS} for entry in entries]
     return sorted(compact, key=lambda entry: str(entry["name"]))
 
