@@ -128,6 +128,45 @@ def _run_address_map(args: dict[str, Any]) -> int:
     return 0
 
 
+class _PagingError(ValueError):
+    """Fixed, credential-free paging usage message."""
+
+
+def _paged_search(
+    client: RegridClient, command: str, args: dict[str, Any], options: dict[str, Any], total: int
+) -> dict[str, Any]:
+    """Follow the last feature's id as offset_id until total records, a short page or no cursor."""
+    limit = options.get("limit")
+    if total < 1 or type(limit) is not int or limit < 1:
+        raise _PagingError(
+            "--max-records requires a positive count and an integer limit in --options"
+        )
+    if command == "point" and args.get("method") == "POST":
+        raise _PagingError("--max-records is not supported for POST point searches")
+    if "offset_id" in options:
+        raise _PagingError("--max-records conflicts with offset_id")
+    requests_cap = -(-total // limit)
+    print(f"regrid: up to {requests_cap} requests for {total} records", file=sys.stderr)
+    features: list[Any] = []
+    pages = 0
+    cursor: Any = None
+    while pages < requests_cap and len(features) < total:
+        page_options = dict(options) if cursor is None else {**options, "offset_id": cursor}
+        result = getattr(client, command)(**args, **page_options)
+        pages += 1
+        page = ((result.get("parcels") or {}).get("features")) or []
+        features.extend(page)
+        if len(page) < limit or len(features) >= total:
+            break
+        last = page[-1].get("id") if isinstance(page[-1], dict) else None
+        if last is None:
+            print("regrid: paging stopped: no cursor in response", file=sys.stderr)
+            break
+        cursor = last
+    collection = {"type": "FeatureCollection", "features": features[:total]}
+    return {"parcels": collection, "pages": pages}
+
+
 # Commands that run locally: no token, no HTTP client.
 _OFFLINE = {"map": _run_map, "fields": _run_fields}
 
@@ -239,6 +278,12 @@ def _parser() -> argparse.ArgumentParser:
                 "--geojson", required=name == "area", help="GeoJSON object as JSON string or @file"
             )
             sub.add_argument("--method", choices=["GET", "POST"], default="GET")
+        if name in {"point", "area", "query"}:
+            sub.add_argument(
+                "--max-records",
+                type=int,
+                help="Follow offset_id cursors for up to N records; requires limit in --options",
+            )
         if name == "point":
             sub.add_argument("--lat", type=float)
             sub.add_argument("--lon", type=float)
@@ -320,6 +365,8 @@ def main(argv: list[str] | None = None) -> int:
     base_url = args.pop("base_url")
     tiles_base_url = args.pop("tiles_base_url")
     output = args.pop("output", None)
+    max_records = args.pop("max_records", None)
+    sent: list[int] = []
     try:
         options = _object(args.pop("options", "{}"))
         for name in ("geojson", "fields", "details", "metadata"):
@@ -336,14 +383,26 @@ def main(argv: list[str] | None = None) -> int:
             base_url=base_url,
             tiles_base_url=tiles_base_url,
         ) as client:
-            result = getattr(client, command)(**args, **options)
+            if max_records is None:
+                result = getattr(client, command)(**args, **options)
+            else:
+                client._http.event_hooks["request"].append(lambda request: sent.append(1))
+                result = _paged_search(client, command, args, options, max_records)
         if output is not None:
             Path(output).write_bytes(result)
         else:
             print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
     except (RegridError, ValueError, TypeError, OSError) as exc:
         # SDK messages are sanitized; local messages may contain supplied option names/paths.
-        message = str(exc) if isinstance(exc, RegridError) else "Invalid input or output file"
+        message = (
+            str(exc)
+            if isinstance(exc, (RegridError, _PagingError))
+            else "Invalid input or output file"
+        )
         print(f"regrid: {message}", file=sys.stderr)
+        if max_records is not None:
+            print(f"regrid: requests made: {len(sent)}", file=sys.stderr)
         return 1
+    if max_records is not None:
+        print(f"regrid: requests made: {len(sent)}", file=sys.stderr)
     return 0
