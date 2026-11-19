@@ -92,6 +92,7 @@ Coverage includes every SDK and CLI module; XML output is written to ignored `co
 .venv/bin/regrid point --lat 32.7767 --lon -96.7970 --options '{"radius":10,"limit":5}'
 .venv/bin/regrid query --validate-fields --fields '{"geoid":{"eq":"48113"}}' --options '{"limit":5}'
 .venv/bin/regrid area --method POST --geojson @area.geojson --options '{"limit":5}'
+.venv/bin/regrid parcel-path /us/nj/camden/haddonfield/123 --options '{"return_parcels":true}'   # refresh a saved result by path
 .venv/bin/regrid usage --detailed
 .venv/bin/regrid tilejson --format mvt
 .venv/bin/regrid grid 15 8828 12121

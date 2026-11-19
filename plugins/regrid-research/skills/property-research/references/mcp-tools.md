@@ -61,6 +61,11 @@ Premium `return_*` flags need user authorization; see [premium datasets](premium
 | Area | `/parcels/area` | `geojson` | `radius` |
 | Field filter | `/parcels/query` | at least one `fields[<field>][<op>]` | `path`, `geojson` |
 | Regrid ID | `/parcels/{ll_uuid}` | UUID in the URL path | none |
+| Regrid path (refresh) | `/parcels/path` | `path` | none; one request, one record |
+| Address suggestions | `/parcels/typeahead` | `query` | Enterprise only; trial tokens cover 7 counties |
+| County pull dates | `/verse` | none | `return_geometry`; returns every US county and Puerto Rico per call |
+| Field definitions | `/schemas/parcel`, `/schemas/building`, `/schemas/address`, `/schemas/enhanced_ownership`, `/schemas/zoning` | none | `premium_only` (parcel only); no token, but counts as a request |
+| Detailed usage | `/usage/detailed` | none | date and token options |
 | Usage diagnostic | `/usage` | none | none |
 
 Filter operators seen in spec examples include `eq`, `ilike`, `between`

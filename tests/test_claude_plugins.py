@@ -190,3 +190,31 @@ def test_fields_helper_and_catalog_are_shared_across_all_archives(source, tmp_pa
     assert cowork[name] == code[name] == standalone["property-research/scripts/fields.py"]
     catalog = "skills/property-research/references/fields.json"
     assert catalog in code
+
+
+NEW_ENDPOINTS = [
+    "/parcels/path",
+    "/parcels/typeahead",
+    "/verse",
+    "/schemas/parcel",
+    "/schemas/building",
+    "/schemas/address",
+    "/schemas/enhanced_ownership",
+    "/schemas/zoning",
+    "/usage/detailed",
+]
+
+
+def test_new_endpoints_documented():
+    endpoints = json.loads((SKILL_ROOT / "references/endpoints.json").read_text())["endpoints"]
+    tools = (SKILL_ROOT / "references/mcp-tools.md").read_text()
+    for path in NEW_ENDPOINTS:
+        assert path in endpoints and f"`{path}" in tools
+    required = {p["name"] for p in endpoints["/parcels/path"]["parameters"] if p.get("required")}
+    assert required == {"path"}
+    assert "Enterprise" in endpoints["/parcels/typeahead"]["skill_note"]
+
+
+def test_refresh_rule_never_unscoped():
+    batch = (SKILL_ROOT / "references/batch.md").read_text()
+    assert "/parcels/path" in batch and "never fall back to an unscoped search" in batch

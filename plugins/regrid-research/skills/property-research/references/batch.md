@@ -111,6 +111,10 @@ only pending attempts. Without a verified receipt, stop after recording uncertai
 and retain the reservation. Do not transition a still-running request or infer
 zero consumption from a crash. These helper calls neither retry nor save a file.
 
+An explicit refresh of a saved result uses `/parcels/path` with the saved `path`:
+one request, one record. If the saved result has no `path`, stop and ask;
+never fall back to an unscoped search.
+
 Proceed only with genuinely `not_attempted` inputs not covered by unresolved
 attempts. A caller's explicit refresh/retry creates a new attempt and preserves
 the old evidence and accounting. Resolve ambiguity only within authorized scope.

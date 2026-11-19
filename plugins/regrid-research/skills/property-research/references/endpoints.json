@@ -745,6 +745,192 @@
           }
         }
       ]
+    },
+    "/parcels/path": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [
+        {
+          "name": "path",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
+        },
+        {
+          "name": "return_custom",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_field_labels",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_stacked",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_zoning",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_buildings",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_matched_addresses",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_enhanced_ownership",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_parcels",
+          "in": "query",
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      ],
+      "skill_note": "Canonical-path lookup; one request returns one record. Use it to refresh a saved result by its saved path."
+    },
+    "/parcels/typeahead": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [
+        {
+          "name": "query",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
+        }
+      ],
+      "skill_note": "Regrid Enterprise product only; trial tokens are restricted to 7 counties. Returns address suggestions, not full parcel records."
+    },
+    "/verse": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [
+        {
+          "name": "return_geometry",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        }
+      ],
+      "skill_note": "Returns every US county and Puerto Rico in one call (with last full data pull dates); there is no county filter, so use return_geometry=false to shrink it."
+    },
+    "/schemas/parcel": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [
+        {
+          "name": "premium_only",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        }
+      ],
+      "security": [],
+      "skill_note": "Field definitions; the spec marks it security: [] (no token required) but it still counts as a request in the skill's request accounting."
+    },
+    "/schemas/building": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [],
+      "security": [],
+      "skill_note": "Field definitions; the spec marks it security: [] (no token required) but it still counts as a request in the skill's request accounting."
+    },
+    "/schemas/address": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [],
+      "security": [],
+      "skill_note": "Field definitions; the spec marks it security: [] (no token required) but it still counts as a request in the skill's request accounting."
+    },
+    "/schemas/enhanced_ownership": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [],
+      "security": [],
+      "skill_note": "Field definitions; the spec marks it security: [] (no token required) but it still counts as a request in the skill's request accounting."
+    },
+    "/schemas/zoning": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [],
+      "security": [],
+      "skill_note": "Field definitions; the spec marks it security: [] (no token required) but it still counts as a request in the skill's request accounting."
+    },
+    "/usage/detailed": {
+      "method": "GET",
+      "server": "https://app.regrid.com/api/v2",
+      "parameters": [
+        {
+          "name": "return_full_history",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "begin_date",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "return_by_token",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "return_by_this_token",
+          "in": "query",
+          "schema": {
+            "type": "boolean"
+          }
+        }
+      ],
+      "skill_note": "Usage breakdown by country and service; counts as a request."
     }
   }
 }
