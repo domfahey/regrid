@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import re
 import shlex
 from pathlib import Path
@@ -113,3 +114,52 @@ def test_documented_invocation_executes(
     }
     argv = [concrete.get(tok, tok) for tok in argv]
     assert cli.main(argv) == 0, (argv, capsys.readouterr().err)
+
+
+def _walk(parser: argparse.ArgumentParser) -> tuple[set[str], dict[str, set[str]]]:
+    """Return (subcommand names, {subcommand or "global": long option strings})."""
+    names: set[str] = set()
+    flags: dict[str, set[str]] = {}
+
+    def visit(p: argparse.ArgumentParser, owner: str) -> None:
+        # argparse has no public API for listing actions or subparsers; use the private ones.
+        for action in p._actions:
+            if isinstance(action, argparse._SubParsersAction):
+                for name, sub in action.choices.items():
+                    names.add(name)
+                    visit(sub, name)
+            else:
+                found = {
+                    opt for opt in action.option_strings if opt.startswith("--") and opt != "--help"
+                }
+                if found:
+                    flags.setdefault(owner, set()).update(found)
+
+    visit(parser, "global")
+    return names, flags
+
+
+def _word(token: str) -> re.Pattern[str]:
+    return re.compile(rf"(?<![\w-]){re.escape(token)}(?![\w-])")
+
+
+def _command(name: str) -> re.Pattern[str]:
+    """A subcommand shown as code: `regrid NAME` or a backtick right before NAME."""
+    return re.compile(rf"(?:regrid |`){re.escape(name)}(?![\w-])")
+
+
+def test_cli_md_mentions_every_subcommand_and_flag() -> None:
+    names, flags = _walk(_parser())
+    lines = CLI_MD.read_text(encoding="utf-8").splitlines()
+    missing = sorted(n for n in names if not any(_command(n).search(ln) for ln in lines))
+    for owner, owned in flags.items():
+        for flag in sorted(owned):
+            flag_re = _word(flag)
+            if owner == "global":
+                ok = any(flag_re.search(ln) for ln in lines)
+            else:
+                cmd_re = _command(owner)
+                ok = any(flag_re.search(ln) and cmd_re.search(ln) for ln in lines)
+            if not ok:
+                missing.append(f"{owner} {flag}")
+    assert not missing, f"cli.md does not show on one line: {missing}"

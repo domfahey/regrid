@@ -164,7 +164,7 @@ makes at most one `/usage` check through `execute-request`.
 | `search`, `fetch` | Search and read Regrid's documentation |
 | `execute-request` | Makes the API call (counts toward the request budget) |
 
-**Endpoints reached through `execute-request`** (GET only, US routes):
+**Endpoints reached through `execute-request`** (GET only, US routes, except read-only POST geometry search on `/parcels/point` and `/parcels/area`; every other POST is forbidden):
 
 | Endpoint | Purpose |
 | --- | --- |

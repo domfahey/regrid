@@ -6,7 +6,14 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
-No changes yet.
+### Added
+
+- Tests: `tests/test_cli_docs.py` now fails unless `references/cli.md` shows every CLI subcommand as code (`regrid <cmd>` or a backtick before it) and every long option on one line that is word-bounded with that code subcommand (global options need only the flag). It checks presence, not accuracy.
+
+### Changed
+
+- Docs: `references/cli.md` covers the remaining CLI flags (global `--timeout`, `--base-url`, `--tiles-base-url`, `--country`, `area --method`, `query --validate-fields` and `--allow-unknown-fields`, `address-map --path`, `--save-response` and `--retrieved-at`, tile `--format`, `--retina` and `--metadata`, `usage`/`schema --options`, `@file` values).
+- Docs: `references/mcp-tools.md` adds recipes for `/parcels/query` operators, `/parcels/area` geometry, `/parcels/{ll_uuid}`, `/usage/detailed` dates and `/schemas` `premium_only`; POST geometry search on `/parcels/point` and `/parcels/area` for geometry too large for a URL; and the `return_field_labels`, `return_custom`, `return_custom_id` and `return_stacked` response options.
 
 ## [SDK 0.4.2][sdk-v0.4.2] and [Regrid Research 0.9.2][regrid-research-v0.9.2] - 2026-11-19
 
