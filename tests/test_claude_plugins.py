@@ -158,9 +158,13 @@ def test_command_is_bounded_and_links_map_guide():
 
 
 def test_host_results_never_claim_unrun_checks():
-    data = json.loads((PLUGIN / "evals/results/map-hosts-0.7.0.json").read_text())
-    assert set(data["hosts"]) == {"claude_code", "claude_apps", "cowork"}
-    assert set(data["hosts"].values()) <= {"verified", "failed", "not_run"}
+    files = sorted((PLUGIN / "evals/results").glob("map-hosts-*.json"))
+    assert len(files) >= 2
+    for path in files:
+        data = json.loads(path.read_text())
+        assert set(data) == {"plugin_version", "hosts", "notes"}, path.name
+        assert set(data["hosts"]) == {"claude_code", "claude_apps", "cowork"}
+        assert set(data["hosts"].values()) <= {"verified", "failed", "not_run"}
 
 
 def test_versions():

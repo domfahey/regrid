@@ -5,6 +5,5 @@
     "claude_apps": "not_run",
     "cowork": "not_run"
   },
-  "notes": "browser_render: 2026-11-19, synthetic US response rendered with `regrid map --neighbours` and opened from localhost in Chromium (Playwright). Esri imagery loaded (30 tiles), subject outline plus 2 neighbour outlines drawn, info panel showed all facts with hostile owner text rendered as plain text, Esri attribution visible, no console errors except the test server's missing favicon. `regrid export` CSV/GeoJSON written; negative longitude unprefixed. claude_code, claude_apps and cowork hosts: not run (need the user's apps). Live Regrid geometry check: not run (billable; needs authorization).",
-  "browser_render": "verified"
+  "notes": "Map render verified 2026-11-19 in a plain browser (not a Claude host): synthetic US response rendered with `regrid map --neighbours` and opened from localhost in Chromium (Playwright). Esri imagery loaded (30 tiles), subject outline plus 2 neighbour outlines drawn, info panel showed all facts with hostile owner text rendered as plain text, Esri attribution visible, no console errors except the test server's missing favicon. `regrid export` CSV/GeoJSON written; negative longitude unprefixed. claude_code, claude_apps and cowork hosts: not run (need the user's apps). Live Regrid geometry check: not run (billable; needs authorization)."
 }
