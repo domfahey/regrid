@@ -99,20 +99,14 @@ def build(source: Path, output: Path) -> list[Path]:
     expected = {
         "mcpServers": {
             "regrid": {
-                "command": "npx",
-                "args": [
-                    "-y",
-                    "mcp-remote",
-                    MCP_URL,
-                    "--header",
-                    "x-regrid-token: ${REGRID_TOKEN}",
-                ],
-                "env": {"REGRID_TOKEN": "${REGRID_TOKEN}"},
+                "type": "http",
+                "url": MCP_URL,
+                "headers": {"x-regrid-token": "${REGRID_TOKEN}"},
             }
         }
     }
     if local_config != expected:
-        raise ValueError("Local MCP config must use the approved token placeholder bridge")
+        raise ValueError("Local MCP config must use the approved native HTTP token placeholder")
     cowork = dict(common)
     cowork[".mcp.json"] = json_bytes({"mcpServers": {"regrid": {"type": "http", "url": MCP_URL}}})
     standalone = {

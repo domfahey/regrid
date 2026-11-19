@@ -60,7 +60,7 @@ HTTP 200 alone is not authentication success. Do not request per-token breakdown
 or print token fragments returned by account metadata.
 
 For Cowork, the Cowork plugin declares a remote HTTP connector to
-https://support.regrid.com/mcp; it launches no local bridge. Add/connect it in
+https://support.regrid.com/mcp; it launches no local process. Add/connect it in
 Claude's Connectors settings. Merely installing the plugin does not authenticate.
 Choose No sign-in and, where the Request headers beta is available, configure a
 required `x-regrid-token` header with the actual token entered privately in the
@@ -70,8 +70,8 @@ rejected, report that specific blocker; do not invent an OAuth flow or put the
 key in a URL. An OAuth-enabled gateway is a separate, unimplemented alternative.
 See the plugin README for the setup steps and official documentation link.
 
-For Claude Code, the Code package's local `mcp-remote` bridge requires Node/npx
-and `REGRID_TOKEN` in its host environment. The README's uv command loads `.env`
+For Claude Code, the Code package declares a native HTTP MCP server (no Node/npx)
+that needs `REGRID_TOKEN` in its host environment. The README's uv command loads `.env`
 privately before launch. Cowork does not inherit that file or Desktop's Developer
 JSON configuration. Use one package variant per host; use the standalone skill
 when a Regrid connector is already configured. Cowork live authentication must be

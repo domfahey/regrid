@@ -14,6 +14,7 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ### Changed
 
+- Regrid Research Claude Code package: the MCP config now uses Claude Code's native HTTP transport with an `x-regrid-token: ${REGRID_TOKEN}` header instead of an unpinned `npx -y mcp-remote` bridge. Security: the token no longer appears in process arguments, no npm package is downloaded, and Node.js is no longer required. The Cowork package is unchanged.
 - Regrid Research skills: richer trigger descriptions, a shorter `property-research` routing page with match/answer rules in `references/answers.md`, a single budget/ledger source in `batch.md`, and consistent "neighbour" and "premium dataset" terminology.
 
 ### Fixed

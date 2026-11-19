@@ -15,7 +15,7 @@ its references. Setup is separate from research; choose only one connection.
 | Package in `dist/` | Use |
 | --- | --- |
 | `regrid-research-cowork-0.8.0.zip` | Cowork plugin with a remote HTTP connector declaration; credentials configured in Claude |
-| `regrid-research-claude-code-0.8.0.zip` | Claude Code plugin with the local `mcp-remote` bridge and environment placeholder |
+| `regrid-research-claude-code-0.8.0.zip` | Claude Code plugin with a native HTTP MCP server and environment placeholder |
 | `regrid-property-research-skill-0.8.0.zip` | Standalone research skill for an already configured Regrid connector |
 
 The two plugin packages also ship the `/regrid-research:address-map <US street
@@ -64,10 +64,11 @@ been verified in this account.
 
 ## Connect in Claude Code
 
-`regrid-research-claude-code-0.8.0.zip` contains the research and setup skills plus a local
-stdio bridge using `npx -y mcp-remote`, the Regrid MCP URL, and the
-`x-regrid-token: ${REGRID_TOKEN}` header. Node/npx and the host environment token
-are required. Do not enable this bridge alongside an equivalent active connector.
+`regrid-research-claude-code-0.8.0.zip` contains the research and setup skills plus a native
+HTTP MCP server (`"type": "http"`) for the Regrid MCP URL with the
+`x-regrid-token: ${REGRID_TOKEN}` header, which Claude Code expands from the host
+environment. No Node/npx or helper process is needed, and the token never appears in
+process arguments. Do not enable this server alongside an equivalent active connector.
 
 From the repository root, after installing uv and Claude Code:
 
@@ -77,7 +78,7 @@ uv run --no-cache --env-file .env --no-sync claude --plugin-dir ./plugins/regrid
 
 This loads credentials into the host process without printing them or modifying
 the plugin. Keep `.env` outside the plugin. Use `/mcp` and then
-`/regrid-research:setup` to verify access. Do not enable a duplicate Regrid bridge.
+`/regrid-research:setup` to verify access. Do not enable a duplicate Regrid MCP server.
 
 ## Compose with other workflows
 

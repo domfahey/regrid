@@ -43,9 +43,14 @@ def test_transports_share_complete_skill_and_build_reproducibly(source, tmp_path
     assert json.loads(cowork[".mcp.json"]) == {
         "mcpServers": {"regrid": {"type": "http", "url": "https://support.regrid.com/mcp"}}
     }
-    assert json.loads(code[".mcp.json"])["mcpServers"]["regrid"]["env"] == {
-        "REGRID_TOKEN": "${REGRID_TOKEN}"
+    server = json.loads(code[".mcp.json"])["mcpServers"]["regrid"]
+    assert server == {
+        "type": "http",
+        "url": "https://support.regrid.com/mcp",
+        "headers": {"x-regrid-token": "${REGRID_TOKEN}"},
     }
+    assert not {"command", "args", "env"} & set(server)
+    assert "npx" not in code[".mcp.json"].decode()
     assert set(cowork) == set(code)
     for name in cowork:
         if name != ".mcp.json":
@@ -98,7 +103,7 @@ def test_embedded_token_is_rejected_without_echoing_it(source, tmp_path):
 def test_literal_header_secret_is_rejected(source, tmp_path):
     path = source / ".mcp.json"
     config = json.loads(path.read_text())
-    config["mcpServers"]["regrid"]["env"]["REGRID_TOKEN"] = "synthetic-secret"
+    config["mcpServers"]["regrid"]["headers"]["x-regrid-token"] = "synthetic-secret"
     path.write_text(json.dumps(config))
     with pytest.raises(ValueError, match="placeholder"):
         builder.build(source, tmp_path / "output")
