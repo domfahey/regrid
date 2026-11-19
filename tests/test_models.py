@@ -315,3 +315,14 @@ def test_report_and_tilejson_roundtrip():
 def test_response_envelopes_validate_known_fields(model, payload):
     with pytest.raises(ValidationError):
         model.model_validate(payload)
+
+
+def test_verse_wrapper_with_feature_type_still_requires_properties():
+    import pytest
+
+    with pytest.raises(ValueError):
+        VerseResponse.model_validate(
+            {"verse": {"type": "FeatureCollection", "features": []}, "type": "Feature"}
+        )
+    wrapped = {"verse": {"type": "FeatureCollection", "features": []}}
+    assert VerseResponse.model_validate(wrapped).verse is not None

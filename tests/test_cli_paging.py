@@ -837,3 +837,20 @@ def test_paging_note_for_pages_first_seen_on_later_page(monkeypatch, capsys):
     assert data["pages"] == 2 and data["complete"] is True
     note = "regrid: paging note: response pages/complete kept as response_pages/response_complete"
     assert err.splitlines().count(note) == 1
+
+
+@pytest.mark.parametrize("second", [[3, "abc"], [7, None, 3]])
+def test_mixed_unusable_ids_do_not_hide_disorder(monkeypatch, capsys, second):
+    install(monkeypatch, [feats(4, 5, 6), feats(*second)])
+    assert cli.main([*POINT, "--max-records", "6", "--options", '{"limit":3}']) == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["complete"] is False
+    assert "regrid: paging stopped: results not in cursor order" in captured.err
+
+
+def test_repeat_only_page_without_numeric_ids_stops_incomplete(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats("abc", 5), feats("abc", "abc")])
+    assert cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}']) == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["complete"] is False and len(seen) == 2
+    assert "regrid: paging stopped: cursor did not advance" in captured.err

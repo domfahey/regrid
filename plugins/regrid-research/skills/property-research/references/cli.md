@@ -44,8 +44,10 @@ It needs an explicit integer `limit` of at least 2 in `--options` and rejects a 
 is the enforced worst case. It starts at `offset_id=0` so results come in id order
 (verified live: without it point/area page 1 is spatially ordered and a cursor would skip
 records). The cursor is exclusive, so each page starts after the previous one, and it never
-asks for more records than still needed. If ids are not ascending past the cursor it stops
-with `complete: false` and `regrid: paging stopped: results not in cursor order`. It outputs
+asks for more records than still needed. If numeric feature ids are not ascending past the
+cursor (non-numeric ids are skipped by the check) it stops with `complete: false` and
+`regrid: paging stopped: results not in cursor order`; it also stops when a page has no usable
+cursor or only repeats (`no cursor in response`, `cursor did not advance`). It outputs
 `{"parcels": FeatureCollection, "pages": P, "complete": true|false}`. Get the user's agreed record budget first; page only within one task.
 
 Export from a saved response, with no requests:

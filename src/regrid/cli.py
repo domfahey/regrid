@@ -475,7 +475,7 @@ def _paged_search(
             print("regrid: paging stopped: results not in cursor order", file=sys.stderr)
             break
         if not new and page:
-            # Safety net: a page of only already-seen records would loop forever.
+            # Reachable for repeat-only pages with no usable numeric id (skipped by the order check).
             print("regrid: paging stopped: cursor did not advance", file=sys.stderr)
             break
         if len(page) < page_options["limit"] or len(features) >= total:
@@ -485,21 +485,20 @@ def _paged_search(
         if last is None:
             print("regrid: paging stopped: no cursor in response", file=sys.stderr)
             break
-        if last == cursor:  # unreachable once ordered; kept as a loop guard
-            print("regrid: paging stopped: cursor did not advance", file=sys.stderr)
-            break
         cursor = last
     return _paged_result(merged, features[:total], pages, complete)
 
 
 def _in_cursor_order(page: list[Any], cursor: int) -> bool:
-    """True unless numeric ids are not strictly ascending or not all above the cursor."""
-    ids = [_cursor(feature) for feature in page]
+    """True unless numeric ids are not strictly ascending or not all above the cursor.
+
+    Features without a usable numeric id are skipped by this check.
+    """
     numbers = [cursor]
-    for value in ids:
-        if value is None:
-            return True
-        numbers.append(value)
+    for feature in page:
+        value = _cursor(feature)
+        if value is not None:
+            numbers.append(value)
     return all(a < b for a, b in zip(numbers, numbers[1:]))
 
 

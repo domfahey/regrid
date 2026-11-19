@@ -538,9 +538,9 @@ class VerseResponse(RegridModel):
     @classmethod
     def require_shape_content(cls, value: Any) -> Any:
         if isinstance(value, dict):
-            if value.get("verse") is not None:
-                return value
             if value.get("type") is None:
+                if value.get("verse") is not None:
+                    return value
                 raise ValueError("Verse metadata requires a type or a verse collection")
             if value.get("type") == "FeatureCollection" and not isinstance(
                 value.get("features"), list
