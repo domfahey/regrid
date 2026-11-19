@@ -90,8 +90,6 @@ Schemas: use `python3 "<skill>/scripts/fields.py" explain FIELD` first (offline)
 Detailed usage: `/usage/detailed` only for "how many lookups are left" questions;
 never per-token breakdowns (they can expose token fragments). `/usage` serves setup checks.
 
-Filter operators seen in spec examples include `eq`, `ilike`, `between`
-(`[2000,2999]`), and `gte`, e.g. `fields[geoid][eq]=48113` (more under recipes below).
 Only point, area, and query list `return_count`, `return_geometry`, and
 `offset_id` pagination; address, APN, owner, and Regrid ID do not. For APNs,
 pass the value exactly as supplied even though the spec types `parcelnumb`
@@ -111,12 +109,13 @@ Never call `/report` (a POST that files a data issue), `/client_token/typeahead`
 ## Search recipes and response options
 
 **Field filter (`/parcels/query`).** Send 1-4 filters as `fields[<field>][<op>]`, e.g.
-`fields[owner][ilike]=smith`. Find queryable fields offline first:
+`fields[owner][ilike]=smith` or `fields[geoid][eq]=48113`. Find queryable fields offline first:
 `python3 "<skill>/scripts/fields.py" search TEXT` / `explain FIELD` (the catalog marks
 queryability). The CLI check `--validate-fields` applies the same catalog to operators:
 text fields take `eq`, `ne`, `isnull`, `in`, `nin`, `ilike`; numeric and date fields
-take `eq`, `ne`, `isnull`, `in`, `nin`, `between` (two values), `gt`, `gte`, `lt`,
-`lte`, `order` (`ASC` or `DESC`, not with paging); boolean fields only `eq`, `ne`, `isnull`.
+take `eq`, `ne`, `isnull`, `in`, `nin`, `between` (two values, e.g. `[2000,2999]`),
+`gt`, `gte`, `lt`, `lte`, `order` (`ASC` or `DESC`, not with paging);
+boolean fields only `eq`, `ne`, `isnull`.
 The boolean-like text fields `usps_vacancy` and `rdi` also take only `eq`, `ne`, `isnull`.
 Exception: `zoning` additionally allows `between` and `order`.
 Scope with `path` or `geojson`, and run a `return_count` first.

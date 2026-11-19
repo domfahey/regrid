@@ -163,3 +163,129 @@ def test_cli_md_mentions_every_subcommand_and_flag() -> None:
             if not ok:
                 missing.append(f"{owner} {flag}")
     assert not missing, f"cli.md does not show on one line: {missing}"
+
+
+def _options_bullets() -> list[tuple[list[str], list[str], str]]:
+    """Return (commands, backticked keys, text) for each `--options` bullet in cli.md."""
+    text = CLI_MD.read_text(encoding="utf-8")
+    bullets = re.findall(r"^- (`--options` on .+?)(?=\n- |\n\n)", text, re.M | re.S)
+    out = []
+    for raw in bullets:
+        head, _, body = " ".join(raw.split()).partition(": ")
+        commands = re.findall(r"`([a-z-]+)`", head.replace("`--options`", ""))
+        # Only the first sentence names keys; later ones (e.g. "`typeahead` takes no ...") do not.
+        sentence = re.split(r"(?<=[.)])\.? (?=[A-Z`])", body)[0]
+        accepted = re.sub(r"\([^)]*rejected\)", "", sentence)  # "(`limit` is rejected)"
+        out.append((commands, re.findall(r"`([a-z_]+)`", accepted), body))
+    return out
+
+
+def _probe_client() -> object:
+    from regrid.client import RegridClient
+
+    return RegridClient(
+        "test", transport=httpx.MockTransport(lambda request: httpx.Response(200, json={}))
+    )
+
+
+def _recorded_allowed(monkeypatch: pytest.MonkeyPatch) -> dict[str, set[str]]:
+    """Call each --options command and record the `allowed` set it hands to _options (US)."""
+    from regrid import endpoints
+
+    seen: list[set[str]] = []
+    real = endpoints._options
+
+    def spy(options: dict[str, object], allowed: set[str]) -> dict[str, object]:
+        seen.append(set(allowed))
+        return real(options, allowed)
+
+    monkeypatch.setattr(endpoints, "_options", spy)
+    client = _probe_client()
+    point = {"lat": 39.9, "lon": -75.1}
+    calls = {
+        "point": lambda: client.point(**point),  # type: ignore[attr-defined]
+        "area": lambda: client.area({"type": "Point", "coordinates": [-75.1, 39.9]}),  # type: ignore[attr-defined]
+        "address": lambda: client.address("1 Main St"),  # type: ignore[attr-defined]
+        "apn": lambda: client.apn("123"),  # type: ignore[attr-defined]
+        "owner": lambda: client.owner("Smith"),  # type: ignore[attr-defined]
+        "query": lambda: client.query({"owner": {"ilike": "smith"}}),  # type: ignore[attr-defined]
+        "parcel": lambda: client.parcel("00000000-0000-4000-8000-000000000000"),  # type: ignore[attr-defined]
+        "parcel-path": lambda: client.parcel_path("/us/nj/camden/camden"),  # type: ignore[attr-defined]
+        "verse": lambda: client.verse(),  # type: ignore[attr-defined]
+        "usage": lambda: client.usage(),  # type: ignore[attr-defined]
+        "schema": lambda: client.schema("parcel"),  # type: ignore[attr-defined]
+    }
+    recorded: dict[str, set[str]] = {}
+    for command, call in calls.items():
+        seen.clear()
+        call()
+        assert len(seen) == 1, command
+        recorded[command] = seen[0]
+    return recorded
+
+
+def _documented() -> dict[str, set[str]]:
+    documented: dict[str, set[str]] = {}
+    for commands, keys, _ in _options_bullets():
+        for command in commands:
+            assert command not in documented, f"{command} appears in two --options bullets"
+            documented[command] = set(keys)
+    return documented
+
+
+def test_options_bullets_are_found() -> None:
+    commands = {c for cmds, _, _ in _options_bullets() for c in cmds}
+    assert {"point", "parcel", "parcel-path", "verse", "usage", "schema"} <= commands
+
+
+def test_documented_options_keys_are_accepted(monkeypatch: pytest.MonkeyPatch) -> None:
+    from regrid.endpoints import _parcel_options
+
+    recorded = _recorded_allowed(monkeypatch)
+    bad = []
+    for command, keys in _documented().items():
+        bad += [f"{command} --options {k}" for k in sorted(keys - recorded[command])]
+    assert not bad, f"cli.md names keys the code rejects: {bad}"
+    # "return flags" is not listed key by key; every parcel return flag must be accepted.
+    flags = _parcel_options("us")
+    assert any(k.startswith("return_") for k in flags)
+    for commands, _, body in _options_bullets():
+        if "return flags" in body:
+            for command in commands:
+                assert flags <= recorded[command], command
+
+
+def test_documented_options_sets_are_exact_for_verse_usage_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from regrid.endpoints import _USAGE
+
+    recorded = _recorded_allowed(monkeypatch)
+    documented = _documented()
+    for command in ("verse", "usage", "schema"):
+        assert documented[command] == recorded[command], command
+    # Cross-check the usage set against the code constant, not just the recorder.
+    assert documented["usage"] == set(_USAGE)
+
+
+def test_parcel_commands_reject_limit_and_doc_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
+    recorded = _recorded_allowed(monkeypatch)
+    for command in ("parcel", "parcel-path"):
+        assert "limit" not in recorded[command]
+        assert "return_stacked" in recorded[command]  # positive control: probe reached _options
+    for command in ("point", "area", "address", "apn", "owner", "query"):
+        assert "limit" in recorded[command]
+    for commands, keys, body in _options_bullets():
+        if "parcel" in commands:
+            assert "limit" not in keys
+            assert "`limit` is rejected" in body
+
+
+def test_typeahead_takes_no_options() -> None:
+    import inspect
+
+    from regrid.endpoints import EndpointsMixin
+
+    params = inspect.signature(EndpointsMixin.typeahead).parameters.values()
+    assert not any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params)
+    assert "takes no `--options`" in CLI_MD.read_text(encoding="utf-8")
