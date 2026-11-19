@@ -26,6 +26,8 @@ Load supporting resources only for the relevant task:
 - Multiple inputs, shared budgets, or requested checkpoints: [batch and resume](references/batch.md).
 - Map or boundary requested: [map guide](references/map.md). The
   `/regrid-research:address-map` command runs this flow for one address.
+- Field meaning: run `scripts/fields.py explain FIELD`; only fields it lacks justify a
+  `/schemas/*` request.
 - Zoning, enhanced ownership, matched buildings or addresses requested: [premium datasets](references/premium.md).
 - Offline validation or saving: run [workflow.py](scripts/workflow.py) as described in
   the batch reference; requires Python 3.10+ and only the standard library.

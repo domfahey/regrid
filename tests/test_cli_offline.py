@@ -51,3 +51,16 @@ def test_map_flags_pass_through(tmp_path):
         cli.main(["map", str(response), str(tmp_path / "m.html"), "--feature", "0", "--replace"])
         == 0
     )
+
+
+def test_regrid_fields_cli(monkeypatch, capsys):
+    monkeypatch.delenv("REGRID_TOKEN", raising=False)
+    monkeypatch.setattr(cli, "RegridClient", lambda **kw: pytest.fail("no client for fields"))
+    assert cli.main(["fields", "explain", "owner", "zzz"]) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out["found"][0]["name"] == "owner" and out["unknown"] == ["zzz"]
+
+
+def test_regrid_fields_search_cli(capsys):
+    assert cli.main(["fields", "search", "ASSESSMENT"]) == 0
+    assert json.loads(capsys.readouterr().out)["matches"]

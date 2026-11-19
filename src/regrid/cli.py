@@ -7,10 +7,12 @@ import json
 import os
 import sys
 from datetime import datetime, timezone
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
 from .client import RegridClient, RegridError
+from .offline import fields as parcel_fields
 from .offline import map as parcel_map
 
 
@@ -41,6 +43,17 @@ def _run_map(args: dict[str, Any]) -> None:
         replace=args["replace"],
     )
     print(json.dumps(summary, indent=2, ensure_ascii=False, allow_nan=False))
+
+
+def _run_fields(args: dict[str, Any]) -> None:
+    catalog = parcel_fields.load_catalog(
+        Path(str(files("regrid").joinpath("data/parcel_fields.json")))
+    )
+    if args["action"] == "explain":
+        result: dict[str, Any] = parcel_fields.explain(catalog, args["names"])
+    else:
+        result = {"matches": parcel_fields.search(catalog, args["term"])}
+    print(json.dumps(result, indent=2, ensure_ascii=False))
 
 
 def _address_map(args: dict[str, Any], sent: list[int], saved: list[Path]) -> None:
@@ -116,7 +129,7 @@ def _run_address_map(args: dict[str, Any]) -> int:
 
 
 # Commands that run locally: no token, no HTTP client.
-_OFFLINE = {"map": _run_map}
+_OFFLINE = {"map": _run_map, "fields": _run_fields}
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -142,6 +155,18 @@ def _parser() -> argparse.ArgumentParser:
     offline.add_argument("--all-candidates", action="store_true", help="Map every feature")
     offline.add_argument("--retrieved-at", metavar="ISO", help="Retrieval timestamp to display")
     offline.add_argument("--replace", action="store_true", help="Overwrite an existing output")
+    field_catalog = commands.add_parser(
+        "fields",
+        help="Explain or search US parcel field definitions (offline, no API call)",
+        description="Explain or search the packaged parcel field catalog without any API call.",
+    )
+    field_actions = field_catalog.add_subparsers(dest="action", required=True)
+    field_explain = field_actions.add_parser("explain", help="Show definitions of named fields")
+    field_explain.add_argument("names", nargs="+", metavar="NAME")
+    field_search = field_actions.add_parser(
+        "search", help="Find fields by name, description or category"
+    )
+    field_search.add_argument("term")
     address_map = commands.add_parser(
         "address-map",
         help="Look up one address (one API request) and render it as an offline satellite map",

@@ -182,3 +182,11 @@ def test_premium_guide_covers_every_flag_and_requires_authorization():
     assert guide.lower().count("authoriz") >= 4 and "beneficial" in guide
     assert "`notes`" in guide
     assert "Premium datasets are US-only" not in guide
+
+
+def test_fields_helper_and_catalog_are_shared_across_all_archives(source, tmp_path):
+    cowork, code, standalone = map(archive_contents, builder.build(source, tmp_path / "out"))
+    name = "skills/property-research/scripts/fields.py"
+    assert cowork[name] == code[name] == standalone["property-research/scripts/fields.py"]
+    catalog = "skills/property-research/references/fields.json"
+    assert catalog in code
