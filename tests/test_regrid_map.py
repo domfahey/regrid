@@ -662,9 +662,7 @@ def test_csv_core_columns_and_formula_guard(tmp_path):
     rows[0][0] = rows[0][0].lstrip("\ufeff")
     assert rows[0] == CORE_COLUMNS
     assert rows[1][3] == '\'=HYPERLINK("x")' and rows[1][4] == '1,2 "q"\nz'
-    assert rows[1][5] == "" and rows[1][9] == "'-75.03"
-    for lead in "+-@":
-        assert parcel_map._csv_cell(f"{lead}1") == f"'{lead}1"
+    assert rows[1][5] == "" and rows[1][9] == "-75.03"
     assert summary == {
         "features": 1,
         "csv": str(tmp_path / "o.csv"),
@@ -762,3 +760,24 @@ def test_export_main_subcommand(tmp_path, capsys):
     assert json.loads(capsys.readouterr().out)["features"] == 1
     assert parcel_map.main(["export", str(response)]) == 1
     assert "Choose --csv and/or --geojson" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("-75.03", "-75.03"),
+        ("-1e3", "-1e3"),
+        (-75.03, "-75.03"),
+        ("+.5", "+.5"),
+        ("-SUM(A1)", "'-SUM(A1)"),
+        ("+1-2", "'+1-2"),
+        ("\t=x", "'\t=x"),
+        ("\r=x", "'\r=x"),
+        ("=1", "'=1"),
+        ("@a", "'@a"),
+        ("-nan", "'-nan"),
+        ("-1e999", "'-1e999"),
+    ],
+)
+def test_csv_cell_numbers_unprefixed(value, expected):
+    assert parcel_map._csv_cell(value) == expected

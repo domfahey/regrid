@@ -13,6 +13,7 @@ import io
 import json
 import math
 import os
+import re
 import secrets
 import sys
 from collections.abc import Sequence
@@ -598,6 +599,9 @@ _PROPERTY_COLUMNS = frozenset({"headline", "path", "ll_uuid"})
 NO_OUTPUT = "Choose --csv and/or --geojson"
 
 
+_PLAIN_NUMBER = re.compile(r"[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?")
+
+
 def _csv_cell(value: object) -> str:
     """A CSV cell: missing is empty, and spreadsheet formula prefixes are neutralised."""
     if value is None:
@@ -606,7 +610,11 @@ def _csv_cell(value: object) -> str:
         text = json.dumps(value, ensure_ascii=False)
     else:
         text = str(value)
-    return "'" + text if text[:1] in {"=", "+", "-", "@"} else text
+    if text[:1] not in {"=", "+", "-", "@", "\t", "\r"}:
+        return text
+    if _PLAIN_NUMBER.fullmatch(text) and math.isfinite(float(text)):
+        return text
+    return "'" + text
 
 
 def _core_value(feature: dict, name: str) -> Any:
