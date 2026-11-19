@@ -31,7 +31,7 @@ def install(monkeypatch, pages):
 
 
 def test_normal_paging(monkeypatch, capsys):
-    seen = install(monkeypatch, [feats(1, 10), feats(11, 20), feats(21, 30)])
+    seen = install(monkeypatch, [feats(1, 10), feats(11, 20), feats(21)])
     code = cli.main([*POINT, "--max-records", "5", "--options", '{"limit":2}'])
     out, err = capsys.readouterr()
     assert code == 0
@@ -43,7 +43,8 @@ def test_normal_paging(monkeypatch, capsys):
     assert "offset_id" not in seen[0].url.params
     assert seen[1].url.params["offset_id"] == "10"
     assert seen[2].url.params["offset_id"] == "20"
-    assert "regrid: up to 4 requests for 5 records" in err
+    assert [r.url.params["limit"] for r in seen] == ["2", "2", "1"]
+    assert "regrid: up to 3 requests for 5 records" in err
     assert "regrid: requests made: 3" in err
     assert "secret" not in err
 
@@ -302,7 +303,7 @@ def test_order_filter_with_paging_rejected_before_request(monkeypatch, capsys):
 def test_request_limit_capped_to_remaining(monkeypatch, capsys):
     seen = install(monkeypatch, [feats(1, 2), feats(3)])
     assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
-    assert [r.url.params["limit"] for r in seen] == ["2", "2"]  # later pages: remaining + 1
+    assert [r.url.params["limit"] for r in seen] == ["2", "1"]  # never more than still needed
     seen = install(monkeypatch, [feats(1, 2, 3, 4, 5)])
     assert cli.main([*POINT, "--max-records", "5", "--options", '{"limit":100}']) == 0
     assert seen[0].url.params["limit"] == "5"
@@ -325,14 +326,14 @@ def test_duplicate_ids_within_page_deduplicated(monkeypatch, capsys):
     assert [f["id"] for f in data["parcels"]["features"]] == [1]
 
 
-def test_inclusive_cursor_still_reaches_exact_total(monkeypatch, capsys):
+def test_exclusive_cursor_reaches_exact_total(monkeypatch, capsys):
     ids = list(range(1, 20))
     seen = []
 
     def handle(request):
         seen.append(request)
         start = request.url.params.get("offset_id")
-        rows = [i for i in ids if start is None or i >= int(start)]
+        rows = [i for i in ids if start is None or i > int(start)]
         rows = rows[: int(request.url.params["limit"])]
         return httpx.Response(
             200, json={"parcels": {"type": "FeatureCollection", "features": feats(*rows)}}
@@ -347,11 +348,8 @@ def test_inclusive_cursor_still_reaches_exact_total(monkeypatch, capsys):
     assert [f["id"] for f in data["parcels"]["features"]] == [1, 2, 3, 4, 5]
     assert data["complete"] is True
     assert seen[0].url.params["limit"] == "2"
-    assert all(int(r.url.params["limit"]) <= 2 for r in seen)
-    remaining = 5
-    for r, got in zip(seen, (2, 1, 1, 1)):
-        assert int(r.url.params["limit"]) <= remaining + 1 or r is seen[0]
-        remaining -= got
+    assert [r.url.params["limit"] for r in seen] == ["2", "2", "1"]
+    assert [r.url.params["offset_id"] for r in seen[1:]] == ["2", "4"]
 
 
 def _counting(monkeypatch, handler):
@@ -385,10 +383,11 @@ def test_printed_cap_is_enforced_maximum(monkeypatch, capsys, inclusive, total, 
     out, err = capsys.readouterr()
     cap = int(err.split("regrid: up to ")[1].split()[0])
     assert len(seen) <= cap
-    assert json.loads(out)["complete"] is True
-    if inclusive and total > limit:
+    # A server that repeats the cursor yields fewer new records than asked: never claim complete.
+    assert json.loads(out)["complete"] is (not inclusive or total <= limit)
+    assert cap == -(-total // limit)
+    if not inclusive:
         assert len(seen) == cap
-    assert cap <= max(total, 1)
 
 
 def test_limit_one_rejected_before_any_request(monkeypatch, capsys):

@@ -283,7 +283,7 @@ def _identity(item: Any) -> str:
 
 
 def _extend_new(current: list[Any], incoming: list[Any]) -> None:
-    """Append items not already merged; an inclusive cursor repeats the previous page's tail.
+    """Append items not already merged; a misbehaving cursor may repeat the previous page's tail.
 
     Only dict items (features, objects) are de-duplicated; other items are always kept.
     """
@@ -432,9 +432,9 @@ def _paged_search(
     if "offset_id" in options:
         raise _PagingError("--max-records conflicts with offset_id")
     _validate_paging(client, command, args, options)
-    # Worst case under an inclusive cursor: later pages add at least limit - 1 new records.
-    first = min(limit, total)
-    requests_cap = 1 + -(-(total - first) // (limit - 1))
+    # offset_id is exclusive (verified live): each page starts after the cursor, so every
+    # full page adds limit new records and the worst case is ceil(total / limit) requests.
+    requests_cap = -(-total // limit)
     print(f"regrid: up to {requests_cap} requests for {total} records", file=sys.stderr)
     features: list[Any] = []
     seen_ids: set[str] = set()
@@ -446,8 +446,7 @@ def _paged_search(
     state = progress if progress is not None else {}
     while pages < requests_cap and len(features) < total:
         remaining = total - len(features)
-        # An inclusive offset_id repeats the cursor feature, so later pages ask for one extra.
-        page_options = {**options, "limit": min(limit, remaining + (1 if pages else 0))}
+        page_options = {**options, "limit": min(limit, remaining)}
         if cursor is not None:
             page_options["offset_id"] = cursor
         result = getattr(client, command)(**args, **page_options)
@@ -480,6 +479,10 @@ def _paged_search(
         features.extend(new)
         _drop_trimmed_siblings(merged, features[:total], features[total:])
         state.update(merged=merged, features=features[:total], pages=pages)
+        if not new and page:
+            # Safety net: a page of only already-seen records would loop forever.
+            print("regrid: paging stopped: cursor did not advance", file=sys.stderr)
+            break
         if len(page) < page_options["limit"] or len(features) >= total:
             complete = True
             break
