@@ -126,3 +126,23 @@ def test_missing_token_makes_no_request(tmp_path, verse_server, monkeypatch, cap
     monkeypatch.delenv("REGRID_TOKEN")
     assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", str(tmp_path / "v")]) == 1
     assert verse_server == [] and "requests made: 0" in capsys.readouterr().err
+
+
+def test_freshness_keeps_result_when_cache_cannot_be_serialized(tmp_path, monkeypatch, capsys):
+    nan_verse = json.loads(json.dumps(VERSE))
+    nan_verse["features"][0]["properties"]["extra"] = float("nan")
+
+    class NanClient(RegridClient):
+        def verse(self, **kwargs):
+            self.request_count += 1
+            return nan_verse
+
+    monkeypatch.setenv("REGRID_TOKEN", "secret")
+    monkeypatch.setattr(cli, "RegridClient", NanClient)
+    cache = tmp_path / "verse.json"
+    assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", str(cache)]) == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["last_refresh"] == "2026-09-01"
+    assert "verse cache not saved" in captured.err
+    assert captured.err.count("requests made") == 1 and "requests made: 1" in captured.err
+    assert not cache.exists() and list(tmp_path.iterdir()) == []
