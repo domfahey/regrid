@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import re
 import shutil
 from pathlib import Path
 from zipfile import ZipFile
@@ -129,8 +130,6 @@ def test_map_helper_is_shared_across_all_archives(source, tmp_path):
 
 
 def test_mcp_examples_use_current_spec_title():
-    import re
-
     text = (
         ROOT / "plugins/regrid-research/skills/property-research/references/mcp-tools.md"
     ).read_text()
@@ -314,8 +313,6 @@ def test_setup_declares_property_research_dependency():
 
 
 def test_consistent_terminology():
-    import re
-
     for path in DOC_FILES:
         text = path.read_text()
         assert not re.search(r"(?i)\bneighbors?\b", text), path
@@ -323,8 +320,6 @@ def test_consistent_terminology():
 
 
 def test_skill_descriptions_are_third_person_and_bounded():
-    import re
-
     for path in SKILL_FILES:
         desc = re.search(r"^description: (.+)$", path.read_text(), re.M).group(1)
         assert len(desc) <= 1024, path
@@ -370,6 +365,19 @@ def test_cli_is_the_fallback_route_and_freshness_script_is_routed():
     assert "MCP `/parcels/typeahead`: returns no parcel records" not in batch
 
 
+def test_plugin_license_is_mit_and_identical_to_repo_license():
+    assert (PLUGIN / "LICENSE").read_bytes() == (ROOT / "LICENSE").read_bytes()
+    manifest = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())
+    assert manifest["license"] == "MIT"
+
+
+def test_builder_reads_license_from_source_directory(source, tmp_path):
+    (source / "LICENSE").write_bytes(b"source license\n")
+    cowork, code, skill = map(archive_contents, builder.build(source, tmp_path / "out"))
+    assert cowork["LICENSE"] == code["LICENSE"] == skill["property-research/LICENSE"]
+    assert code["LICENSE"] == b"source license\n"
+
+
 def test_license_ships_in_every_archive_identical_to_repo_license(source, tmp_path):
     license_text = (ROOT / "LICENSE").read_bytes()
     cowork, code, skill = map(archive_contents, builder.build(source, tmp_path / "out"))
@@ -401,16 +409,17 @@ def test_shipped_readme_leads_with_current_status_and_omits_history():
 
 
 def test_descriptions_state_exclusions():
-    import re
-
     for path, words in (
-        (SKILL_FILES[0], ("non-us", "batch", "data-issue", "appraisal", "legal ownership")),
+        (SKILL_FILES[0], ("batch", "data-issue", "appraisal", "legal ownership")),
         (SKILL_FILES[1], ("property lookup",)),
     ):
         desc = re.search(r"^description: (.+)$", path.read_text(), re.M).group(1).lower()
         assert "do not use for" in desc, path
         for word in words:
             assert word in desc, (path, word)
+    assert "non-us" not in re.search(r"do not use for.*", SKILL_FILES[0].read_text().lower()).group(
+        0
+    )
 
 
 def test_skill_md_defines_skill_path_and_hides_fields_json():
@@ -421,8 +430,6 @@ def test_skill_md_defines_skill_path_and_hides_fields_json():
 
 
 def test_one_script_path_convention():
-    import re
-
     for path in DOC_FILES:
         text = path.read_text()
         assert "/path/to/property-research" not in text, path
@@ -435,10 +442,9 @@ def test_one_script_path_convention():
 
 
 def test_command_uses_skill_prefixed_paths_and_states_hosts():
-    import re
-
     text = (PLUGIN / "commands/address-map.md").read_text()
-    assert "`<skill>` is the property-research skill folder" in text
+    assert "${CLAUDE_PLUGIN_ROOT}/skills/property-research" in text
+    assert "elsewhere it is\nthe property-research skill folder" in text
     assert "python3 <skill>/scripts/map.py render" in text
     assert not re.search(r"(?<!<skill>/)(?<![\w/.-])(scripts|references)/", text)
     assert "Claude Code and Cowork only" in (SKILL_ROOT / "references/map.md").read_text()

@@ -5,7 +5,8 @@ argument-hint: <US street address>
 
 Map the US property at: $ARGUMENTS
 
-`<skill>` is the property-research skill folder (the folder that holds `SKILL.md`).
+In Claude Code, `<skill>` is `${CLAUDE_PLUGIN_ROOT}/skills/property-research`; elsewhere it is
+the property-research skill folder (the folder that holds `SKILL.md`).
 Use the property-research skill and its Regrid MCP tools. Scope is US parcels only; for
 a non-US address, follow the skill's scope rule and stop.
 

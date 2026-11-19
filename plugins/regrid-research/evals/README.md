@@ -258,13 +258,13 @@ Run per host (Claude Code, Claude apps, Cowork) with the 0.8.0 archive:
 
 `--suite feature` adds eight map, export, field-explanation, freshness, typo, and
 out-of-scope scenarios (`feature-cases.json`, grader-only `feature-rubric.json`);
-`--suite all` includes it. `trigger-cases.json` lists 12 prompts labelled with the
+`--suite all` includes it. `trigger-cases.json` lists 15 prompts (including exclusion cases such as Batch API, data-issue reports, and appraisals) labelled with the
 expected skill (`property-research`, `setup`, or `none`) for skill-discovery checks;
 validation checks structure only, not model behavior.
 
 ## Historical verification
 
-Verification logs moved verbatim from the shipped plugin README. They describe
+Verification logs moved from the shipped plugin README. They describe
 earlier plugin versions and are not current status; the 0.8.0 status is in the
 plugin README's "Validation and acceptance" section.
 
@@ -290,7 +290,7 @@ the current external blockers: Claude CLI OAuth has expired and cannot refresh;
 Claude Desktop inspection failed with `cgWindowNotFound`. No new Claude model
 trial, baseline comparison, Cowork import, or authenticated Cowork lookup is
 claimed. After local `claude auth login`, use the discovery runner documented in
-[evals/README.md](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/README.md), then grade each retained trace.
+the discovery runner section above, then grade each retained trace.
 
 Historical 0.3.0 verification: `make check` passed 671 tests, including 24 workflow-helper regressions
 and seven packaging tests. The SDK coverage gate remains 98.16%; that percentage
@@ -321,13 +321,13 @@ records 13/13 scenarios and 40/40 criteria passed, with the evaluator transcript
 and content hashes retained. These evaluations use a synthetic tool double; the
 20-address case checks the first request and continuation plan, not a full live
 batch. No without-skill baseline was run. Evaluation files are repository-only
-and are not shipped in the plugin ZIPs; see the discovery section above in this file
-for that report. The packaged live tool reference distinguishes executed calls
+and are not shipped in the plugin ZIPs; see `results/forward-report.json` and
+`results/final-report.json` for those reports. The packaged live tool reference distinguishes executed calls
 from the schema-checked address example.
 
 Version 0.4.0 adds metadata-first filesystem discovery trials, without-skill
 baselines, distractor skills, model/CLI identifiers, and read traces. See the
-[discovery evaluation instructions](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/README.md). Checkpoint diagnostics now
+discovery runner section above. Checkpoint diagnostics now
 identify structural paths without exposing values; `workflow.py save INPUT DEST`
 validates before writing and requires `--replace` to overwrite. Python 3.10+
 and the standard library are sufficient.

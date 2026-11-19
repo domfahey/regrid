@@ -154,8 +154,16 @@ def test_feature_suite_validates_trigger_cases(tmp_path, monkeypatch):
         run.load_cases("feature")
 
 
-def test_packet_omits_fields_json_content():
-    refs = run.packet(run.load_cases("feature"), True)["references"]
+def test_packet_omits_fields_json_content_outside_feature_suite():
+    refs = run.packet(run.load_cases("research"), True)["references"]
     note = refs["fields.json"]
     assert "fields.py" in note and len(note) < 200 and "\n" not in note
     assert "answers.md" in refs and "result.schema.json" in refs
+
+
+def test_feature_packet_includes_fields_catalog():
+    refs = run.packet(run.load_cases("feature"), True, include_fields=True)["references"]
+    assert (
+        refs["fields.json"]
+        == (run.ROOT.parent / "skills/property-research/references/fields.json").read_text()
+    )

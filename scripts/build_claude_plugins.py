@@ -13,7 +13,7 @@ SOURCE = REPO_ROOT / "plugins" / "regrid-research"
 MCP_URL = "https://support.regrid.com/mcp"
 SKILLS = ("property-research", "setup")
 BASE_FILES = (".claude-plugin/plugin.json", ".mcp.json", "README.md")
-LICENSE_FILE = "LICENSE"  # read from the repository root, not the plugin source
+LICENSE_FILE = "LICENSE"  # read from the plugin source directory
 TOKEN_PATTERN = re.compile(rb"rg_[A-Za-z0-9_-]{8,}")
 
 
@@ -93,7 +93,7 @@ def build(source: Path, output: Path) -> list[Path]:
     version = manifest["version"]
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise ValueError("Plugin version must be three numeric components")
-    license_bytes = read_public_file(REPO_ROOT, LICENSE_FILE)
+    license_bytes = read_public_file(source, LICENSE_FILE)
     skills_only = dict(common)
     for name in SKILLS:
         skills_only.update(skill_files(source, name))
