@@ -180,3 +180,5 @@ def test_premium_guide_covers_every_flag_and_requires_authorization():
     ):
         assert flag in guide
     assert guide.lower().count("authoriz") >= 4 and "beneficial" in guide
+    assert "`notes`" in guide
+    assert "Premium datasets are US-only" not in guide
