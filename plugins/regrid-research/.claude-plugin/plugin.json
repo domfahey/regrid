@@ -1,6 +1,6 @@
 {
   "name": "regrid-research",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Research parcel ownership and property attributes with the Regrid MCP server, bounded searches, address verification, and source freshness.",
   "author": {
     "name": "Dominic Fahey"
