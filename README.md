@@ -221,6 +221,7 @@ The catalog is packaged with the library, so imports and validation never fetch 
 | `apn(parcelnumb, **options)` | `/parcels/apn` |
 | `owner(owner, **options)` | `/parcels/owner` |
 | `query(fields, **options)` | `/parcels/query`; nested field → operator → value mapping |
+| `validate_query(fields, *, paging=False, **options)` | Validates a query exactly as `query()` would, without sending a request; with `paging=True`, raises `QueryPagingError` (a `ValueError`) for filters that can't be used with `offset_id` paging |
 | `parcel(ll_uuid, **options)` | `/parcels/{ll_uuid}` |
 | `parcel_path(path, **options)` | `/parcels/path` |
 | `typeahead(query)` | `/parcels/typeahead` |

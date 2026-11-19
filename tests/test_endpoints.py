@@ -323,3 +323,11 @@ def test_validate_query_paging_flags_only_paging_errors(recording_client):
         client.validate_query({"nope_field": {"eq": "x"}}, paging=True, validate_fields=True)
     assert not isinstance(excinfo.value, QueryPagingError)
     assert requests == []
+
+
+def test_query_paging_error_is_exported():
+    import regrid
+
+    assert regrid.QueryPagingError is QueryPagingError
+    assert "QueryPagingError" in regrid.__all__
+    assert issubclass(regrid.QueryPagingError, ValueError)

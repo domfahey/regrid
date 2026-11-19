@@ -8,6 +8,8 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ### Added
 
+- SDK: `RegridClient.validate_query(fields, *, paging=False, ...)` validates a query exactly as `query()` would without sending a request, and `QueryPagingError` (exported from `regrid`, a `ValueError`) marks filters that can't be paged with `offset_id`. `regrid.offline.map.write_atomic_bytes` and `regrid.offline.freshness.check_max_age_days` are new public helpers.
+
 - Regrid Research plugin README: MCP server coverage summary (tools, endpoints, options, and deliberately unused features), linking to the skill references.
 
 ### Changed
