@@ -243,3 +243,25 @@ def test_neighbours_and_suggestions_are_ledger_accounted():
     assert "typeahead" in batch and "record_limit 1" in batch
     for line in (refs / "mcp-tools.md").read_text().splitlines():
         assert len(line) <= 100 or line.startswith("|")
+
+
+def test_cli_path_paging_schema_usage_and_export_guidance():
+    refs = SKILL_ROOT / "references"
+    tools = (refs / "mcp-tools.md").read_text()
+    cli = (refs / "cli.md").read_text()
+    rows = [
+        line for line in tools.split("## Choosing the endpoint")[1].splitlines() if "| `/" in line
+    ]
+    assert len(rows) >= 13
+    for row in rows:
+        path = row.split("`")[1]
+        assert f"`{path}`" in cli.split("## Command map")[1].split("\n## ")[0], path
+    assert "requests made" in cli and "never read `.env`" in cli
+    assert "CLI-only" in cli
+    assert "/usage/detailed" in tools and "never per-token" in tools
+    assert "fields.py" in tools and "one request each" in tools
+    assert "map.py export" in (refs / "map.md").read_text()
+    skill = (SKILL_ROOT / "SKILL.md").read_text()
+    assert "return_count" in skill and "map.py export" in skill
+    assert "not saved in checkpoints" in (refs / "batch.md").read_text()
+    assert "CLI" in (PLUGIN / "skills/setup/SKILL.md").read_text()

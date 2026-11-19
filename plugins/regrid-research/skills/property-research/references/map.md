@@ -60,6 +60,20 @@ record_limit 25). Complete it with the actual returned count; an unknown outcome
 uncertain. If the remaining budget is short, do not call: report that neighbours exceed
 the workflow budget.
 
+## Export
+
+To give the user a spreadsheet or GeoJSON, export from the saved response; it makes no
+extra requests:
+
+```
+python3 <skill>/scripts/map.py export RESPONSE.json [--csv F] [--geojson F] [--all-fields] [--replace]
+```
+
+CSV has the core columns (headline, path, ll_uuid, owner, parcelnumb, ll_last_refresh,
+ll_gisacre, ll_gissqft, lat, lon); `--all-fields` appends the rest, sorted. Cells that
+start with `=`, `+`, `-` or `@` get a `'` prefix. GeoJSON keeps geometry verbatim with
+core properties only. Never paste geometry into chat.
+
 ## Limits
 
 - The page loads Leaflet from unpkg.com and imagery from Esri (server.arcgisonline.com).

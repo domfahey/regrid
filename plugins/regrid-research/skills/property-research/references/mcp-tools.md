@@ -68,6 +68,16 @@ Premium `return_*` flags need user authorization; see [premium datasets](premium
 | Detailed usage | `/usage/detailed` | none | date and token options |
 | Usage diagnostic | `/usage` | none | none |
 
+Before an open-ended point, area or query search, an optional `return_count=true` call
+is one request and zero records: it reports how many parcels match, so the user can
+set the record budget. Page with `offset_id` only within that budget and one task.
+
+Schemas: use `scripts/fields.py explain FIELD` first (offline). Call `/schemas/*` only
+when `fields.py` lacks the field, one request each, reserved as a diagnostic.
+
+Detailed usage: `/usage/detailed` only for "how many lookups are left" questions;
+never per-token breakdowns (they can expose token fragments). `/usage` serves setup checks.
+
 Filter operators seen in spec examples include `eq`, `ilike`, `between`
 (`[2000,2999]`), and `gte`, e.g. `fields[geoid][eq]=48113`.
 Only point, area, and query list `return_count`, `return_geometry`, and
