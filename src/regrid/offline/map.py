@@ -98,7 +98,10 @@ def _validate_ring(ring: object) -> None:
         _validate_position(position)
     if ring[0] != ring[-1]:
         raise MapError("Polygon rings must be closed")
-    twice_area = sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(ring, ring[1:]))
+    x0, y0 = ring[0][0], ring[0][1]  # relative to the first vertex: no precision loss
+    twice_area = sum(
+        (a[0] - x0) * (b[1] - y0) - (b[0] - x0) * (a[1] - y0) for a, b in zip(ring, ring[1:])
+    )
     if abs(twice_area) < 1e-12:
         raise MapError("Polygon ring has zero area")
 

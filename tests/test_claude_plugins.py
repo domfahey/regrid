@@ -484,9 +484,10 @@ def test_token_pattern_ignores_identifiers_but_catches_tokens(tmp_path):
             builder.read_public_file(root, "bad.md")
 
 
-@pytest.mark.parametrize("kind", ["", "RSA ", "EC ", "OPENSSH ", "ENCRYPTED "])
+@pytest.mark.parametrize("kind", ["", "RSA ", "EC ", "OPENSSH ", "ENCRYPTED ", "PGP "])
 def test_private_key_blocks_are_rejected(tmp_path, kind):
-    (tmp_path / "k.md").write_text(f"-----BEGIN {kind}PRIVATE KEY-----\n")
+    suffix = " BLOCK" if kind == "PGP " else ""
+    (tmp_path / "k.md").write_text(f"-----BEGIN {kind}PRIVATE KEY{suffix}-----\n")
     with pytest.raises(ValueError, match="credential"):
         builder.read_public_file(tmp_path, "k.md")
 
@@ -502,4 +503,4 @@ def test_paging_and_refresh_guidance_match_the_workflow_helper():
         "authorized_retry=True" in batch.split("An explicit refresh")[1][:600]
     )
     cli = (refs / "cli.md").read_text()
-    assert cli.count('"limit":1') >= 6 and "return_stacked" in cli
+    assert cli.count('"limit":1') >= 4 and "return_stacked" in cli

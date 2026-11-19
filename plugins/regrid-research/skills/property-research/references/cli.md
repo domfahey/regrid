@@ -19,18 +19,20 @@ request count is on stderr. Apply the same scope, limit and premium rules as ove
 | `/parcels/point` | `regrid point --lat L --lon L [--options '{"limit":1,"radius":M}']` (or `--geojson` Point JSON or @FILE; `--method GET|POST`) |
 | `/parcels/area` | `regrid area --geojson @FILE` (GeoJSON as a JSON string or @file) |
 | `/parcels/query` | `regrid query --fields '{"field":{"op":v}}'` |
-| `/parcels/{ll_uuid}` | `regrid parcel LL_UUID --options '{"limit":1}'` |
-| `/parcels/path` | `regrid parcel-path PATH --options '{"limit":1}'` |
+| `/parcels/{ll_uuid}` | `regrid parcel LL_UUID` |
+| `/parcels/path` | `regrid parcel-path PATH` |
 | `/parcels/typeahead` | `regrid typeahead QUERY` (Enterprise) |
 | `/verse` | `regrid freshness --path /us/<st>/<county>` |
 | `/schemas/parcel`, `/schemas/building`, `/schemas/address`, `/schemas/enhanced_ownership`, `/schemas/zoning` | `regrid schema NAME` |
 | `/usage/detailed` | `regrid usage --detailed` |
 | `/usage` | `regrid usage` |
 
-Single-property lookups take `"limit":1`: `apn`, `owner` and `point` default to 5
-records. The CLI does not default premium or stacked flags to false; pass
+Single-result searches take `"limit":1`: `address`, `apn`, `owner` and `point` default to
+5 records. `parcel` and `parcel-path` return one record and reject `limit`.
+The CLI does not default premium or stacked flags to false; pass
 `"return_stacked":false,"return_zoning":false,...` in `--options` as SKILL.md says,
-unless the user requested them.
+unless the user requested them. This applies to `parcel` and `parcel-path` too, which
+accept those flags but not `limit`.
 
 Offline, no request: `regrid fields explain|search`, `regrid map`, `regrid export`.
 Also: `regrid address-map ADDRESS OUT.html [--neighbours]` (one lookup, plus one

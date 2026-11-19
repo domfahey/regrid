@@ -20,7 +20,7 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 - Packaging: the credential scan no longer flags words that merely contain `rg_`, and it now catches RSA, EC and OpenSSH private keys.
 - Skill guidance:
   - Paged searches and refresh-by-path now use `authorized_retry=True`, and paged searches budget for one extra record per later page, matching the workflow helper.
-  - CLI examples pass `limit` 1 and say the CLI doesn't turn paid datasets off by default.
+  - Single-result search examples (address, apn, owner, point) pass `limit` 1, Regrid ID and path lookups need no limit, and the notes say the CLI doesn't turn paid datasets off by default.
 - Evals: the Canadian-route check finds `/ca/` inside URLs and no longer flags text that starts with `CA/`. A fixture now uses the real error message.
 
 ## [SDK 0.4.0][sdk-v0.4.0] and [Regrid Research 0.9.0][regrid-research-v0.9.0] - 2026-11-19

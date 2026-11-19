@@ -15,7 +15,7 @@ SKILLS = ("property-research", "setup")
 BASE_FILES = (".claude-plugin/plugin.json", ".mcp.json", "README.md", "PRIVACY.md")
 LICENSE_FILE = "LICENSE"  # read from the plugin source directory
 TOKEN_PATTERN = re.compile(rb"(?<![A-Za-z0-9_])rg_[A-Za-z0-9_-]{8,}")
-PRIVATE_KEY_PATTERN = re.compile(rb"-----BEGIN [A-Z ]*PRIVATE KEY-----")
+PRIVATE_KEY_PATTERN = re.compile(rb"-----BEGIN [A-Z ]*PRIVATE KEY(?: BLOCK)?-----")
 
 
 def read_public_file(root: Path, relative: str) -> bytes:

@@ -927,3 +927,23 @@ def test_zero_area_ring_is_rejected(tmp_path):
     collinear = [[-75.03, 39.9], [-75.02, 39.9], [-75.01, 39.9], [-75.03, 39.9]]
     with pytest.raises(MapError, match="zero area"):
         parcel_map.validate_geometry({"type": "Polygon", "coordinates": [collinear]})
+
+
+def _ring(points):
+    return {"type": "Polygon", "coordinates": [[*points, points[0]]]}
+
+
+def test_zero_area_check_is_precise_at_real_coordinates():
+    lon, lat, d = -122.4194, 37.7749, 2.7e-6  # about 0.3 m
+    small = _ring([[lon, lat], [lon + d, lat], [lon + d, lat + d], [lon, lat + d]])
+    parcel_map.validate_geometry(small)
+    parcel_map.validate_geometry(
+        _ring([[179.95, 52.0], [-179.95, 52.0], [-179.95, 52.1], [179.95, 52.1]])
+    )
+    for bad in (
+        _ring([[lon, lat], [lon + d, lat + d], [lon + 2 * d, lat + 2 * d]]),
+        _ring([[lon, lat], [lon + d, lat], [lon, lat]]),
+        _ring([[lon, lat], [lon + 0.01, lat], [lon + 0.02, lat], [lon + 0.01, lat]]),
+    ):
+        with pytest.raises(MapError, match="zero area"):
+            parcel_map.validate_geometry(bad)
