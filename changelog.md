@@ -6,7 +6,22 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
-No changes yet.
+### Fixed
+
+- CLI and SDK:
+  - Deeply nested JSON (from the API, a freshness cache, or `--options`/`--fields`/`--geojson`) now fails with one sanitized error and the usual `regrid: requests made: N` line instead of a traceback.
+  - `address-map` treats file names that differ only by letter case as the same file before sending any request.
+  - Paging keeps a response's own `pages`/`complete` values as `response_pages`/`response_complete`.
+  - Paging no longer treats ids `True`, `1` and `1.0` as duplicates.
+- Offline helpers:
+  - `map.py render` reports a missing output folder clearly, and zero-area outlines are rejected.
+  - Freshness caches dated in the future are treated as stale.
+  - The field catalog rejects entries without a string name.
+- Packaging: the credential scan no longer flags words that merely contain `rg_`, and it now catches RSA, EC and OpenSSH private keys.
+- Skill guidance:
+  - Paged searches and refresh-by-path now use `authorized_retry=True`, and paged searches budget for one extra record per later page, matching the workflow helper.
+  - CLI examples pass `limit` 1 and say the CLI doesn't turn paid datasets off by default.
+- Evals: the Canadian-route check finds `/ca/` inside URLs and no longer flags text that starts with `CA/`. A fixture now uses the real error message.
 
 ## [SDK 0.4.0][sdk-v0.4.0] and [Regrid Research 0.9.0][regrid-research-v0.9.0] - 2026-11-19
 
