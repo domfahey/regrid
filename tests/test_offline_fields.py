@@ -14,6 +14,23 @@ from regrid.offline import fields
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / "plugins/regrid-research/skills/property-research"
 SKILL_FIELDS = SKILL / "references/fields.json"
+OWNER = {
+    "name": "owner",
+    "datatype": "text",
+    "tier": "standard",
+    "category": "Ownership",
+    "description": "Owner name",
+}
+ASSESSMENT_HITS = [
+    "agval",
+    "homestead_exemption",
+    "improvval",
+    "landval",
+    "parval",
+    "parvaltype",
+    "taxamt",
+    "taxyear",
+]
 
 
 def _load(name: str, path: Path):
@@ -29,16 +46,20 @@ generator = _load("generate_skill_fields", ROOT / "scripts/generate_skill_fields
 
 def test_explain_known_and_unknown():
     catalog = fields.load_catalog(SKILL_FIELDS)
-    result = fields.explain(catalog, ["owner", "notafield"])
-    assert [f["name"] for f in result["found"]] == ["owner"] and result["unknown"] == ["notafield"]
+    result = fields.explain(catalog, ["parval", "owner", "notafield", "owner"])
+    # Found entries keep request order (and repeats); unknown names are reported separately.
+    assert [f["name"] for f in result["found"]] == ["parval", "owner", "owner"]
+    assert result["found"][1] == OWNER
+    assert result["unknown"] == ["notafield"]
 
 
 def test_search_matches_description_case_insensitive():
-    hits = fields.search(fields.load_catalog(SKILL_FIELDS), "ASSESSMENT")
-    assert hits and all(
-        "assessment" in (h["name"] + h["description"] + h["category"]).lower() for h in hits
-    )
-    assert [h["name"] for h in hits] == sorted(h["name"] for h in hits)
+    catalog = fields.load_catalog(SKILL_FIELDS)
+    hits = fields.search(catalog, "ASSESSMENT")
+    assert [h["name"] for h in hits] == ASSESSMENT_HITS
+    assert fields.search(catalog, "no-such-field-term") == []
+    # A term found only in a category (not in the name) still matches.
+    assert OWNER in fields.search(catalog, "ownership")
 
 
 def test_compact_and_full_catalogs_agree():
@@ -71,27 +92,28 @@ def test_generator_detects_stale_and_writes(tmp_path, capsys):
 
 def test_load_catalog_rejects_bad_documents(tmp_path):
     bad = tmp_path / "bad.json"
-    bad.write_text('{"fields": 3}')
-    with pytest.raises(ValueError, match="catalog"):
-        fields.load_catalog(bad)
-    bad.write_text("[]")
-    with pytest.raises(ValueError, match="catalog"):
-        fields.load_catalog(bad)
+    for body in ('{"fields": 3}', "[]", '{"fields": [1]}'):
+        bad.write_text(body)
+        with pytest.raises(ValueError, match="^Unrecognized field catalog format$"):
+            fields.load_catalog(bad)
 
 
 def test_main_explain_and_search(capsys):
     assert fields.main(["explain", "owner", "zzz", "--catalog", str(SKILL_FIELDS)]) == 0
-    out = json.loads(capsys.readouterr().out)
-    assert out["found"][0]["name"] == "owner" and out["unknown"] == ["zzz"]
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == {"found": [OWNER], "unknown": ["zzz"]}
+    assert captured.err == ""
     assert fields.main(["search", "assessment", "--catalog", str(SKILL_FIELDS)]) == 0
-    assert json.loads(capsys.readouterr().out)
+    matches = json.loads(capsys.readouterr().out)["matches"]
+    assert [m["name"] for m in matches] == ASSESSMENT_HITS
 
 
 def test_main_default_catalog_and_errors(tmp_path, capsys):
-    assert fields.main(["explain", "owner", "--catalog", str(tmp_path / "none.json")]) == 1
-    assert capsys.readouterr().err.startswith("fields: ")
-    # Default catalog sits at ../references/fields.json relative to the script.
-    assert fields.DEFAULT_CATALOG.name in {"fields.json", "parcel_fields.json"}
+    missing = tmp_path / "none.json"
+    assert fields.main(["explain", "owner", "--catalog", str(missing)]) == 1
+    captured = capsys.readouterr()
+    assert captured.err == f"fields: [Errno 2] No such file or directory: '{missing}'\n"
+    assert captured.out == ""
 
 
 def test_default_catalog_prefers_references_then_packaged_data(tmp_path):
@@ -115,12 +137,14 @@ def test_main_reports_missing_default_catalog(monkeypatch, capsys):
 
     monkeypatch.setattr(fields, "default_catalog", missing)
     assert fields.main(["search", "owner"]) == 1
-    assert "fields: No field catalog found" in capsys.readouterr().err
+    captured = capsys.readouterr()
+    assert captured.err == "fields: No field catalog found\n"
+    assert captured.out == ""
 
 
 def test_sdk_copy_falls_back_to_packaged_catalog():
     assert fields.DEFAULT_CATALOG == ROOT / "src/regrid/data/parcel_fields.json"
-    assert fields.load_catalog(fields.DEFAULT_CATALOG)
+    assert len(fields.load_catalog(fields.DEFAULT_CATALOG)) == 169
 
 
 def test_fields_helper_runs_from_extracted_archive(tmp_path):
@@ -136,7 +160,7 @@ def test_fields_helper_runs_from_extracted_archive(tmp_path):
         cwd=tmp_path,
     )
     assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout)["found"][0]["name"] == "owner"
+    assert json.loads(result.stdout) == {"found": [OWNER], "unknown": []}
 
 
 @pytest.mark.parametrize("name", [["x"], None, "", 5])
