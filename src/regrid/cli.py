@@ -13,6 +13,7 @@ from typing import Any
 
 from .client import RegridClient, RegridError
 from .offline import fields as parcel_fields
+from .offline import freshness as county_freshness
 from .offline import map as parcel_map
 
 
@@ -128,6 +129,56 @@ def _run_address_map(args: dict[str, Any]) -> int:
     return 0
 
 
+def _freshness(args: dict[str, Any], sent: list[int]) -> None:
+    county = county_freshness.county_path(args["path"])
+    cache_path = Path(args["cache"]) if args["cache"] else county_freshness.default_cache_path()
+    cached = None if args["refresh"] else county_freshness.read_cache(cache_path)
+    if cached is not None:
+        (retrieved_at, verse), state = cached, "hit"
+    else:
+        with RegridClient(
+            token=(os.environ.get("REGRID_TOKEN") or "").strip() or None,
+            timeout=args["timeout"],
+            base_url=args["base_url"],
+            tiles_base_url=args["tiles_base_url"],
+        ) as client:
+            client._http.event_hooks["request"].append(lambda request: sent.append(1))
+            verse = client.verse(return_geometry=False)
+        retrieved_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        state = "miss"
+        county_freshness.write_cache(cache_path, retrieved_at, verse)
+    dates = county_freshness.county_dates(verse, county)
+    print(
+        json.dumps(
+            {**dates, "verse_retrieved_at": retrieved_at, "cache": state},
+            indent=2,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+    )
+
+
+def _run_freshness(args: dict[str, Any]) -> int:
+    sent: list[int] = []
+    message = None
+    try:
+        _freshness(args, sent)
+    except (RegridError, ValueError, TypeError, OSError) as exc:
+        if isinstance(exc, RegridError):
+            message = str(exc)
+        elif isinstance(exc, OSError):
+            message = "Could not read or write the verse cache"
+        elif isinstance(exc, TypeError):
+            message = "Invalid verse response"
+        else:
+            message = " ".join(str(exc).split())
+    print(f"regrid: requests made: {len(sent)}", file=sys.stderr)
+    if message is not None:
+        print(f"regrid: {message}", file=sys.stderr)
+        return 1
+    return 0
+
+
 # Commands that run locally: no token, no HTTP client.
 _OFFLINE = {"map": _run_map, "fields": _run_fields}
 
@@ -167,6 +218,14 @@ def _parser() -> argparse.ArgumentParser:
         "search", help="Find fields by name, description or category"
     )
     field_search.add_argument("term")
+    freshness = commands.add_parser(
+        "freshness",
+        help="Show a county's published data dates from /verse (cached)",
+        description="Report county data dates from a cached /verse response; dates only.",
+    )
+    freshness.add_argument("--path", required=True, help="Regrid path, e.g. /us/nj/camden")
+    freshness.add_argument("--cache", metavar="FILE", help="Verse cache file")
+    freshness.add_argument("--refresh", action="store_true", help="Ignore the cache and refetch")
     address_map = commands.add_parser(
         "address-map",
         help="Look up one address (one API request) and render it as an offline satellite map",
@@ -314,6 +373,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"regrid: {' '.join(str(exc).split())}", file=sys.stderr)
             return 1
         return 0
+    if command == "freshness":
+        return _run_freshness(args)
     if command == "address_map":
         return _run_address_map(args)
     timeout = args.pop("timeout")
