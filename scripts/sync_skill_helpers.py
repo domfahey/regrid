@@ -14,7 +14,11 @@ SOURCE_DIR = Path("src/regrid/offline")
 SKILL_SCRIPTS = Path("plugins/regrid-research/skills/property-research/scripts")
 
 # source name -> skill name
-HELPERS: dict[str, str] = {"map.py": "map.py", "fields.py": "fields.py"}
+HELPERS: dict[str, str] = {
+    "map.py": "map.py",
+    "fields.py": "fields.py",
+    "freshness.py": "freshness.py",
+}
 
 
 def sync(root: Path, *, check: bool) -> list[str]:
