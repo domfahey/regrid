@@ -85,9 +85,10 @@ def _address_map(args: dict[str, Any], sent: list[int], saved: list[Path]) -> No
         base_url=args["base_url"],
         tiles_base_url=args["tiles_base_url"],
     ) as client:
-        # Count requests as httpx is about to send them, so failures before sending count 0.
-        client._http.event_hooks["request"].append(lambda request: sent.append(1))
-        result = client.address(args["address"], **options)
+        try:
+            result = client.address(args["address"], **options)
+        finally:
+            sent.append(client.request_count)
     body = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
     with open(response_path, "w" if replace else "x", encoding="utf-8") as handle:
         handle.write(body)
@@ -119,7 +120,7 @@ def _run_address_map(args: dict[str, Any]) -> int:
             message = "Invalid input or output file"
         else:
             message = " ".join(str(exc).split())
-    print(f"regrid: requests made: {len(sent)}", file=sys.stderr)
+    print(f"regrid: requests made: {sent[0] if sent else 0}", file=sys.stderr)
     if message is not None and saved:
         print(f"regrid: response saved to {saved[0]}", file=sys.stderr)
     if message is not None:
@@ -366,7 +367,7 @@ def main(argv: list[str] | None = None) -> int:
     tiles_base_url = args.pop("tiles_base_url")
     output = args.pop("output", None)
     max_records = args.pop("max_records", None)
-    sent: list[int] = []
+    count = 0
     try:
         options = _object(args.pop("options", "{}"))
         for name in ("geojson", "fields", "details", "metadata"):
@@ -383,11 +384,13 @@ def main(argv: list[str] | None = None) -> int:
             base_url=base_url,
             tiles_base_url=tiles_base_url,
         ) as client:
-            if max_records is None:
-                result = getattr(client, command)(**args, **options)
-            else:
-                client._http.event_hooks["request"].append(lambda request: sent.append(1))
-                result = _paged_search(client, command, args, options, max_records)
+            try:
+                if max_records is None:
+                    result = getattr(client, command)(**args, **options)
+                else:
+                    result = _paged_search(client, command, args, options, max_records)
+            finally:
+                count = client.request_count
         if output is not None:
             Path(output).write_bytes(result)
         else:
@@ -400,9 +403,7 @@ def main(argv: list[str] | None = None) -> int:
             else "Invalid input or output file"
         )
         print(f"regrid: {message}", file=sys.stderr)
-        if max_records is not None:
-            print(f"regrid: requests made: {len(sent)}", file=sys.stderr)
+        print(f"regrid: requests made: {count}", file=sys.stderr)
         return 1
-    if max_records is not None:
-        print(f"regrid: requests made: {len(sent)}", file=sys.stderr)
+    print(f"regrid: requests made: {count}", file=sys.stderr)
     return 0

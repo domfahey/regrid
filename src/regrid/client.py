@@ -73,9 +73,17 @@ class RegridClient(EndpointsMixin):
         self._token = settings.token
         self._base_url = settings.base_url
         self._tiles_base_url = settings.tiles_base_url
+        self.request_count = 0
         self._http = httpx.Client(
-            timeout=settings.timeout, transport=transport, follow_redirects=False
+            timeout=settings.timeout,
+            transport=transport,
+            follow_redirects=False,
+            event_hooks={"request": [self._count_request]},
         )
+
+    def _count_request(self, request: httpx.Request) -> None:
+        # Fires as httpx is about to send, so requests rejected before sending count 0.
+        self.request_count += 1
 
     def __enter__(self) -> RegridClient:
         return self
