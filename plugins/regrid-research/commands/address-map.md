@@ -22,7 +22,8 @@ a non-US address, follow the skill's scope rule and stop.
 
 With neighbours: only if the user asked. State "one request, up to 25 records", then
 follow the neighbours section of `references/map.md` (one extra `/parcels/point`
-request) and render with `--neighbours`.
+request, reserved first as a lookup attempt with record_limit 25, completed with the
+returned count, left uncertain if the outcome is unknown) and render with `--neighbours`.
 
 Never put the Regrid token in chat, command arguments, the saved response, or the page.
 

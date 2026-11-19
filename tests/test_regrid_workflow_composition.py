@@ -350,3 +350,11 @@ def test_cli_freshness_zero_record_attempt_keeps_ledger_valid():
     assert doc["budget"]["attempted_requests"] == 1
     assert doc["budget"]["returned_records"] == 0
     assert doc["budget"]["uncertain_records"] == 0
+
+
+def test_cli_freshness_diagnostic_uncertain_validates():
+    doc = workflow.reserve_attempt(workflow.upgrade_workflow(legacy()), [], 0, kind="diagnostic")
+    doc = workflow.complete_attempt(doc, "attempt-000001", "uncertain", None)
+    workflow.validate(doc)
+    assert doc["budget"]["attempted_requests"] == 1
+    assert doc["budget"]["uncertain_records"] == 0

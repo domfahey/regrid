@@ -231,3 +231,14 @@ def test_cli_freshness_neighbours_and_suggestions_guidance():
     tools = (refs / "mcp-tools.md").read_text()
     assert "/parcels/typeahead" in tools and "never retried" in tools
     assert "requests made" in (refs / "batch.md").read_text()
+
+
+def test_neighbours_and_suggestions_are_ledger_accounted():
+    refs = SKILL_ROOT / "references"
+    for text in ((refs / "map.md").read_text(), (PLUGIN / "commands/address-map.md").read_text()):
+        assert "record_limit 25" in text and "uncertain" in text
+    batch = (refs / "batch.md").read_text()
+    assert "## CLI and suggestion requests" in batch
+    assert "typeahead" in batch and "record_limit 1" in batch
+    for line in (refs / "mcp-tools.md").read_text().splitlines():
+        assert len(line) <= 100 or line.startswith("|") or "http" in line
