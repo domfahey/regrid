@@ -5,6 +5,8 @@ import pytest
 
 from regrid import RegridClient, RegridDecodeError, RegridError
 
+GENERIC = "Invalid Regrid request parameters"
+
 
 @pytest.mark.parametrize(
     "kwargs",
@@ -24,8 +26,9 @@ from regrid import RegridClient, RegridDecodeError, RegridError
     ],
 )
 def test_reject_invalid_client_configuration(kwargs):
-    with pytest.raises((ValueError, TypeError)):
+    with pytest.raises(ValueError) as caught:
         RegridClient(**kwargs)
+    assert str(caught.value) == "Invalid Regrid request parameters"
 
 
 @pytest.mark.parametrize(
@@ -34,6 +37,7 @@ def test_reject_invalid_client_configuration(kwargs):
         ([], RegridDecodeError),
         ({"status": "error", "message": "sensitive upstream message"}, RegridError),
     ],
+    ids=["non-object", "api-error"],
 )
 def test_reject_unexpected_response_without_disclosing_body(payload, error):
     with RegridClient(
@@ -42,38 +46,44 @@ def test_reject_unexpected_response_without_disclosing_body(payload, error):
     ) as client:
         with pytest.raises(error) as caught:
             client.usage()
-    assert "sensitive upstream message" not in str(caught.value)
+    assert type(caught.value) is error
+    assert str(caught.value) == (
+        "Expected a JSON object from Regrid"
+        if error is RegridDecodeError
+        else "Regrid reported an API error"
+    )
 
 
 @pytest.mark.parametrize(
-    "method,kwargs",
+    "method,kwargs,error,message",
     [
-        ("tilejson", {"format": "jpg"}),
-        ("tile", {"z": 10, "x": 0, "y": 0, "format": "jpg"}),
-        ("tile", {"z": 10, "x": 0, "y": 0, "retina": "yes"}),
-        ("area", {"geojson": "broken"}),
-        ("area", {"geojson": "[]"}),
-        ("area", {"geojson": {}}),
-        ("area", {"geojson": {"type": "Point"}, "method": "DELETE"}),
-        ("point", {"lat": 1, "lon": 2, "method": "DELETE"}),
-        ("point", {"lat": 1, "lon": 2, "offset_id": -1}),
-        ("point", {"lat": 1, "lon": 2, "offset_id": True}),
-        ("query", {"fields": {"owner": {"eq": float("inf")}}}),
-        ("query", {"fields": {"owner": {"illegal[eq]": "name"}}}),
-        ("query", {"fields": {"owner": {}}}),
-        ("schema", {"premium_only": "true"}),
-        ("usage", {"detailed": "yes"}),
+        ("tilejson", {"format": "jpg"}, ValueError, "format must be mvt or png"),
+        ("tile", {"z": 10, "x": 0, "y": 0, "format": "jpg"}, ValueError, GENERIC),
+        ("tile", {"z": 10, "x": 0, "y": 0, "retina": "yes"}, ValueError, GENERIC),
+        ("area", {"geojson": "broken"}, ValueError, "Invalid Regrid GeoJSON request"),
+        ("area", {"geojson": "[]"}, ValueError, GENERIC),
+        ("area", {"geojson": {}}, ValueError, GENERIC),
+        ("area", {"geojson": {"type": "Point"}, "method": "DELETE"}, ValueError, GENERIC),
+        ("point", {"lat": 1, "lon": 2, "method": "DELETE"}, ValueError, GENERIC),
+        ("point", {"lat": 1, "lon": 2, "offset_id": -1}, ValueError, GENERIC),
+        ("point", {"lat": 1, "lon": 2, "offset_id": True}, ValueError, GENERIC),
+        ("query", {"fields": {"owner": {"eq": float("inf")}}}, ValueError, GENERIC),
+        ("query", {"fields": {"owner": {"illegal[eq]": "name"}}}, ValueError, GENERIC),
+        ("query", {"fields": {"owner": {}}}, ValueError, GENERIC),
+        ("schema", {"premium_only": "true"}, ValueError, GENERIC),
+        ("usage", {"detailed": "yes"}, TypeError, "detailed must be a boolean"),
     ],
 )
-def test_invalid_arguments_never_reach_transport(method, kwargs):
+def test_invalid_arguments_never_reach_transport(method, kwargs, error, message):
     def unexpected_request(request):
         pytest.fail("Invalid arguments reached the network")
 
     with RegridClient(
         "test-placeholder", transport=httpx.MockTransport(unexpected_request)
     ) as client:
-        with pytest.raises((ValueError, TypeError)):
+        with pytest.raises(error) as caught:
             getattr(client, method)(**kwargs)
+    assert str(caught.value) == message
 
 
 def test_string_geometry_roundtrips_and_null_options_are_omitted():

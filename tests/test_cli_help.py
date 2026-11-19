@@ -16,14 +16,10 @@ def _top_level_help() -> dict[str, str]:
     return helps
 
 
-def test_every_top_level_command_has_help_text() -> None:
+def test_every_top_level_command_has_descriptive_help_text() -> None:
     helps = _top_level_help()
-    assert helps
+    assert {"point", "address", "freshness", "map", "tile"} <= set(helps)
     for name, text in helps.items():
-        assert text.strip(), f"{name} has no help text"
-
-
-def test_help_text_is_not_the_bare_command_name() -> None:
-    helps = _top_level_help()
-    for name, text in helps.items():
-        assert text.strip() != name, f"{name} help is its own name"
+        # Empty, the bare command name, or a single word is not a description.
+        assert len(text.split()) >= 3, f"{name} help is not descriptive: {text!r}"
+        assert text.strip().lower() != name, f"{name} help is its own name"

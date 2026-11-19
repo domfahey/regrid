@@ -35,14 +35,24 @@ def _deep_body(depth, wrap='{"parcels":{"features":[]},"x":%s}'):
     return (wrap % ("[" * depth + "]" * depth)).encode()
 
 
-def _assert_clean_failure(capsys, requests_made):
+# Which message appears depends on where the parser gives up (RecursionError vs invalid JSON).
+DEEP = (
+    "Response or input is nested too deeply",
+    "Regrid returned invalid JSON",
+    "No verse entry found for /us/nj/camden",  # decodable body that is not a verse listing
+)
+BAD_INPUT = "Invalid input or output file"
+
+
+def _assert_clean_failure(capsys, requests_made, message):
     out, err = capsys.readouterr()
     lines = err.splitlines()
     assert out == ""
     assert "Traceback" not in err and "secret" not in err
     assert lines.count(f"regrid: requests made: {requests_made}") == 1
-    assert sum(line.startswith("requests made") or "requests made" in line for line in lines) == 1
-    assert any(line.startswith("regrid: ") and "requests made" not in line for line in lines)
+    assert sum("requests made" in line for line in lines) == 1
+    messages = (message,) if isinstance(message, str) else message
+    assert sum(lines.count(f"regrid: {m}") for m in messages) == 1
 
 
 def test_decode_deep_json_raises_decode_error():
@@ -68,7 +78,7 @@ def test_deep_response_body(monkeypatch, capsys, tmp_path, argv, depth):
     argv = [str(tmp_path / "m.html") if a == "OUTPATH" else a for a in argv]
     argv = [str(tmp_path / "c.json") if a == "CACHE" else a for a in argv]
     assert cli.main(argv) == 1
-    _assert_clean_failure(capsys, 1)
+    _assert_clean_failure(capsys, 1, DEEP)
     assert len(seen) == 1
 
 
@@ -90,7 +100,7 @@ def test_deep_decoded_result_fails_at_output(monkeypatch, capsys, tmp_path, argv
     argv = [str(tmp_path / "m.html") if a == "OUTPATH" else a for a in argv]
     argv = [str(tmp_path / "c.json") if a == "CACHE" else a for a in argv]
     assert cli.main(argv) == 1
-    _assert_clean_failure(capsys, 1)
+    _assert_clean_failure(capsys, 1, DEEP)
     assert len(seen) == 1
 
 
@@ -116,7 +126,7 @@ def test_deep_json_argument_makes_no_request(monkeypatch, capsys, flag, depth):
         "--geojson": ["area", "--geojson", '{"a":' + deep + "}"],
     }[flag]
     assert cli.main(command) == 1
-    _assert_clean_failure(capsys, 0)
+    _assert_clean_failure(capsys, 0, BAD_INPUT)
     assert seen == []
 
 
