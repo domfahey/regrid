@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import re
 import shlex
 from pathlib import Path
@@ -113,3 +114,31 @@ def test_documented_invocation_executes(
     }
     argv = [concrete.get(tok, tok) for tok in argv]
     assert cli.main(argv) == 0, (argv, capsys.readouterr().err)
+
+
+def _walk(parser: "argparse.ArgumentParser", prefix: str = "") -> "tuple[set[str], set[str]]":
+    """Return (subcommand names, long option strings) for a parser tree."""
+    names: set[str] = set()
+    flags: set[str] = set()
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            for name, sub in action.choices.items():
+                names.add(name)
+                sub_names, sub_flags = _walk(sub)
+                names |= sub_names
+                flags |= sub_flags
+        else:
+            flags |= {
+                opt for opt in action.option_strings if opt.startswith("--") and opt != "--help"
+            }
+    return names, flags
+
+
+def test_cli_md_mentions_every_subcommand_and_flag() -> None:
+    names, flags = _walk(_parser())
+    text = CLI_MD.read_text(encoding="utf-8")
+    missing = sorted(
+        {n for n in names if not re.search(rf"(?<![\w-]){re.escape(n)}(?![\w-])", text)}
+        | {f for f in flags if f not in text}
+    )
+    assert not missing, f"cli.md does not mention: {missing}"

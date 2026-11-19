@@ -50,6 +50,33 @@ Export from a saved response, with no requests:
 starting with `=`, `+`, `-`, `@`, tab or CR get a `'` prefix; plain numbers such as
 `-75.1` stay as they are.
 
+## Flags not in the map
+
+Global, before the command: `--timeout SECONDS`, `--base-url URL`, `--tiles-base-url URL`
+(defaults: 30 s, `https://app.regrid.com/api/v2`, `https://tiles.regrid.com`; do not
+point them at another host).
+`--options`, `--geojson`, `--fields` and `--metadata` take a JSON string or `@file`.
+Endpoint commands also take `--country us|ca` (default `us`; Canada stays as legacy,
+out of this skill's scope).
+
+- `area --method GET|POST`: `POST` sends the GeoJSON as a JSON body for geometry too
+  large for a URL; same read-only search, same one request per page. See
+  [mcp-tools](mcp-tools.md#large-geometry-post-search). `point --method POST` needs GeoJSON.
+- `query --validate-fields`: check fields and operators against the offline US field
+  catalog before any request; `--allow-unknown-fields` lets through fields absent from
+  the catalog (fields it marks non-queryable still fail).
+- `usage --options '{"begin_date":"YYYY-MM-DD","end_date":"YYYY-MM-DD"}'` and
+  `schema --options '{"premium_only":true}'` (parcel schema only).
+- `address-map ADDRESS OUT.html`: `--path PATH` county scope, `--save-response FILE`
+  keeps the lookup JSON, `--retrieved-at ISO` sets the shown timestamp, `--replace`.
+- `map RESPONSE OUT.html`: `--feature N`, `--all-candidates`, `--retrieved-at ISO`,
+  `--neighbours FILE`, `--replace`; see [map](map.md).
+- `tilejson [--format mvt|png]`, `tile Z X Y --output FILE [--format mvt|png] [--retina]`,
+  `grid Z X Y [--metadata RASTER_TILEJSON]`. `--retina` gives `@2x` raster tiles.
+- Never run: `report` (`--comment`, `--path`, `--ll-uuid`, `--details`, `--details-text`)
+  and `client-token-typeahead` (`--exp`); the first files an external report and
+  the second issues a token.
+
 ## Tiles
 
 `regrid tilejson`, `regrid tile` and `regrid grid` are CLI-only: there is no MCP
