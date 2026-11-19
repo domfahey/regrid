@@ -36,7 +36,7 @@ def test_normal_paging(monkeypatch, capsys):
     out, err = capsys.readouterr()
     assert code == 0
     data = json.loads(out)
-    assert data["pages"] == 3
+    assert data["pages"] == 3 and data["complete"] is True
     assert [f["id"] for f in data["parcels"]["features"]] == [1, 10, 11, 20, 21]
     assert data["parcels"]["type"] == "FeatureCollection"
     assert len(seen) == 3
@@ -59,8 +59,8 @@ def test_repeated_cursor_stops_at_k(monkeypatch, capsys):
     seen = install(monkeypatch, [feats(1, 7), feats(7, 7)])
     code = cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}'])
     assert code == 0
-    assert len(seen) == 3
-    assert "requests made: 3" in capsys.readouterr().err
+    assert len(seen) == 2
+    assert "requests made: 2" in capsys.readouterr().err
 
 
 def test_missing_cursor_stops(monkeypatch, capsys):
@@ -115,3 +115,45 @@ def test_area_and_query(monkeypatch):
     query = ["query", "--fields", '{"geoid":{"eq":"48113"}}', "--max-records", "2"]
     assert cli.main([*query, "--options", '{"limit":2}']) == 0
     assert len(seen) == 3
+
+
+def test_mid_paging_error_prints_partial(monkeypatch, capsys):
+    seen = []
+
+    def handle(request):
+        seen.append(request)
+        if len(seen) == 2:
+            return httpx.Response(500, text="boom")
+        return httpx.Response(
+            200, json={"parcels": {"type": "FeatureCollection", "features": feats(1, 10)}}
+        )
+
+    monkeypatch.setenv("REGRID_TOKEN", "secret")
+    monkeypatch.setattr(
+        cli, "RegridClient", lambda **kw: RegridClient(**kw, transport=httpx.MockTransport(handle))
+    )
+    code = cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}'])
+    out, err = capsys.readouterr()
+    assert code == 1
+    data = json.loads(out)
+    assert data["complete"] is False and data["pages"] == 1
+    assert [f["id"] for f in data["parcels"]["features"]] == [1, 10]
+    assert err.count("regrid: requests made:") == 1
+    assert err.rstrip().splitlines()[-1] == f"regrid: requests made: {len(seen)}"
+    assert "secret" not in err
+
+
+def test_cursor_not_advancing_stops(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 7), feats(2, 7), feats(3, 4)])
+    code = cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}'])
+    out, err = capsys.readouterr()
+    assert code == 0 and len(seen) == 2
+    assert "regrid: paging stopped: cursor did not advance" in err
+    assert json.loads(out)["complete"] is True
+
+
+def test_repeated_first_feature_stops(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 7), feats(1, 8), feats(3, 4)])
+    assert cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}']) == 0
+    assert len(seen) == 2
+    assert "cursor did not advance" in capsys.readouterr().err

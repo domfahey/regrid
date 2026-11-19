@@ -140,23 +140,31 @@ def _address_map(
                     if parcel_map.load_features(result):
                         notes.append("neighbours skipped: subject has no coordinates")
                 else:
-                    around = client.point(
-                        lat=point[0],
-                        lon=point[1],
-                        radius=100,
-                        limit=25,
-                        return_geometry=True,
-                        return_parcels=True,
-                        return_stacked=False,
-                        return_zoning=False,
-                        return_matched_buildings=False,
-                        return_matched_addresses=False,
-                        return_enhanced_ownership=False,
-                    )
-                    text = json.dumps(around, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
-                    with open(neighbours_path, "w" if replace else "x", encoding="utf-8") as handle:
-                        handle.write(text)
-                    neighbours_file = neighbours_path
+                    try:
+                        around = client.point(
+                            lat=point[0],
+                            lon=point[1],
+                            radius=100,
+                            limit=25,
+                            return_geometry=True,
+                            return_parcels=True,
+                            return_stacked=False,
+                            return_zoning=False,
+                            return_matched_buildings=False,
+                            return_matched_addresses=False,
+                            return_enhanced_ownership=False,
+                        )
+                    except RegridError:
+                        notes.append("neighbours skipped: request failed")
+                    else:
+                        text = (
+                            json.dumps(around, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+                        )
+                        mode = "w" if replace else "x"
+                        with open(neighbours_path, mode, encoding="utf-8") as handle:
+                            handle.write(text)
+                        neighbours_file = neighbours_path
+                        saved.append(neighbours_path)
         finally:
             sent.append(client.request_count)
     retrieved_at = args["retrieved_at"] or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -202,6 +210,8 @@ def _run_address_map(args: dict[str, Any]) -> int:
         print(f"regrid: {note}", file=sys.stderr)
     if message is not None and saved:
         print(f"regrid: response saved to {saved[0]}", file=sys.stderr)
+        if len(saved) > 1:
+            print(f"regrid: neighbours saved to {saved[1]}", file=sys.stderr)
     if message is not None:
         print(f"regrid: {message}", file=sys.stderr)
         return 1
@@ -213,7 +223,12 @@ class _PagingError(ValueError):
 
 
 def _paged_search(
-    client: RegridClient, command: str, args: dict[str, Any], options: dict[str, Any], total: int
+    client: RegridClient,
+    command: str,
+    args: dict[str, Any],
+    options: dict[str, Any],
+    total: int,
+    progress: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Follow the last feature's id as offset_id until total records, a short page or no cursor."""
     limit = options.get("limit")
@@ -228,23 +243,40 @@ def _paged_search(
     requests_cap = -(-total // limit)
     print(f"regrid: up to {requests_cap} requests for {total} records", file=sys.stderr)
     features: list[Any] = []
+    seen_ids: set[Any] = set()
     pages = 0
     cursor: Any = None
+    state = progress if progress is not None else {}
     while pages < requests_cap and len(features) < total:
         page_options = dict(options) if cursor is None else {**options, "offset_id": cursor}
         result = getattr(client, command)(**args, **page_options)
         pages += 1
         page = ((result.get("parcels") or {}).get("features")) or []
-        features.extend(page)
+        first = page[0].get("id") if page and isinstance(page[0], dict) else None
+        repeated = first is not None and first in seen_ids
+        if not repeated:
+            features.extend(page)
+        seen_ids.update(f.get("id") for f in page if isinstance(f, dict) and "id" in f)
+        state["features"], state["pages"] = features[:total], pages
+        if repeated:
+            print("regrid: paging stopped: cursor did not advance", file=sys.stderr)
+            break
         if len(page) < limit or len(features) >= total:
             break
         last = page[-1].get("id") if isinstance(page[-1], dict) else None
         if last is None:
             print("regrid: paging stopped: no cursor in response", file=sys.stderr)
             break
+        if last == cursor:
+            print("regrid: paging stopped: cursor did not advance", file=sys.stderr)
+            break
         cursor = last
-    collection = {"type": "FeatureCollection", "features": features[:total]}
-    return {"parcels": collection, "pages": pages}
+    return _paged_result(features[:total], pages, True)
+
+
+def _paged_result(features: list[Any], pages: int, complete: bool) -> dict[str, Any]:
+    collection = {"type": "FeatureCollection", "features": features}
+    return {"parcels": collection, "pages": pages, "complete": complete}
 
 
 def _freshness(args: dict[str, Any], sent: list[int]) -> None:
@@ -368,7 +400,7 @@ def _parser() -> argparse.ArgumentParser:
     freshness.add_argument("--refresh", action="store_true", help="Ignore the cache and refetch")
     address_map = commands.add_parser(
         "address-map",
-        help="Look up one address (one API request) and render it as an offline satellite map",
+        help="Look up one address (one API request; two with --neighbours) and render it as an offline satellite map",
         description="Make one address lookup, save the response, and render a satellite map.",
     )
     address_map.add_argument("address")
@@ -488,7 +520,9 @@ def _parser() -> argparse.ArgumentParser:
         if name == "client-token-typeahead":
             sub.add_argument("--exp", type=float, help="Token lifetime in seconds")
         if name == "usage":
-            sub.add_argument("--detailed", action="store_true")
+            sub.add_argument(
+                "--detailed", action="store_true", help="Include per-endpoint usage detail"
+            )
         if name == "report":
             for field in ("comment", "path", "ll-uuid"):
                 sub.add_argument("--" + field)
@@ -534,6 +568,7 @@ def main(argv: list[str] | None = None) -> int:
     output = args.pop("output", None)
     max_records = args.pop("max_records", None)
     count = 0
+    progress: dict[str, Any] = {}
     try:
         options = _object(args.pop("options", "{}"))
         for name in ("geojson", "fields", "details", "metadata"):
@@ -554,7 +589,7 @@ def main(argv: list[str] | None = None) -> int:
                 if max_records is None:
                     result = getattr(client, command)(**args, **options)
                 else:
-                    result = _paged_search(client, command, args, options, max_records)
+                    result = _paged_search(client, command, args, options, max_records, progress)
             finally:
                 count = client.request_count
         if output is not None:
@@ -568,6 +603,9 @@ def main(argv: list[str] | None = None) -> int:
             if isinstance(exc, (RegridError, _PagingError))
             else "Invalid input or output file"
         )
+        if isinstance(exc, RegridError) and progress.get("pages"):
+            partial = _paged_result(progress["features"], progress["pages"], False)
+            print(json.dumps(partial, indent=2, ensure_ascii=False, allow_nan=False))
         print(f"regrid: {message}", file=sys.stderr)
         print(f"regrid: requests made: {count}", file=sys.stderr)
         return 1

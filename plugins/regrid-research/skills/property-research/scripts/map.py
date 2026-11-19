@@ -644,6 +644,8 @@ def export(
     for target in targets:
         if not target.parent.is_dir():
             raise MapError("Output directory does not exist")
+        if target.resolve() == Path(response_path).resolve():
+            raise MapError("Output must not be the response file")
     try:
         document = json.loads(Path(response_path).read_text(encoding="utf-8"))
     except (ValueError, RecursionError) as exc:

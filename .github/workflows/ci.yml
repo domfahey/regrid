@@ -44,3 +44,5 @@ jobs:
           tests/test_skill_helper_sync.py
           tests/test_cli_offline.py
           tests/test_offline_fields.py
+          tests/test_offline_freshness.py
+          tests/test_cli_freshness.py

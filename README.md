@@ -101,13 +101,14 @@ Coverage includes every SDK and CLI module; XML output is written to ignored `co
 .venv/bin/regrid address-map "123 Main St, Dallas, TX" parcel.html   # one request, saves parcel.json
 .venv/bin/regrid address-map "123 Main St, Dallas, TX" parcel.html --neighbours   # opt-in: one extra request, up to 25 records
 .venv/bin/regrid point --lat 32.7767 --lon -96.7970 --options '{"limit":100}' --max-records 300   # bounded paging
+.venv/bin/regrid point --lat 32.7767 --lon -96.7970 --options '{"return_count":true}'   # count matches before pulling
 .venv/bin/regrid fields search owner          # offline field catalog, no request
 .venv/bin/regrid fields explain usedesc
 .venv/bin/regrid freshness --path /us/nj/camden   # county data dates from a cached /verse response
 .venv/bin/regrid export parcel.json --csv parcel.csv --geojson parcel.geojson   # offline export
 ```
 
-Every API command prints `regrid: requests made: N` to stderr (JSON on stdout is unchanged); SDK users can read `RegridClient.request_count`. `--max-records N` on `point`, `area` and `query` follows `offset_id` cursors for up to N records and requires `limit` in `--options`; the cursor field has not been verified against the live API. `address-map --neighbours` draws neighbouring outlines within 100 m, capped at 25 records. `regrid export RESPONSE` writes core columns (`--all-fields` appends the rest) and never overwrites without `--replace`.
+Every API command prints `regrid: requests made: N` to stderr (JSON on stdout is unchanged); SDK users can read `RegridClient.request_count`. `--max-records N` on `point`, `area` and `query` follows `offset_id` cursors for up to N records and requires `limit` in `--options`; the cursor field has not been verified against the live API. Output carries `"complete": true`; if a later page fails, the partial result is printed with `"complete": false` and the command exits 1. Paging also stops, with `regrid: paging stopped: cursor did not advance`, if the cursor repeats. `address-map --neighbours` draws neighbouring outlines within 100 m, capped at 25 records. `regrid export RESPONSE` writes core columns (`--all-fields` appends the rest) and never overwrites without `--replace`.
 
 `regrid map RESPONSE OUTPUT [--feature N] [--all-candidates] [--retrieved-at ISO] [--replace]` renders offline with no request. `regrid address-map ADDRESS OUTPUT [--path SCOPE] [--save-response FILE] [--retrieved-at ISO] [--replace]` makes one address request, prints `regrid: requests made: N` to stderr, and saves the response next to the page unless `--save-response` is given. Pages load Leaflet and Esri imagery in the viewer's browser.
 

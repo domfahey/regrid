@@ -273,14 +273,6 @@ def test_neighbours_path_colliding_with_response_refused(tmp_path, monkeypatch, 
     assert seen == [] and "different files" in capsys.readouterr().err
 
 
-def test_neighbours_failure_keeps_response_and_counts_two(tmp_path, monkeypatch, capsys):
-    seen = _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03}, neighbour_status=500)
-    assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 1
-    err = capsys.readouterr().err
-    assert len(seen) == 2 and "requests made: 2" in err and "response saved to" in err
-    assert (tmp_path / "m.json").exists() and not (tmp_path / "m.html").exists()
-
-
 def test_neighbours_without_parcels_makes_no_second_request(tmp_path, monkeypatch, capsys):
     seen = _install(
         monkeypatch, lambda request: httpx.Response(200, json={"parcels": {"features": []}})
@@ -290,3 +282,28 @@ def test_neighbours_without_parcels_makes_no_second_request(tmp_path, monkeypatc
     assert len(seen) == 1 and "requests made: 1" in err
     assert "Response contains no parcels" in err and "neighbours skipped" not in err
     assert not (tmp_path / "m.neighbours.json").exists()
+
+
+def test_neighbours_failure_still_renders_subject(tmp_path, monkeypatch, capsys):
+    seen = _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03}, neighbour_status=500)
+    out = tmp_path / "m.html"
+    assert cli.main(["address-map", "x", str(out), "--neighbours"]) == 0
+    captured = capsys.readouterr()
+    assert len(seen) == 2 and "requests made: 2" in captured.err
+    assert "regrid: neighbours skipped: request failed" in captured.err
+    assert out.exists() and not (tmp_path / "m.neighbours.json").exists()
+    assert "neighbours_response" not in json.loads(captured.out)
+    assert "secret" not in captured.err
+
+
+def test_render_failure_reports_neighbours_file(tmp_path, monkeypatch, capsys):
+    _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03})
+
+    def boom(*a, **k):
+        raise regrid.offline.map.MapError("render exploded")
+
+    monkeypatch.setattr(cli.parcel_map, "render", boom)
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 1
+    err = capsys.readouterr().err
+    assert f"response saved to {tmp_path / 'm.json'}" in err
+    assert f"neighbours saved to {tmp_path / 'm.neighbours.json'}" in err

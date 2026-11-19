@@ -822,3 +822,16 @@ def test_export_non_finite_reports_one_line_and_writes_nothing(tmp_path, capsys)
     err = capsys.readouterr().err
     assert err.startswith("error: ") and err.count("\n") == 1 and "Traceback" not in err
     assert not gj.exists() and not csv_out.exists()
+
+
+@pytest.mark.parametrize("replace", [False, True])
+def test_export_refuses_output_equal_to_response(tmp_path, replace):
+    response = write_response(tmp_path / "r.json", good_feature())
+    before = response.read_text()
+    alias = tmp_path / "sub" / ".." / "r.json"
+    (tmp_path / "sub").mkdir()
+    with pytest.raises(MapError, match="response"):
+        parcel_map.export(response, csv_path=alias, replace=replace)
+    with pytest.raises(MapError, match="response"):
+        parcel_map.export(response, geojson_path=response, replace=replace)
+    assert response.read_text() == before

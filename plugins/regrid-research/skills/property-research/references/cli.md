@@ -22,7 +22,7 @@ request count is on stderr. Apply the same scope, limit and premium rules as ove
 | `/parcels/{ll_uuid}` | `regrid parcel LL_UUID` |
 | `/parcels/path` | `regrid parcel-path PATH` |
 | `/parcels/typeahead` | `regrid typeahead QUERY` (Enterprise) |
-| `/verse` | `regrid freshness --path /us/<st>/<county>` (or raw `regrid verse`) |
+| `/verse` | `regrid freshness --path /us/<st>/<county>` |
 | `/schemas/parcel`, `/schemas/building`, `/schemas/address`, `/schemas/enhanced_ownership`, `/schemas/zoning` | `regrid schema NAME` |
 | `/usage/detailed` | `regrid usage --detailed` |
 | `/usage` | `regrid usage` |
@@ -65,7 +65,8 @@ on Windows) and reused unless `--refresh` is given or no cache exists.
 ## Ledger
 
 Every CLI command that calls the API ends stderr with `regrid: requests made: N`
-(`address-map` prints it before its error or saved lines). The CLI is ledger-unaware:
+(`address-map` and `freshness` print it before their error line, so parse it by its
+`regrid: requests made:` prefix, not by position). The CLI is ledger-unaware:
 reserve before the command, complete from that line, and treat an unreadable line as
 `uncertain`; do not retry.
 

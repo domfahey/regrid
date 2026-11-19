@@ -25,7 +25,7 @@ relative:
 | 5 | Ship the US parcel field catalog | Medium | S | The generator already exists; explains fields at no request cost |
 | 6 | Refresh by Regrid path | Medium | S | Cheap, exact re-fetch of a saved property |
 | 7 | Windows CI job | Medium | S | Guards the bundled helpers on a platform only simulated so far |
-| 8 | County freshness (`/verse`) | Medium | M | Adds trust in the data date, but needs caching (one call returns all counties) (**decision**: stale threshold) |
+| 8 | County freshness (`/verse`) | Medium | M | Adds trust in the data date, but needs caching (one call returns all counties) (dates only; no stale label) |
 | 9 | Address suggestions then fetch by path | Medium | M | Helps mistyped addresses, but Enterprise-only, so many tokens can't use it |
 | 10 | Neighbouring parcel outlines | Medium | M | Useful map context, but costs extra records (**decision**: radius and cap) |
 | 11 | Count before pulling (`return_count`) | Low | S | Matters for open-ended searches, not single-address lookups |
@@ -57,11 +57,10 @@ Suggested batches:
 ## New lookups (MCP and CLI both offer these; the skill does not use them)
 
 - [x] **County freshness (`/verse`)**:
-  - Report when Regrid last did a full pull for the parcel's county, and flag it when stale.
+  - Report when Regrid last did a full pull for the parcel's county, and report the dates only (never label a county stale).
   - One request returns every county, so save the response and reuse it within a task
     or across checkpoints instead of calling it for each property.
   - Add it to `endpoints.json` and to the endpoint table in `mcp-tools.md`.
-  - **Decision:** how many days old counts as stale.
 - [x] **Address suggestions (`/parcels/typeahead`) then fetch by path (`/parcels/path`)**:
   - Use when an address is ambiguous or mistyped, before spending records on a lookup.
   - Typeahead is a Regrid Enterprise product (trial tokens cover only 7 counties), so
@@ -71,7 +70,7 @@ Suggested batches:
 - [x] **Refresh by Regrid path (`/parcels/path`)**: re-fetch a saved result by its
   `path` when the user asks to refresh or the result is shown to be stale. Wire it
   into `references/batch.md` resume rules.
-- [ ] **Field definitions (`/schemas/*`)**:
+- [x] **Field definitions (`/schemas/*`)**:
   - Explain what returned fields and codes mean (`usedesc`, zoning, building, address,
     enhanced ownership).
   - No token is needed, but through MCP each call still counts as a request, so
@@ -85,12 +84,13 @@ Suggested batches:
     and `return_matched_addresses` are worth requesting, and that they need user
     authorization.
   - Enhanced ownership ties into the existing recorded-versus-beneficial-owner rules.
-- [ ] **Count before pulling (`return_count`)**: for open-ended owner, area, point and
+- [x] **Count before pulling (`return_count`)**: for open-ended owner, area, point and
   query searches, count matches first so a record budget can be agreed. The count
   call still counts against the request budget.
 - [x] **Paging (`offset_id`)** (implemented as `--max-records`; the cursor field is unverified live, awaiting user: not run): page through results within an agreed record budget,
-  carrying the paging position through checkpoints.
-- [ ] **Detailed usage (`/usage/detailed`)**: consider it for setup or "how many
+  Paging positions are NOT carried through checkpoints; a resumed open-ended search
+  needs fresh authorization.
+- [x] **Detailed usage (`/usage/detailed`)**: consider it for setup or "how many
   lookups do I have left" questions. Never request per-token breakdowns.
 
 ## CLI and repo assets
