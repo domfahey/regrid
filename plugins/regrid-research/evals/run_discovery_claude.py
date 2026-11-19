@@ -74,6 +74,25 @@ def parse_trace(raw: str) -> tuple[list[dict[str, Any]], int]:
     return events, invalid
 
 
+AUTH_TERMS = (
+    "oauth token has expired",
+    "oauth session",
+    "failed to refresh",
+    "authentication_error",
+    "not logged in",
+    "please run /login",
+)
+
+
+def is_error_event(event: dict[str, Any]) -> bool:
+    kind, subtype = event.get("type"), str(event.get("subtype") or "")
+    if kind == "result":
+        return bool(event.get("is_error")) or subtype != "success"
+    if kind == "error":
+        return True
+    return kind == "system" and ("error" in event or "error" in subtype)
+
+
 def run_trial(
     cli: str,
     model: str,
@@ -135,17 +154,13 @@ def run_trial(
             and not invalid
         ):
             status = "completed"
-        auth_blocked = any(
-            term in (raw + stderr).lower()
-            for term in (
-                "oauth token has expired",
-                "oauth session",
-                "failed to refresh",
-                "authentication_error",
-                "not logged in",
-                "please run /login",
+        auth_blocked = False
+        if status != "completed":
+            # Scan only places failures are reported, never assistant text or tool results.
+            error_text = stderr + "".join(
+                json.dumps(event) for event in events if is_error_event(event)
             )
-        )
+            auth_blocked = any(term in error_text.lower() for term in AUTH_TERMS)
         if auth_blocked or (not models and status != "timed_out"):
             status = "blocked"
         report = {

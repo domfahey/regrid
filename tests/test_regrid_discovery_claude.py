@@ -82,6 +82,80 @@ def test_auth_failure_stops_remaining_runs(tmp_path, monkeypatch):
     assert all(item["status"] == "not_run" for item in report["runs"][1:])
 
 
+def auth_phrase_trace():
+    phrases = "You are not logged in. authentication_error: please run /login"
+    return "\n".join(
+        json.dumps(item)
+        for item in [
+            {
+                "type": "assistant",
+                "message": {
+                    "model": "claude-test-20261028",
+                    "content": [{"type": "text", "text": phrases}],
+                },
+            },
+            {
+                "type": "user",
+                "message": {
+                    "content": [
+                        {"type": "tool_result", "content": "OAuth token has expired " + phrases}
+                    ]
+                },
+            },
+            {"type": "result", "subtype": "success", "is_error": False, "result": phrases},
+        ]
+    )
+
+
+def test_successful_trial_mentioning_auth_phrases_stays_completed(tmp_path, monkeypatch):
+    def fake_run(command, **kwargs):
+        return SimpleNamespace(stdout=auth_phrase_trace(), stderr="", returncode=0)
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    report = runner.run_trial(
+        "claude", "haiku", "checkpoint-correction", "skill", tmp_path, "2.test", 1, 0.25
+    )
+    assert report["status"] == "completed"
+    assert report["auth_blocked"] is False
+
+
+def test_suite_continues_after_successful_trial_mentioning_auth_phrases(tmp_path, monkeypatch):
+    def fake_run(command, **kwargs):
+        if command[-1] == "--version":
+            return SimpleNamespace(stdout="2.test", returncode=0)
+        return SimpleNamespace(stdout=auth_phrase_trace(), stderr="", returncode=0)
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    report = runner.run_suite(tmp_path / "results")
+    assert len(report["runs"]) == 24
+    assert all(item["status"] == "completed" for item in report["runs"])
+
+
+def test_error_result_event_auth_failure_is_blocked(tmp_path, monkeypatch):
+    trace = "\n".join(
+        json.dumps(item)
+        for item in [
+            {"type": "assistant", "message": {"model": "claude-test-20261028", "content": []}},
+            {
+                "type": "result",
+                "subtype": "error_during_execution",
+                "is_error": True,
+                "result": "Not logged in - Please run /login",
+            },
+        ]
+    )
+
+    def fake_run(command, **kwargs):
+        return SimpleNamespace(stdout=trace, stderr="", returncode=1)
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    report = runner.run_trial(
+        "claude", "haiku", "checkpoint-correction", "skill", tmp_path, "2.test", 1, 0.25
+    )
+    assert report["status"] == "blocked"
+    assert report["auth_blocked"] is True
+
+
 def test_timeout_is_not_success(tmp_path, monkeypatch):
     def fake_run(command, **kwargs):
         raise subprocess.TimeoutExpired(command, 1, output=b'{"type":"system"}\n')

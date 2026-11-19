@@ -1,6 +1,7 @@
 """Strict, credential-safe validation for transport and tile configuration."""
 
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
@@ -34,6 +35,8 @@ class ClientSettings(_StrictModel):
             url = httpx.URL(value)
         except httpx.InvalidURL:
             raise ValueError("Invalid service URL") from None
+        # httpx reports bare "?", "#" and "user:@" delimiters as empty, so also check the raw text
+        # and authority to keep endpoint paths from landing in the query or fragment.
         if (
             url.scheme != "https"
             or not url.host
@@ -41,6 +44,9 @@ class ClientSettings(_StrictModel):
             or url.fragment
             or url.username
             or url.password
+            or any(character in value for character in "?#")
+            or any(character.isspace() for character in value)
+            or "@" in urlsplit(value).netloc
         ):
             raise ValueError("Service URLs must be HTTPS without credentials, queries or fragments")
         return value.rstrip("/")

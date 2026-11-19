@@ -455,6 +455,7 @@ def reserve_attempt(
 ) -> Document:
     """Reserve before dispatch. Persist this copy before a call when checkpoints are requested."""
     validate(document)
+    _require(isinstance(authorized_retry, bool), "Authorized retry flag must be a boolean")
     _require(_integer(record_limit), "Invalid record limit")
     _require(kind in ("lookup", "diagnostic"), "Invalid attempt kind")
     _require(
@@ -563,7 +564,8 @@ def save_checkpoint(
     document: Document, path: Path, *, requested: bool = False, replace: bool = False
 ) -> None:
     """Write atomically only on explicit request; no implicit overwrite or directory creation."""
-    _require(requested, "Checkpoint must be explicitly requested")
+    _require(requested is True, "Checkpoint must be explicitly requested")
+    _require(isinstance(replace, bool), "Checkpoint replace flag must be a boolean")
     validate(document)
     data = json.dumps(document, indent=2, allow_nan=False) + "\n"
     path = Path(path)

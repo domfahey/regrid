@@ -44,11 +44,21 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 
 - Restrict automatic parcel-search limits to parcel routes so public address-schema requests receive no search parameters.
 - Reject non-finite upstream JSON numbers before serialization can silently convert them to null.
+- `TypedRegridClient.grid()` accepts the `TileJSON` model returned by `TypedRegridClient.tilejson()` as `metadata`.
+- `query(..., country="US", validate_fields=True)` no longer fails; country case is normalized before catalog validation.
+- `ll_updated_at` validation behaves the same on Python 3.10 as on later versions and accepts lowercase `z`, any fractional-second precision, and `+HH`/`+HHMM` offsets. Timestamps without seconds are rejected.
+- The CLI treats an empty or whitespace-only `REGRID_TOKEN` as unset, so public commands work and authenticated commands report the missing-token error. Surrounding whitespace is trimmed from the token.
+- UTFGrid discovery falls back to `grids` when TileJSON contains `"grid": null`.
+- Reject a `lat` or `lon` supplied without the other on point searches, including when GeoJSON is given, and whitespace-only `path` options on address, APN, owner, and query searches.
+- Reject service URLs containing `?`, `#`, whitespace, or userinfo delimiters, which previously moved endpoint paths into the query string or fragment.
+- Regrid Research workflow helper requires real booleans for `requested`, `replace`, and `authorized_retry`; truthy non-boolean values such as `"false"` no longer write or replace checkpoints or authorize retries.
+- The discovery evaluation runner no longer marks a completed trial as blocked when its output merely mentions an authentication phrase; authentication failures are detected from stderr and error events only.
 
 ### Security
 
 - Store account tokens as `SecretStr` and mask temporary-token models unless explicitly exported.
 - Sanitize request and response-validation failures without retaining input-bearing Pydantic exceptions.
+- Transport, JSON-decode, and JSON/GeoJSON input errors no longer retain the original exception as `__context__`, which could hold a token-bearing URL, the response body, or raw input.
 - Reject unsafe UTFGrid URLs and replace metadata credentials with the configured client token.
 - Keep local environment files and private keys out of Git. The live runner suppresses HTTP logging and prints no credentials, property details, response bodies, or exception text.
 

@@ -151,3 +151,25 @@ def test_network_error_traceback_does_not_disclose_token(exception_type):
             client.address("123 Main St")
     rendered = "".join(traceback.format_exception(caught.value))
     assert TOKEN not in rendered
+
+
+def test_transport_error_does_not_retain_token_bearing_context():
+    def handler(request):
+        raise httpx.ConnectError("boom", request=request)
+
+    with client_for(handler) as client:
+        with pytest.raises(RegridError) as excinfo:
+            client.address("1 Main St")
+    assert excinfo.value.__context__ is None
+    assert excinfo.value.__cause__ is None
+
+
+def test_decode_error_does_not_retain_response_body_context():
+    def handler(request):
+        return httpx.Response(200, content=b"not json SECRET-BODY")
+
+    with client_for(handler) as client:
+        with pytest.raises(RegridDecodeError) as excinfo:
+            client.address("1 Main St")
+    assert excinfo.value.__context__ is None
+    assert excinfo.value.__cause__ is None

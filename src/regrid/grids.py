@@ -32,7 +32,9 @@ class _GridClient(Protocol):
 
 def _template(metadata: Mapping[str, Any]) -> str:
     """Select one advertised endpoint without guessing a server path."""
-    value = metadata.get("grid", metadata.get("grids"))
+    value = metadata.get("grid")
+    if value is None:
+        value = metadata.get("grids")
     if isinstance(value, list):
         if not value or not all(isinstance(item, str) and item.strip() for item in value):
             raise ValueError("TileJSON must advertise a UTFGrid endpoint")

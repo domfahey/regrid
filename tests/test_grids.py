@@ -158,3 +158,31 @@ def test_grid_transport_errors_are_safe_and_not_retried(response, error):
             fetch_grid(client, 10, 0, 0, metadata={"grid": "/grid/{z}/{x}/{y}"})
     assert len(seen) == 1
     assert TOKEN not in str(caught.value)
+
+
+def test_null_grid_falls_back_to_grids_advertised_by_tilejson():
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        assert request.url.path == "/utf/10/0/1.json"
+        return httpx.Response(200, json=GRID)
+
+    metadata = {
+        "grid": None,
+        "grids": ["https://tiles.regrid.com/utf/{z}/{x}/{y}.json"],
+    }
+    with RegridClient(TOKEN, transport=httpx.MockTransport(handler)) as client:
+        assert fetch_grid(client, 10, 0, 1, metadata=metadata) == GRID
+    assert len(seen) == 1
+
+
+@pytest.mark.parametrize("grid", ["", " ", 42, [], [""]])
+def test_explicit_invalid_grid_does_not_fall_back_to_grids(grid):
+    def handler(request):
+        pytest.fail("Invalid explicit grid fell back to grids")
+
+    metadata = {"grid": grid, "grids": ["https://tiles.regrid.com/utf/{z}/{x}/{y}.json"]}
+    with RegridClient(TOKEN, transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(ValueError, match="TileJSON must advertise a UTFGrid endpoint"):
+            fetch_grid(client, 10, 0, 1, metadata=metadata)

@@ -139,9 +139,7 @@ def _parser() -> argparse.ArgumentParser:
             sub.add_argument("--detailed", action="store_true")
         if name == "report":
             for field in ("comment", "path", "ll-uuid"):
-                sub.add_argument(
-                    "--" + field, help=("JSON object or @file" if field == "details" else None)
-                )
+                sub.add_argument("--" + field)
             details = sub.add_mutually_exclusive_group()
             details.add_argument("--details", help="Details JSON object or @file")
             details.add_argument("--details-text", help="Plain text report details")
@@ -181,7 +179,7 @@ def main(argv: list[str] | None = None) -> int:
         if options.keys() & args.keys():
             raise ValueError("--options conflicts with an explicit command argument")
         with RegridClient(
-            token=os.environ.get("REGRID_TOKEN"),
+            token=(os.environ.get("REGRID_TOKEN") or "").strip() or None,
             timeout=timeout,
             base_url=base_url,
             tiles_base_url=tiles_base_url,

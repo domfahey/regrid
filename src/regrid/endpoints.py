@@ -55,15 +55,21 @@ def _json(value: Any) -> str:
     try:
         return json.dumps(value, separators=(",", ":"), allow_nan=False)
     except (TypeError, ValueError, OverflowError):
-        raise ValueError("Invalid Regrid JSON request") from None
+        pass
+    # Raise outside the except block: __context__ would retain the raw input.
+    raise ValueError("Invalid Regrid JSON request")
 
 
 def _geometry(value: Mapping[str, Any] | str) -> dict[str, Any]:
     if isinstance(value, str):
+        valid = True
         try:
             value = json.loads(value)
         except (ValueError, TypeError):
-            raise ValueError("Invalid Regrid GeoJSON request") from None
+            valid = False
+        # Raise outside the except block: __context__ would retain the raw input.
+        if not valid:
+            raise ValueError("Invalid Regrid GeoJSON request")
     if isinstance(value, Mapping):
         value = dict(value)
     return safe_validate(GeometryInput, {"geojson": value}).geojson
@@ -219,7 +225,7 @@ class EndpointsMixin:
 
             validate_catalog_filters(
                 validated,
-                country=country,
+                country="ca" if prefix else "us",
                 allow_unknown=allow_unknown_fields,
                 paging=params.get("offset_id") is not None,
             )

@@ -114,3 +114,32 @@ def test_generated_attributes_match_catalog_without_runtime_model_construction()
         check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "2026-07-09T13:22:32Z",
+        "2026-07-09T13:22:32z",
+        "2026-07-09T13:22:32.1Z",
+        "2026-07-09T13:22:32.12Z",
+        "2026-07-09T13:22:32.123Z",
+        "2026-07-09T13:22:32.1234Z",
+        "2026-07-09T13:22:32.123456Z",
+        "2026-07-09 13:22:32+00",
+        "2026-07-09T13:22:32+0000",
+        "2026-07-09T13:22:32+00:00",
+        "2026-07-09T13:22:32-05:00",
+    ],
+)
+def test_ll_updated_at_accepts_timezone_aware_timestamps_unchanged(value):
+    assert ParcelFields.model_validate({"ll_updated_at": value}).ll_updated_at == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["2026-07-09T13:22:32", "2026-07-09", "not-a-timestamp", ""],
+)
+def test_ll_updated_at_rejects_naive_date_only_and_garbage(value):
+    with pytest.raises(ValidationError):
+        ParcelFields.model_validate({"ll_updated_at": value})
