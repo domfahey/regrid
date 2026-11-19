@@ -2,9 +2,23 @@
 
 User-visible changes are grouped by release using the categories from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version numbering follows [Semantic Versioning](https://semver.org/); the current `0.x` API remains under development.
 
-No releases have been tagged in this repository. The Python SDK/CLI metadata version is `0.3.0`; the independently versioned Regrid Research plugin is `0.8.0`. These metadata versions do not establish published releases. Keep pending changes under Unreleased until an actual release is prepared.
+The Python SDK/CLI and the Regrid Research plugin are versioned independently. The first tagged releases are SDK `0.3.0` (`sdk-v0.3.0`) and Regrid Research `0.8.0` (`regrid-research-v0.8.0`). Keep pending changes under Unreleased until the next release is prepared.
 
 ## Unreleased
+
+No changes yet.
+
+## [SDK 0.3.0][sdk-v0.3.0] and [Regrid Research 0.8.0][regrid-research-v0.8.0] - 2026-11-19
+
+First tagged release of both components. It contains every change made before tagging, so earlier plugin versions (0.2.0–0.7.0) and SDK versions (0.1.0–0.2.0) appear as entries below rather than separate releases. Release assets:
+- the wheel and source package (SDK)
+- the Cowork, Claude Code and standalone-skill archives (plugin)
+
+Unverified at release:
+- the live geometry check
+- the Claude Code, Claude apps and Cowork map host checks
+- the live paging cursor
+- model and Cowork acceptance evaluations
 
 ### Added
 
@@ -139,3 +153,6 @@ SDK/CLI and plugin versions are independent. At release time, move only the rele
 - For a plugin release, update `plugins/regrid-research/.claude-plugin/plugin.json` and the documented archive names. Run `.venv/bin/python scripts/build_claude_plugins.py` to rebuild the Cowork, Claude Code, and standalone skill ZIPs in ignored `dist/`; all three archive versions derive from the plugin manifest. Validate the rebuilt artifacts and record model/Cowork acceptance separately from structural checks.
 
 Describe user-facing changes rather than copying commit logs. Add repository comparison links when a remote and release tags exist; do not invent release dates or links.
+
+[sdk-v0.3.0]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.3.0
+[regrid-research-v0.8.0]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.8.0
