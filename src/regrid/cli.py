@@ -432,8 +432,11 @@ def _paged_search(
     if "offset_id" in options:
         raise _PagingError("--max-records conflicts with offset_id")
     _validate_paging(client, command, args, options)
-    # offset_id is exclusive (verified live): each page starts after the cursor, so every
-    # full page adds limit new records and the worst case is ceil(total / limit) requests.
+    # Verified live: without offset_id, point and area return page 1 in spatial (not id) order,
+    # while any request with offset_id returns features with id > offset_id in ascending id
+    # order (query is id-ordered either way). So page 1 starts at offset_id=0: every page is
+    # id-ordered, the cursor (last id) skips nothing, and each full page adds limit new records,
+    # so the worst case is ceil(total / limit) requests.
     requests_cap = -(-total // limit)
     print(f"regrid: up to {requests_cap} requests for {total} records", file=sys.stderr)
     features: list[Any] = []
@@ -441,14 +444,13 @@ def _paged_search(
     merged: dict[str, Any] = {}
     noted: set[str] = set()
     pages = 0
-    cursor: Any = None
+    cursor: Any = 0
     complete = False
     state = progress if progress is not None else {}
     while pages < requests_cap and len(features) < total:
         remaining = total - len(features)
         page_options = {**options, "limit": min(limit, remaining)}
-        if cursor is not None:
-            page_options["offset_id"] = cursor
+        page_options["offset_id"] = cursor
         result = getattr(client, command)(**args, **page_options)
         page = _parse_page(result)
         pages += 1
@@ -465,8 +467,13 @@ def _paged_search(
                 seen_ids.add(identity)
             new.append(feature)
         features.extend(new)
+        ordered = _in_cursor_order(page, cursor)
         _drop_trimmed_siblings(merged, features[:total], features[total:])
         state.update(merged=merged, features=features[:total], pages=pages)
+        if not ordered:
+            # Never skip silently: with offset_id the API promises ascending ids above it.
+            print("regrid: paging stopped: results not in cursor order", file=sys.stderr)
+            break
         if not new and page:
             # Safety net: a page of only already-seen records would loop forever.
             print("regrid: paging stopped: cursor did not advance", file=sys.stderr)
@@ -478,11 +485,22 @@ def _paged_search(
         if last is None:
             print("regrid: paging stopped: no cursor in response", file=sys.stderr)
             break
-        if last == cursor:
+        if last == cursor:  # unreachable once ordered; kept as a loop guard
             print("regrid: paging stopped: cursor did not advance", file=sys.stderr)
             break
         cursor = last
-    return _paged_result(merged, features[:total], pages, complete or len(features) >= total)
+    return _paged_result(merged, features[:total], pages, complete)
+
+
+def _in_cursor_order(page: list[Any], cursor: int) -> bool:
+    """True unless numeric ids are not strictly ascending or not all above the cursor."""
+    ids = [_cursor(feature) for feature in page]
+    numbers = [cursor]
+    for value in ids:
+        if value is None:
+            return True
+        numbers.append(value)
+    return all(a < b for a, b in zip(numbers, numbers[1:]))
 
 
 def _paged_result(

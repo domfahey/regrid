@@ -114,7 +114,7 @@ class Server:
                 200, json={"parcels": {"type": "FeatureCollection", "features": [SUBJECT]}}
             )
         if path == "/parcels/point" and params.get("radius") == "50":
-            if params.get("offset_id") is None:
+            if params.get("offset_id") == "0":
                 return httpx.Response(200, json=collection(5, 7))
             return httpx.Response(200, json=collection(9, 11))
         if path == "/parcels/typeahead":
@@ -201,14 +201,14 @@ def test_happy_path(capsys):
     ]
     assert point_gets[0].url.params["radius"] == "1"
     assert point_gets[0].url.params["return_geometry"] == "false"
-    assert point_gets[1].url.params["limit"] == "2" and "offset_id" not in point_gets[1].url.params
+    assert point_gets[1].url.params["limit"] == "2" and point_gets[1].url.params["offset_id"] == "0"
     assert point_gets[2].url.params["offset_id"] == "7"
     detailed = calls[("GET", "/usage/detailed")].url.params
     assert detailed["begin_date"].endswith("-01")
     assert {
         r.url.params.get("token") for r in server.requests if r.url.host != "tiles.regrid.com"
     } == {TOKEN, live_full.BAD_TOKEN, None}
-    assert "NOTE paging: exclusive: true" in output
+    assert "NOTE paging: ordered: true" in output
     assert "NOTE apn: match: true" in output
     assert "NOTE verse: subject county present: true" in output
     assert "PASS bad token: rejected with HTTP 401" in output
@@ -312,7 +312,7 @@ def test_request_cap(cap, capsys):
 @pytest.mark.parametrize("repeat", [True, False])
 def test_cursor_overlap(repeat, capsys):
     def page(request):
-        if request.url.params.get("offset_id") is None:
+        if request.url.params.get("offset_id") == "0":
             return httpx.Response(200, json=collection(5, 7))
         return httpx.Response(200, json=collection(*((7, 9) if repeat else (6, 9))))
 
@@ -331,8 +331,23 @@ def test_cursor_overlap(repeat, capsys):
         assert status == 1
         assert "FAIL paging: cursor record repeated; pager assumptions broke" in output
     else:
-        assert status == 0
-        assert "NOTE paging: exclusive: false" in output
+        assert status == 1
+        assert any(line.startswith("FAIL paging: pages not in ascending") for line in output)
+
+
+def test_unordered_pages_fail(capsys):
+    server = Server()
+    original = server.respond
+
+    def respond(request, route):
+        if route[1] == "/parcels/point" and request.url.params.get("radius") == "50":
+            ids = (7, 5) if request.url.params.get("offset_id") == "0" else (9, 11)
+            return httpx.Response(200, json=collection(*ids))
+        return original(request, route)
+
+    server.respond = respond
+    assert run_full(server) == 1
+    assert "FAIL paging: pages not in ascending id order from offset_id=0" in lines(capsys)
 
 
 def test_single_record_page_and_empty_second_page(capsys):
@@ -341,7 +356,7 @@ def test_single_record_page_and_empty_second_page(capsys):
 
     def respond(request, route):
         if route[1] == "/parcels/point" and request.url.params.get("radius") == "50":
-            if request.url.params.get("offset_id") is None:
+            if request.url.params.get("offset_id") == "0":
                 return httpx.Response(200, json=collection("7"))
             return httpx.Response(200, json=collection())
         return original(request, route)

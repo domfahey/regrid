@@ -412,26 +412,31 @@ class Runner:
 
         def check() -> Outcome:
             options: dict[str, Any] = {"radius": 50, "limit": 2, "return_geometry": False, **FLAGS}
-            first = _features(self.client.point(subject.lat, subject.lon, **options))
+            first = _features(self.client.point(subject.lat, subject.lon, offset_id=0, **options))
             ids = [_cursor(feature.get("id")) for feature in first]
             if not first or None in ids:
                 raise CheckFailed("page 1 has no usable cursor")
-            last = ids[-1]
-            assert last is not None
+            usable = [i for i in ids if i is not None]
+            last = usable[-1]
             second = _features(
                 self.client.point(subject.lat, subject.lon, offset_id=last, **options)
             )
             second_ids = [_cursor(feature.get("id")) for feature in second]
             if None in second_ids:
                 raise CheckFailed("page 2 has unusable ids")
-            overlap = set(ids) & set(second_ids)
-            if overlap and len(first) == 2 and second_ids[0] == last:
+            later = [i for i in second_ids if i is not None]
+            if set(usable) & set(later):
                 raise CheckFailed("cursor record repeated; pager assumptions broke")
-            advanced = not second_ids or (second_ids[0] or 0) > last
-            exclusive = not overlap and advanced
+            ordered = (
+                usable == sorted(set(usable))
+                and later == sorted(set(later))
+                and all(i > max(usable) for i in later)
+            )
+            if not ordered:
+                raise CheckFailed("pages not in ascending id order from offset_id=0")
             return Outcome(
                 f"page 1: {len(first)}, page 2: {len(second)}",
-                [f"exclusive: {str(exclusive).lower()}"],
+                [f"ordered: {str(ordered).lower()}"],
             )
 
         self.step("paging", 2, check)

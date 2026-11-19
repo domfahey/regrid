@@ -40,7 +40,7 @@ def test_normal_paging(monkeypatch, capsys):
     assert [f["id"] for f in data["parcels"]["features"]] == [1, 10, 11, 20, 21]
     assert data["parcels"]["type"] == "FeatureCollection"
     assert len(seen) == 3
-    assert "offset_id" not in seen[0].url.params
+    assert seen[0].url.params["offset_id"] == "0"
     assert seen[1].url.params["offset_id"] == "10"
     assert seen[2].url.params["offset_id"] == "20"
     assert [r.url.params["limit"] for r in seen] == ["2", "2", "1"]
@@ -71,7 +71,7 @@ def test_repeated_cursor_stops_at_k(monkeypatch, capsys):
     data = json.loads(out)
     assert [f["id"] for f in data["parcels"]["features"]] == [1, 7]
     assert data["complete"] is False and data["pages"] == 2
-    assert "regrid: paging stopped: cursor did not advance" in err
+    assert "regrid: paging stopped: results not in cursor order" in err
     assert err.splitlines()[-1] == "regrid: requests made: 2"
 
 
@@ -163,7 +163,7 @@ def test_area_and_query(monkeypatch, capsys):
     assert len(seen) == 3
     assert [r.url.path for r in seen] == ["/api/v2/parcels/area"] * 2 + ["/api/v2/parcels/query"]
     assert [r.url.params["limit"] for r in seen] == ["2", "2", "2"]
-    assert [r.url.params.get("offset_id") for r in seen] == [None, "2", None]
+    assert [r.url.params.get("offset_id") for r in seen] == ["0", "2", "0"]
     assert seen[0].url.params["geojson"] == geo
     assert seen[2].url.params["fields[geoid][eq]"] == "48113"
 
@@ -199,7 +199,7 @@ def test_cursor_not_advancing_stops(monkeypatch, capsys):
     code = cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}'])
     out, err = capsys.readouterr()
     assert code == 0 and len(seen) == 2
-    assert "regrid: paging stopped: cursor did not advance" in err
+    assert "regrid: paging stopped: results not in cursor order" in err
     assert json.loads(out)["complete"] is False
 
 
@@ -207,18 +207,20 @@ def test_page_adding_nothing_new_stops_incomplete(monkeypatch, capsys):
     seen = install(monkeypatch, [feats(1, 7), feats(1, 7), feats(3, 4)])
     assert cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}']) == 0
     out, err = capsys.readouterr()
-    assert len(seen) == 2 and "cursor did not advance" in err
+    assert len(seen) == 2 and "results not in cursor order" in err
     data = json.loads(out)
     assert data["complete"] is False and [f["id"] for f in data["parcels"]["features"]] == [1, 7]
 
 
-def test_inclusive_offset_page_is_deduplicated(monkeypatch, capsys):
-    """Safety net for a server that (unexpectedly) repeats the cursor record."""
+def test_inclusive_offset_page_is_deduplicated_and_flagged(monkeypatch, capsys):
+    """A server that (unexpectedly) repeats the cursor record is de-duplicated and flagged."""
     seen = install(monkeypatch, [feats(1, 10), feats(10, 11)])
     assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
-    data = json.loads(capsys.readouterr().out)
+    out, err = capsys.readouterr()
+    data = json.loads(out)
     assert [f["id"] for f in data["parcels"]["features"]] == [1, 10, 11]
-    assert data["complete"] is True and len(seen) == 2
+    assert data["complete"] is False and len(seen) == 2
+    assert "regrid: paging stopped: results not in cursor order" in err
 
 
 def test_short_page_of_only_repeats_stops_incomplete(monkeypatch, capsys):
@@ -228,7 +230,7 @@ def test_short_page_of_only_repeats_stops_incomplete(monkeypatch, capsys):
     data = json.loads(out)
     assert [f["id"] for f in data["parcels"]["features"]] == [1, 2]
     assert data["complete"] is False and len(seen) == 2
-    assert "cursor did not advance" in err
+    assert "results not in cursor order" in err
 
 
 def test_features_without_id_are_kept(monkeypatch, capsys):
@@ -411,7 +413,60 @@ def test_exclusive_cursor_reaches_exact_total(monkeypatch, capsys):
     assert data["complete"] is True
     assert seen[0].url.params["limit"] == "2"
     assert [r.url.params["limit"] for r in seen] == ["2", "2", "1"]
-    assert [r.url.params["offset_id"] for r in seen[1:]] == ["2", "4"]
+    assert [r.url.params["offset_id"] for r in seen] == ["0", "2", "4"]
+
+
+def _spatial_server(ids, order_after=None):
+    """Fake API: no offset_id => descending ids (spatial); offset_id => ascending ids > it."""
+
+    def handle(request):
+        start = request.url.params.get("offset_id")
+        limit = int(request.url.params["limit"])
+        if start is None:
+            rows = sorted(ids, reverse=True)[:limit]
+        else:
+            rows = [i for i in sorted(ids) if i > int(start)][:limit]
+            if order_after is not None:
+                rows = order_after(rows)
+        body = {"parcels": {"type": "FeatureCollection", "features": feats(*rows)}}
+        return httpx.Response(200, json=body)
+
+    return handle
+
+
+@pytest.mark.parametrize("command", ["point", "area", "query"])
+def test_first_page_starts_at_zero_so_no_gaps(monkeypatch, capsys, command):
+    seen = _counting(monkeypatch, lambda request, _n: _spatial_server(range(1, 8))(request))
+    geo = '{"type":"Point","coordinates":[1,2]}'
+    extra = {
+        "point": POINT,
+        "area": ["area", "--geojson", geo],
+        "query": ["query", "--fields", '{"geoid":{"eq":"48113"}}'],
+    }[command]
+    assert cli.main([*extra, "--max-records", "7", "--options", '{"limit":3}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert [f["id"] for f in data["parcels"]["features"]] == [1, 2, 3, 4, 5, 6, 7]
+    assert data["complete"] is True
+    assert [r.url.params["offset_id"] for r in seen] == ["0", "3", "6"]
+
+
+@pytest.mark.parametrize("scramble", [lambda rows: rows[::-1], lambda rows: [rows[0]] * 2])
+def test_unordered_pages_stop_incomplete(monkeypatch, capsys, scramble):
+    _counting(monkeypatch, lambda request, _n: _spatial_server(range(1, 8), scramble)(request))
+    assert cli.main([*POINT, "--max-records", "6", "--options", '{"limit":2}']) == 0
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert data["complete"] is False
+    assert "regrid: paging stopped: results not in cursor order" in captured.err
+    assert captured.err.rstrip().splitlines()[-1].startswith("regrid: requests made: ")
+
+
+def test_page_not_after_cursor_stops_incomplete(monkeypatch, capsys):
+    install(monkeypatch, [feats(5, 6), feats(3, 4)])
+    assert cli.main([*POINT, "--max-records", "4", "--options", '{"limit":2}']) == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["complete"] is False
+    assert "regrid: paging stopped: results not in cursor order" in captured.err
 
 
 def _counting(monkeypatch, handler):
@@ -512,7 +567,7 @@ def test_merge_shape_mismatch_keeps_first_and_notes_once(monkeypatch, capsys):
 
 
 def test_string_digit_cursor_is_accepted(monkeypatch, capsys):
-    seen = install(monkeypatch, [feats(1, "10"), feats("10", "11")])
+    seen = install(monkeypatch, [feats(1, "10"), feats("11", "12")])
     assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
     data = json.loads(capsys.readouterr().out)
     assert [f["id"] for f in data["parcels"]["features"]] == [1, "10", "11"]
@@ -774,7 +829,7 @@ def test_paging_note_reflects_response_pages_added_on_later_page(monkeypatch, ca
 
 
 def test_paging_note_for_pages_first_seen_on_later_page(monkeypatch, capsys):
-    _paged(monkeypatch, _page([1, 2]), _page([2, 3], pages=[7], complete=[8]))
+    _paged(monkeypatch, _page([1, 2]), _page([3], pages=[7], complete=[8]))
     assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
     out, err = capsys.readouterr()
     data = json.loads(out)

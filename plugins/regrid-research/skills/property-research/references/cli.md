@@ -41,8 +41,11 @@ neighbours request when asked). Never run `report` or `client-token-typeahead`.
 Paging: `--max-records N` on `point` (GET only), `area` and `query`, never `owner`.
 It needs an explicit integer `limit` of at least 2 in `--options` and rejects a truthy `return_count`. It prints
 `regrid: up to K requests for N records` before the first request; K = ceil(N / limit)
-is the enforced worst case. The `offset_id` cursor is exclusive (verified live), so each
-page starts after the previous one, and it never asks for more records than still needed. It outputs
+is the enforced worst case. It starts at `offset_id=0` so results come in id order
+(verified live: without it point/area page 1 is spatially ordered and a cursor would skip
+records). The cursor is exclusive, so each page starts after the previous one, and it never
+asks for more records than still needed. If ids are not ascending past the cursor it stops
+with `complete: false` and `regrid: paging stopped: results not in cursor order`. It outputs
 `{"parcels": FeatureCollection, "pages": P, "complete": true|false}`. Get the user's agreed record budget first; page only within one task.
 
 Export from a saved response, with no requests:
