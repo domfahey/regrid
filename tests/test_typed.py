@@ -282,14 +282,16 @@ def test_http_errors_are_not_misreported_as_schema_errors():
 
 
 def test_request_validation_happens_before_transport():
-    def unexpected_request(request):
-        pytest.fail("Invalid request was sent")
+    seen = []
 
-    with TypedRegridClient(
-        "test-auth-token", transport=httpx.MockTransport(unexpected_request)
-    ) as client:
-        with pytest.raises(ValueError):
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json=PARCELS)
+
+    with TypedRegridClient("test-auth-token", transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(ValueError, match="^Invalid Regrid request parameters$"):
             client.address("Main St", limit=0)
+    assert seen == []
 
 
 def test_public_schema_without_token_and_private_missing_token():
@@ -297,8 +299,9 @@ def test_public_schema_without_token_and_private_missing_token():
         transport=httpx.MockTransport(lambda request: httpx.Response(200, json={"schema": {}}))
     ) as client:
         assert isinstance(client.schema(), SchemaResponse)
-        with pytest.raises(AuthenticationError):
+        with pytest.raises(AuthenticationError) as caught:
             client.usage()
+    assert caught.value.status_code == 401
 
 
 def test_tile_bytes_and_close_lifecycle():

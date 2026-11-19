@@ -553,7 +553,7 @@ def test_endpoint_specific_parameter_exclusions(method, country, verb, forbidden
 
     def handler(request):
         calls.append(request)
-        pytest.fail("Undocumented option reached the API")
+        return httpx.Response(200, json={})
 
     arguments = {
         "point": {"geojson": POINT, "method": verb},
@@ -566,6 +566,11 @@ def test_endpoint_specific_parameter_exclusions(method, country, verb, forbidden
         "parcel_path": {"path": US_PARCEL_PATH},
     }[method]
     with RegridClient(TOKEN, transport=httpx.MockTransport(handler)) as client:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="^Invalid Regrid request parameters$"):
             getattr(client, method)(country=country, **arguments, **{forbidden: True})
-    assert calls == []
+        # The same call without the undocumented option is valid, so it was the option
+        # (not the base arguments) that was rejected.
+        getattr(client, method)(country=country, **arguments)
+    assert len(calls) == 1
+    assert forbidden not in calls[0].url.params
+    assert forbidden not in calls[0].content.decode()

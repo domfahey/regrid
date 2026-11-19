@@ -86,55 +86,63 @@ def test_custom_origin_relative_path_query_values_and_empty_grid():
     assert len(seen) == 1
 
 
+MISSING = "TileJSON must advertise a UTFGrid endpoint"
+UNSAFE = "Unsafe UTFGrid endpoint in TileJSON"
+NOT_OBJECT = "UTFGrid metadata must be a TileJSON object"
+
+
 @pytest.mark.parametrize(
-    "metadata",
+    ("metadata", "message"),
     [
-        {},
-        {"grid": None},
-        {"grid": []},
-        {"grid": [""]},
-        {"grid": [1]},
-        {"grid": " "},
-        {"grid": 42},
-        [],
-        {"grid": "https://evil.example/{z}/{x}/{y}?token=secret-marker"},
-        {"grid": "//evil.example/{z}/{x}/{y}"},
-        {"grid": "http://tiles.regrid.com/{z}/{x}/{y}"},
-        {"grid": "https://tiles.regrid.com:8443/{z}/{x}/{y}"},
-        {"grid": "https://secret-marker@tiles.regrid.com/{z}/{x}/{y}"},
-        {"grid": "https://tiles.regrid.com/{z}/{x}/{y}#secret-marker"},
-        {"grid": "https://tiles.regrid.com/{z}/{x}/{y}#"},
-        {"grid": "https://tiles.regrid.com/{z}/{x}/{y}/{unknown}"},
-        {"grid": "https://tiles.regrid.com/{z.__class__}/{x}/{y}"},
-        {"grid": "https://tiles.regrid.com/{z}/{x}/{y}/%7Bunknown%7D"},
-        {"grid": "https://tiles.regrid.com/{z}/{x}/{y}/%5Cevil"},
-        {"grid": "https://tiles.regrid.com/\n/{z}/{x}/{y}"},
-        {"grid": "https://tiles.regrid.com:bad/{z}/{x}/{y}?token=secret-marker"},
+        ({}, MISSING),
+        ({"grid": None}, MISSING),
+        ({"grid": []}, MISSING),
+        ({"grid": [""]}, MISSING),
+        ({"grid": [1]}, MISSING),
+        ({"grid": " "}, MISSING),
+        ({"grid": 42}, MISSING),
+        ([], NOT_OBJECT),
+        ({"grid": "https://evil.example/{z}/{x}/{y}?token=secret-marker"}, UNSAFE),
+        ({"grid": "//evil.example/{z}/{x}/{y}"}, UNSAFE),
+        ({"grid": "http://tiles.regrid.com/{z}/{x}/{y}"}, UNSAFE),
+        ({"grid": "https://tiles.regrid.com:8443/{z}/{x}/{y}"}, UNSAFE),
+        ({"grid": "https://secret-marker@tiles.regrid.com/{z}/{x}/{y}"}, UNSAFE),
+        ({"grid": "https://tiles.regrid.com/{z}/{x}/{y}#secret-marker"}, UNSAFE),
+        ({"grid": "https://tiles.regrid.com/{z}/{x}/{y}#"}, UNSAFE),
+        ({"grid": "https://tiles.regrid.com/{z}/{x}/{y}/{unknown}"}, UNSAFE),
+        ({"grid": "https://tiles.regrid.com/{z.__class__}/{x}/{y}"}, UNSAFE),
+        ({"grid": "https://tiles.regrid.com/{z}/{x}/{y}/%7Bunknown%7D"}, UNSAFE),
+        ({"grid": "https://tiles.regrid.com/{z}/{x}/{y}/%5Cevil"}, UNSAFE),
+        ({"grid": "https://tiles.regrid.com/\n/{z}/{x}/{y}"}, UNSAFE),
+        ({"grid": "https://tiles.regrid.com:bad/{z}/{x}/{y}?token=secret-marker"}, UNSAFE),
     ],
 )
-def test_unsafe_or_missing_template_fails_before_network(metadata):
+def test_unsafe_or_missing_template_fails_before_network(metadata, message):
+    seen = []
+
     def handler(request):
-        pytest.fail("Unsafe grid request reached transport")
+        seen.append(request)
+        return httpx.Response(200, json=GRID)
 
     with RegridClient(TOKEN, transport=httpx.MockTransport(handler)) as client:
         with pytest.raises(ValueError) as caught:
             fetch_grid(client, 10, 0, 0, metadata=metadata)
+    assert str(caught.value) == message
     assert "secret-marker" not in "".join(traceback.format_exception(caught.value))
     assert caught.value.__context__ is None
+    assert seen == []
 
 
 @pytest.mark.parametrize(
     "coords", [(9, 0, 0), (22, 0, 0), (10, -1, 0), (10, 0, 1024), (True, 0, 0)]
 )
 def test_invalid_coordinates_do_not_even_discover_metadata(coords):
-    with RegridClient(
-        TOKEN,
-        transport=httpx.MockTransport(
-            lambda request: pytest.fail("Invalid coordinates reached transport")
-        ),
-    ) as client:
-        with pytest.raises(ValueError):
+    seen = []
+    transport = httpx.MockTransport(lambda request: seen.append(request))
+    with RegridClient(TOKEN, transport=transport) as client:
+        with pytest.raises(ValueError, match="^Invalid Regrid request parameters$"):
             fetch_grid(client, *coords)
+    assert seen == []
 
 
 @pytest.mark.parametrize(
