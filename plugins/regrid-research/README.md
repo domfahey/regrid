@@ -201,7 +201,8 @@ Status for 0.9.4:
   see `evals/results/map-hosts-0.9.4.json`.
 - Passed (live, authorized, 2026-11-19): `make live-full` checked every read-only
   endpoint (26 requests): searches, lookups, POST geometry search, `/verse`, detailed
-  usage, tiles and a bad-token 401. Paging from `offset_id=0` returns ordered pages.
+  usage, tiles and a bad-token 401. A default address lookup includes the parcel
+  `geometry`, and paging from `offset_id=0` returns ordered pages.
 - Not run: Claude Code, Claude apps and Cowork host checks of the map page and
   command; a live `/mcp` connection; and model or Cowork acceptance.
 
