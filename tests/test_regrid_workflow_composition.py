@@ -328,3 +328,15 @@ def test_reconciliation_reports_actual_reason_not_budget_counters():
     )
     with pytest.raises(workflow.ValidationError, match="already reconciled"):
         workflow.reconcile_attempt(reconciled, "attempt-000001", proof(), evidence_verified=True)
+
+
+def test_reconcile_unknown_attempt_and_bad_proof_use_validator_messages():
+    doc = workflow.upgrade_workflow(uncertain())
+    with pytest.raises(workflow.ValidationError, match="Unknown or already reconciled attempt"):
+        workflow.reconcile_attempt(doc, "attempt-999999", proof(), evidence_verified=True)
+    with pytest.raises(workflow.ValidationError, match="Invalid reconciliation proof"):
+        workflow.reconcile_attempt(doc, "attempt-000001", {"x": 1}, evidence_verified=True)
+    before = deepcopy(doc)
+    with pytest.raises(workflow.ValidationError):
+        workflow.reconcile_attempt(doc, "attempt-000001", None, evidence_verified=True)
+    assert doc == before

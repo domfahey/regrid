@@ -255,3 +255,20 @@ def test_record_tolerates_null_fields(tmp_path):
     report = sys.modules["discovery"].record({}, trace, "claude-test-1", "2.test")
     assert report["read_paths"] == [None]
     assert len(report["tool_calls"]) == 2
+
+
+def test_non_object_tool_input_is_preserved():
+    events = [
+        {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {"type": "tool_use", "name": "Read", "input": '{"file_path": "x.md"}'},
+                    {"type": "tool_use", "name": "Read", "input": {"file_path": "y.md"}},
+                ]
+            },
+        }
+    ]
+    _, calls = sys.modules["discovery"].extract_calls(events)
+    assert calls[0]["input"] == '{"file_path": "x.md"}'
+    assert sys.modules["discovery"].read_paths(calls) == [None, "y.md"]

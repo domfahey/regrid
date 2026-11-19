@@ -87,7 +87,7 @@ the token supplied in the **outer MCP connection's** `x-regrid-token` header:
 
 ```json
 {
-  "title": "Regrid OpenAPI Specification",
+  "title": "Regrid OpenAPI Specification (reference)",
   "harRequest": {
     "method": "GET",
     "url": "https://app.regrid.com/api/v2/usage"
@@ -98,7 +98,7 @@ the token supplied in the **outer MCP connection's** `x-regrid-token` header:
 The response was a JSON object containing `usage`, with no MCP error. No token
 was passed in the tool arguments and no parcels were retrieved. This verifies
 direct MCP header forwarding, not Claude/Cowork import or credential storage.
-That call predates the ` (reference)` title suffix; use the current title.
+That call used the pre-suffix title; the example above shows the current title.
 Avoid token-breakdown options during setup, since they may return token fragments.
 
 ## Address example checked against the live schema

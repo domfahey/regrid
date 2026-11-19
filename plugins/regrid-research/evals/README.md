@@ -210,6 +210,11 @@ comparison was completed. Historical packet reports are separate simulated-agent
 evidence, not Claude or Cowork acceptance. Preserve those reports when recording
 new trials and independent grades.
 
+Saved reports pin SHA-256 hashes of the files each evaluation received. Plugin 0.5.2
+regenerated `tools.json` and `endpoints.json` and added US-only scope, so earlier
+reports cover the 0.5.1 references, not those changes; hash mismatches against the
+current tree are expected and do not make those reports current evidence.
+
 
 ## Composability regressions (0.5.0)
 
