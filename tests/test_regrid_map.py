@@ -2,7 +2,6 @@
 
 import importlib.util
 import json
-import math
 import os
 import re
 import stat
@@ -11,6 +10,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from map_fixtures import expected_sqft, feature, good_feature, square, write_response
 
 from regrid.offline import map as parcel_map
 
@@ -20,35 +20,6 @@ SCRIPT = (
 )
 
 MapError = parcel_map.MapError
-
-
-def square(lon=-75.03, lat=39.9, size=0.001):
-    ring = [[lon, lat], [lon + size, lat], [lon + size, lat + size], [lon, lat + size], [lon, lat]]
-    return {"type": "Polygon", "coordinates": [ring]}
-
-
-def expected_sqft(lon=-75.03, lat=39.9, size=0.001):
-    r = 6378137.0
-    m2 = (
-        r
-        * r
-        * math.radians(size)
-        * (math.sin(math.radians(lat + size)) - math.sin(math.radians(lat)))
-    )
-    return m2 * 10.763910416709722
-
-
-def feature(geometry, **fields):
-    return {
-        "type": "Feature",
-        "geometry": geometry,
-        "properties": {
-            "headline": "12 Example Ave",
-            "path": "/us/nj/camden/haddonfield/1",
-            "ll_uuid": "00000000-0000-4000-8000-000000000001",
-            "fields": fields,
-        },
-    }
 
 
 @pytest.mark.parametrize("document", [{}, [], {"parcels": {}}])
@@ -173,16 +144,6 @@ def test_oversized_integer_recorded_area_is_unavailable():
     result = parcel_map.area_check(feature(square(), ll_gissqft=10**400))
     assert result["status"] == "unavailable"
     assert result["recorded_sqft"] is None
-
-
-def write_response(path, *features):
-    path.write_text(json.dumps({"parcels": {"features": list(features)}}), encoding="utf-8")
-    return path
-
-
-def good_feature(**fields):
-    fields.setdefault("ll_gissqft", expected_sqft())
-    return feature(square(), **fields)
 
 
 def test_render_writes_page_and_summary(tmp_path):
@@ -473,3 +434,89 @@ def test_no_replace_never_overwrites_a_file_created_after_the_check(tmp_path, mo
         parcel_map.render(write_response(tmp_path / "r.json", good_feature()), output)
     assert output.read_text(encoding="utf-8") == "keep"
     assert [p.name for p in tmp_path.iterdir() if p.name.startswith(".map-")] == []
+
+
+def test_main_prints_summary_json(tmp_path, capsys):
+    response = write_response(tmp_path / "r.json", good_feature())
+    assert parcel_map.main(["render", str(response), str(tmp_path / "m.html")]) == 0
+    assert json.loads(capsys.readouterr().out)["features"] == 1
+
+
+def test_main_reports_map_error_on_one_line(tmp_path, capsys):
+    response = write_response(tmp_path / "r.json", good_feature(), good_feature())
+    assert parcel_map.main(["render", str(response), str(tmp_path / "m.html")]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("error: ") and err.count("\n") == 1
+
+
+def test_main_reports_os_error(tmp_path, capsys):
+    assert (
+        parcel_map.main(["render", str(tmp_path / "missing.json"), str(tmp_path / "m.html")]) == 1
+    )
+    assert capsys.readouterr().err.startswith("error: ")
+
+
+def _render_doc(tmp_path, document):
+    response = tmp_path / "r.json"
+    response.write_text(
+        document if isinstance(document, str) else json.dumps(document), encoding="utf-8"
+    )
+    return parcel_map.render(response, tmp_path / "m.html")
+
+
+def test_render_rejects_invalid_json_and_non_object_features(tmp_path):
+    with pytest.raises(MapError, match="not valid JSON"):
+        _render_doc(tmp_path, "{nope")
+    with pytest.raises(MapError, match="Expected a Regrid parcel response"):
+        _render_doc(tmp_path, {"parcels": {"features": [1]}})
+
+
+@pytest.mark.parametrize(
+    "geometry",
+    [
+        "x",
+        {"type": "MultiPolygon", "coordinates": []},
+        {"type": "Polygon", "coordinates": [[[1], [2, 3], [4, 5], [1]]]},
+        {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [float("nan"), 1], [0, 0]]]},
+    ],
+)
+def test_render_rejects_bad_geometry(tmp_path, geometry):
+    with pytest.raises(MapError):
+        _render_doc(tmp_path, {"parcels": {"features": [feature(geometry)]}})
+
+
+def test_render_accepts_numeric_string_area(tmp_path):
+    doc = {"parcels": {"features": [good_feature(ll_gissqft=str(expected_sqft()))]}}
+    assert _render_doc(tmp_path, doc)["area_checks"][0]["status"] == "ok"
+    assert parcel_map._parse_finite("abc") is None
+
+
+def test_write_falls_back_without_hard_links(tmp_path, monkeypatch):
+    def no_link(*args, **kwargs):
+        raise OSError("links unsupported")
+
+    monkeypatch.setattr(os, "link", no_link)
+    response = write_response(tmp_path / "r.json", good_feature())
+    parcel_map.render(response, tmp_path / "m.html")
+    assert (tmp_path / "m.html").exists()
+    with pytest.raises(MapError, match="exists"):
+        parcel_map.render(response, tmp_path / "m.html")
+
+
+def test_temp_name_collision_is_retried(tmp_path, monkeypatch):
+    names = iter(["aa", "aa", "bb"])
+    monkeypatch.setattr(parcel_map.secrets, "token_hex", lambda n: next(names))
+    (tmp_path / ".map-aa.tmp").write_bytes(b"")
+    response = write_response(tmp_path / "r.json", good_feature())
+    parcel_map.render(response, tmp_path / "m.html")
+    assert (tmp_path / "m.html").exists()
+
+
+def test_module_runs_as_script(tmp_path, monkeypatch):
+    import runpy
+
+    response = write_response(tmp_path / "r.json", good_feature())
+    monkeypatch.setattr(sys, "argv", ["map", "render", str(response), str(tmp_path / "m.html")])
+    with pytest.raises(SystemExit) as exit_info:
+        runpy.run_module("regrid.offline.map", run_name="__main__")
+    assert exit_info.value.code == 0

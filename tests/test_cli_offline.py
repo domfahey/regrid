@@ -1,0 +1,53 @@
+"""Offline CLI commands never need a token or an HTTP client."""
+
+import json
+
+import pytest
+from map_fixtures import good_feature, write_response
+
+from regrid import cli
+
+
+def test_map_renders_without_token_or_client(tmp_path, monkeypatch, capsys):
+    monkeypatch.delenv("REGRID_TOKEN", raising=False)
+    monkeypatch.setattr(cli, "RegridClient", lambda **kw: pytest.fail("no client for offline map"))
+    response = write_response(tmp_path / "r.json", good_feature())
+    assert cli.main(["map", str(response), str(tmp_path / "m.html")]) == 0
+    assert json.loads(capsys.readouterr().out)["features"] == 1
+
+
+def test_map_errors_are_one_line(tmp_path, capsys):
+    response = write_response(tmp_path / "r.json", good_feature(), good_feature())
+    assert cli.main(["map", str(response), str(tmp_path / "m.html")]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("regrid: Response has several parcels") and err.count("\n") == 1
+
+
+def test_map_os_error_is_one_line(tmp_path, capsys):
+    assert cli.main(["map", str(tmp_path / "missing.json"), str(tmp_path / "m.html")]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("regrid: ") and err.count("\n") == 1
+
+
+def test_map_flags_pass_through(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature(), good_feature())
+    assert (
+        cli.main(
+            [
+                "map",
+                str(response),
+                str(tmp_path / "m.html"),
+                "--all-candidates",
+                "--retrieved-at",
+                "2026-11-19T00:00:00Z",
+            ]
+        )
+        == 0
+    )
+    page = (tmp_path / "m.html").read_text(encoding="utf-8")
+    assert "Candidate 2" in page and "2026-11-19T00:00:00Z" in page
+    assert cli.main(["map", str(response), str(tmp_path / "m.html"), "--feature", "0"]) == 1
+    assert (
+        cli.main(["map", str(response), str(tmp_path / "m.html"), "--feature", "0", "--replace"])
+        == 0
+    )

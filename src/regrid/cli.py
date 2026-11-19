@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .client import RegridClient, RegridError
+from .offline import map as parcel_map
 
 
 def _object(value: str) -> dict[str, Any]:
@@ -29,6 +30,22 @@ def _object(value: str) -> dict[str, Any]:
     return result
 
 
+def _run_map(args: dict[str, Any]) -> None:
+    summary = parcel_map.render(
+        Path(args["response"]),
+        Path(args["output"]),
+        index=args["feature"],
+        all_candidates=args["all_candidates"],
+        retrieved_at=args["retrieved_at"],
+        replace=args["replace"],
+    )
+    print(json.dumps(summary, indent=2, ensure_ascii=False, allow_nan=False))
+
+
+# Commands that run locally: no token, no HTTP client.
+_OFFLINE = {"map": _run_map}
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Regrid API CLI. Authentication uses REGRID_TOKEN; schemas are public."
@@ -41,6 +58,17 @@ def _parser() -> argparse.ArgumentParser:
         "--tiles-base-url", default="https://tiles.regrid.com", help="HTTPS tiles base URL"
     )
     commands = parser.add_subparsers(dest="command", required=True)
+    offline = commands.add_parser(
+        "map",
+        help="Render a saved parcel response as an offline satellite map (no API call)",
+        description="Render a saved parcel response as a self-contained satellite map HTML file.",
+    )
+    offline.add_argument("response", help="Saved parcel response JSON file")
+    offline.add_argument("output", help="Destination HTML file")
+    offline.add_argument("--feature", type=int, metavar="N", help="Zero-based feature index")
+    offline.add_argument("--all-candidates", action="store_true", help="Map every feature")
+    offline.add_argument("--retrieved-at", metavar="ISO", help="Retrieval timestamp to display")
+    offline.add_argument("--replace", action="store_true", help="Overwrite an existing output")
     option_commands = {
         "point",
         "area",
@@ -169,6 +197,14 @@ def main(argv: list[str] | None = None) -> int:
     except SystemExit as exc:
         return int(exc.code or 0)
     command = args.pop("command").replace("-", "_")
+    offline_handler = _OFFLINE.get(command)
+    if offline_handler is not None:
+        try:
+            offline_handler(args)
+        except (ValueError, OSError) as exc:  # MapError is a ValueError
+            print(f"regrid: {' '.join(str(exc).split())}", file=sys.stderr)
+            return 1
+        return 0
     timeout = args.pop("timeout")
     base_url = args.pop("base_url")
     tiles_base_url = args.pop("tiles_base_url")
