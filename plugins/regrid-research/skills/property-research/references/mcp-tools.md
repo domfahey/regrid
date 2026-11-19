@@ -151,7 +151,14 @@ yet executed through MCP):
   "harRequest": {
     "method": "POST",
     "url": "https://app.regrid.com/api/v2/parcels/area",
-    "queryString": [{"name":"limit","value":"5"}, {"name":"return_stacked","value":"false"}],
+    "queryString": [
+      {"name":"limit","value":"5"},
+      {"name":"return_stacked","value":"false"},
+      {"name":"return_zoning","value":"false"},
+      {"name":"return_matched_buildings","value":"false"},
+      {"name":"return_matched_addresses","value":"false"},
+      {"name":"return_enhanced_ownership","value":"false"}
+    ],
     "postData": {
       "mimeType": "application/json",
       "text": "{\"geojson\": {\"type\": \"Polygon\", \"coordinates\": [...]}}"
@@ -160,12 +167,17 @@ yet executed through MCP):
 }
 ```
 
-POST point takes no `offset_id` or `return_geometry`. Every other POST (`/report`,
-Batch creation) stays forbidden, as do `/client_token/typeahead` and all DELETEs.
+A `/parcels/point` POST example has the same shape, with `lat`/`lon` omitted and the
+Point or MultiPoint GeoJSON in the body, plus the same four `false` premium flags.
+POST point takes no `offset_id` or `return_geometry`; POST area accepts `limit`,
+`radius`, `return_count`, `offset_id`, `return_geometry` and the premium flags. Every
+other POST (`/report`, Batch creation) stays forbidden, as do `/client_token/typeahead`
+and all DELETEs.
 
 ### Response options
 
-Pass only what the endpoint supports ([endpoints.json](endpoints.json) lists them);
+Pass only what the endpoint supports ([endpoints.json](endpoints.json) lists the GET
+operations; POST point and area accept the narrower set above);
 all four are off unless asked.
 
 - `return_field_labels=true`: adds readable labels (`field_labels`) beside `fields`.

@@ -34,7 +34,7 @@ The CLI does not default premium or stacked flags to false; pass
 unless the user requested them. This applies to `parcel` and `parcel-path` too, which
 accept those flags but not `limit`.
 
-Offline, no request: `regrid fields explain|search`, `regrid map`, `regrid export`.
+Offline, no request: `regrid fields explain|search` (subcommands `explain`, `search`), `regrid map`, `regrid export`.
 Also: `regrid address-map ADDRESS OUT.html [--neighbours]` (one lookup, plus one
 neighbours request when asked). Never run `report` or `client-token-typeahead`.
 
@@ -55,30 +55,37 @@ starting with `=`, `+`, `-`, `@`, tab or CR get a `'` prefix; plain numbers such
 Global, before the command: `--timeout SECONDS`, `--base-url URL`, `--tiles-base-url URL`
 (defaults: 30 s, `https://app.regrid.com/api/v2`, `https://tiles.regrid.com`; do not
 point them at another host).
-`--options`, `--geojson`, `--fields` and `--metadata` take a JSON string or `@file`.
+`--options`, `--fields` and `--metadata` take a JSON string or `@file`. `--geojson` is the
+same JSON input on `point` and `area`, but on `export` it is an output file path.
 Endpoint commands also take `--country us|ca` (default `us`; Canada stays as legacy,
 out of this skill's scope):
 Commands accepting `--country`: `point`, `area`, `address`, `apn`, `owner`, `query`, `parcel`, `parcel-path`, `typeahead`, `verse`, `usage`.
-`--options` JSON (limit, return flags) goes on `area`, `query`, `parcel-path` and `verse`
-as well as the commands in the map.
+`--options` takes JSON on `point`, `area`, `address`, `apn`, `owner`, `query`, `parcel`,
+`verse`, `usage` and `schema`, and on `parcel-path` (`--options`); `typeahead` has none.
+Each command rejects keys it does not support. `limit` goes on `point`, `area`, `address`, `apn`, `owner` and
+`query`; `parcel` and `parcel-path` reject it (return flags only). `verse` accepts only
+`return_geometry`; `usage` and `schema` take the date and `premium_only` keys shown below.
 
 - `area --method GET|POST`: `POST` sends the GeoJSON as a JSON body for geometry too
   large for a URL; same read-only search, same one request per page. See
   [mcp-tools](mcp-tools.md#large-geometry-post-search). `point --method POST` needs GeoJSON.
 - `query --validate-fields`: check fields and operators against the offline US field
   catalog before any request.
-- `query --allow-unknown-fields` lets through fields absent from the catalog (fields it
-  marks non-queryable still fail).
+- `query --allow-unknown-fields` only has an effect together with `--validate-fields`; it
+  lets through fields absent from the catalog (fields it marks non-queryable still fail).
+- Raw `regrid verse [--options '{"return_geometry":true}']` is one request returning the full
+  payload. County pull dates go through `regrid freshness` (cached, dates only); use raw
+  `verse` only when the user explicitly asks for the full payload.
 - `usage --detailed --options '{"begin_date":"YYYY-MM-DD","end_date":"YYYY-MM-DD"}'` and
   `schema --options '{"premium_only":true}'` (parcel schema only).
 - `address-map ADDRESS OUT.html --path PATH`: county scope; `--save-response FILE`
   keeps the lookup JSON; `--neighbours` adds one neighbours request.
 - `address-map ADDRESS OUT.html --retrieved-at ISO` sets the shown timestamp;
   `address-map ... --replace` allows overwriting the output.
-- `map RESPONSE OUT.html`: `--feature N`, `--all-candidates`, `--retrieved-at ISO`,
-  `--neighbours FILE`, `--replace`; see [map](map.md).
+- `map RESPONSE OUT.html` options: `map --feature N`, `map --all-candidates`,
+  `map --retrieved-at ISO`, `map --neighbours FILE`, `map --replace`; see [map](map.md).
 - `tilejson [--format mvt|png]`, `tile Z X Y --output FILE [--format mvt|png] [--retina]`,
-  `grid Z X Y [--metadata RASTER_TILEJSON]`. `--retina` gives `@2x` raster tiles.
+  `grid Z X Y [--metadata RASTER_TILEJSON]`. `--retina` gives `@2x` raster tiles and requires `--format png`.
 - Never run: `report` (`--comment`, `--path`, `--ll-uuid`, `--details`, `--details-text`)
   and `client-token-typeahead` (`--exp`); the first files an external report and
   the second issues a token.

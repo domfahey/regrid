@@ -8,7 +8,7 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ### Added
 
-- Tests: `tests/test_cli_docs.py` now fails when `references/cli.md` omits any CLI subcommand or long option from the real parser.
+- Tests: `tests/test_cli_docs.py` now fails unless `references/cli.md` shows every CLI subcommand as code (`regrid <cmd>` or a backtick before it) and every long option on one line that is word-bounded with that code subcommand (global options need only the flag). It checks presence, not accuracy.
 
 ### Changed
 
