@@ -159,7 +159,7 @@ def test_commands(argv, host, path, method, params, body, requests, capsys):
         assert request.headers["content-type"] == "application/json"
     captured = capsys.readouterr()
     assert json.loads(captured.out) == RESPONSE
-    assert captured.err == ""
+    assert captured.err == "regrid: requests made: 1\n"
 
 
 def test_file_inputs_options_timeout(requests, tmp_path, capsys):
@@ -196,7 +196,35 @@ def test_file_inputs_options_timeout(requests, tmp_path, capsys):
     }
     captured = capsys.readouterr()
     assert json.loads(captured.out) == RESPONSE
-    assert captured.err == ""
+    assert captured.err == "regrid: requests made: 1\n"
+
+
+def test_api_error_still_reports_requests_made(monkeypatch, capsys):
+    monkeypatch.setenv("REGRID_TOKEN", "secret")
+    monkeypatch.setattr(
+        cli,
+        "RegridClient",
+        lambda **kw: RegridClient(
+            **kw, transport=httpx.MockTransport(lambda req: httpx.Response(500))
+        ),
+    )
+    assert cli.main(["apn", "000123"]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err.splitlines() == [
+        "regrid: Regrid returned HTTP 500",
+        "regrid: requests made: 1",
+    ]
+    assert "secret" not in captured.err
+
+
+def test_client_request_count_counts_every_sent_request():
+    transport = httpx.MockTransport(lambda req: httpx.Response(200, json={}))
+    with RegridClient("t", transport=transport) as client:
+        assert client.request_count == 0
+        client.schema()
+        client.address("x")
+        assert client.request_count == 2
 
 
 def test_tile(requests, tmp_path, capsys):
@@ -210,7 +238,9 @@ def test_tile(requests, tmp_path, capsys):
     assert requests[0].url.host == "tiles.regrid.com"
     assert requests[0].url.path == "/api/v1/parcels/10/0/0@2x.png"
     assert dict(requests[0].url.params) == {"token": "secret"}
-    assert capsys.readouterr().out == ""
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == "regrid: requests made: 1\n"
 
 
 @pytest.mark.parametrize(
@@ -237,7 +267,7 @@ def test_bad_output(requests, tmp_path, capsys):
     assert cli.main(["tile", "10", "0", "0", "--output", str(tmp_path)]) == 1
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert captured.err == "regrid: Invalid input or output file\n"
+    assert captured.err == "regrid: Invalid input or output file\nregrid: requests made: 1\n"
     assert tmp_path.is_dir()
     assert list(tmp_path.iterdir()) == []
     assert len(requests) == 1
@@ -258,7 +288,7 @@ def test_http_error(monkeypatch, response, capsys):
         if response.status_code == 403
         else "Regrid returned invalid JSON"
     )
-    assert captured.err == f"regrid: {expected}\n"
+    assert captured.err == f"regrid: {expected}\nregrid: requests made: 1\n"
     assert captured.out == ""
 
 
@@ -279,7 +309,11 @@ def test_blank_token_is_treated_as_unset(token, monkeypatch, capsys):
     monkeypatch.setenv("REGRID_TOKEN", token)
     assert cli.main(["address", "123 Main"]) == 1
     captured = capsys.readouterr()
-    assert captured.err == unset_err == "regrid: Regrid returned HTTP 401\n"
+    assert (
+        captured.err
+        == unset_err
+        == ("regrid: Regrid returned HTTP 401\nregrid: requests made: 0\n")
+    )
     assert captured.out == ""
     assert not seen
 
@@ -293,7 +327,7 @@ def test_blank_token_public_schema_succeeds(requests, monkeypatch, token, capsys
     assert dict(requests[0].url.params) == {}
     captured = capsys.readouterr()
     assert json.loads(captured.out) == RESPONSE
-    assert captured.err == ""
+    assert captured.err == "regrid: requests made: 1\n"
 
 
 def test_parser_help_error(capsys):
