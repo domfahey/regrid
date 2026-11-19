@@ -354,6 +354,10 @@ def _validate_paging(
     """Run page 2's validation up front so it cannot fail after page 1 is billed."""
     if options.get("return_count"):
         raise _PagingError("--max-records conflicts with return_count")
+    try:
+        validate_limit(options.get("limit"), client.max_limit)
+    except ValueError as exc:
+        raise _PagingError(_error_message(exc, os_error="", type_error="")) from None
     if command == "query":
         try:
             client.validate_query(**args, paging=True, **options)
@@ -376,23 +380,19 @@ def _cursor(feature: Any) -> int | None:
 def _drop_trimmed_siblings(merged: dict[str, Any], kept: list[Any], trimmed: list[Any]) -> None:
     """Remove sibling features that belong to parcels trimmed off the end."""
 
-    def uuids(features: list[Any], *, parcels: bool = False) -> set[Any]:
+    def uuids(features: list[Any]) -> set[Any]:
         found = set()
         for feature in features:
-            if parcels and (own := parcel_map.feature_uuid(feature)) is not None:
+            if (own := parcel_map.feature_uuid(feature)) is not None:
                 found.add(own)
             properties = feature.get("properties") if isinstance(feature, dict) else None
-            if not isinstance(properties, dict):
-                continue
-            single, many = properties.get("ll_uuid"), properties.get("ll_uuids")
-            if isinstance(single, str):
-                found.add(single)
+            many = properties.get("ll_uuids") if isinstance(properties, dict) else None
             if isinstance(many, list):
-                found.update(u for u in many if isinstance(u, str))
+                found.update(u for u in many if isinstance(u, str) and u)
         return found
 
-    kept_uuids = uuids(kept, parcels=True)
-    dropped = uuids(trimmed, parcels=True) - kept_uuids
+    kept_uuids = uuids(kept)
+    dropped = uuids(trimmed) - kept_uuids
     if not dropped:
         return
     for key, value in merged.items():
@@ -431,10 +431,6 @@ def _paged_search(
         raise _PagingError("--max-records is not supported for POST point searches")
     if "offset_id" in options:
         raise _PagingError("--max-records conflicts with offset_id")
-    try:
-        validate_limit(limit, client.max_limit)
-    except ValueError as exc:
-        raise _PagingError(_error_message(exc, os_error="", type_error="")) from None
     _validate_paging(client, command, args, options)
     # Worst case under an inclusive cursor: later pages add at least limit - 1 new records.
     first = min(limit, total)

@@ -367,6 +367,7 @@ def test_validate_query_checks_limit_and_paging_flag(recording_client):
         with pytest.raises(ValueError, match="exceeds configured maximum"):
             c.validate_query({"geoid": {"eq": "1"}}, limit=50)
         c.validate_query({"geoid": {"eq": "1"}}, limit=10)
+        c.validate_query({"geoid": {"eq": "1"}}, limit=None)
         for bad in ("false", 0, "x", 1):
             with pytest.raises(ValueError, match="paging"):
                 c.validate_query({"geoid": {"eq": "1"}}, paging=bad)

@@ -724,7 +724,12 @@ def _csv_cell(value: object) -> str:
 
 def _core_value(feature: dict, name: str) -> Any:
     if name == "ll_uuid":
-        return feature_uuid(feature)
+        properties = feature.get("properties")
+        for source in (properties, _fields(feature)):
+            value = source.get("ll_uuid") if isinstance(source, dict) else None
+            if value is not None:
+                return value
+        return None
     properties = feature.get("properties")
     source = properties if name in _PROPERTY_COLUMNS and isinstance(properties, dict) else None
     return (source if source is not None else _fields(feature)).get(name)
@@ -773,7 +778,7 @@ def export(
             if os.path.lexists(target):
                 raise MapError(EXISTS)
     columns = list(CORE_COLUMNS)
-    if all_fields and csv_path is not None:
+    if all_fields:
         extras = {key for feature in features for key in _fields(feature)}
         columns += sorted(extras - set(CORE_COLUMNS))
     csv_data = geojson_data = None
@@ -798,7 +803,12 @@ def export(
                 {
                     "type": "Feature",
                     "geometry": feature["geometry"],
-                    "properties": {name: _core_value(feature, name) for name in CORE_COLUMNS},
+                    "properties": {
+                        name: _core_value(feature, name)
+                        if name in CORE_COLUMNS
+                        else _fields(feature).get(name)
+                        for name in columns
+                    },
                 }
                 for feature in features
             ],

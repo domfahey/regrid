@@ -230,7 +230,7 @@ class EndpointsMixin:
         """
         if type(paging) is not bool:
             raise ValueError("paging must be a boolean")
-        if "limit" in options:
+        if options.get("limit") is not None:
             validate_limit(options["limit"], self.max_limit)
         kwargs: dict[str, Any] = {
             "country": country,

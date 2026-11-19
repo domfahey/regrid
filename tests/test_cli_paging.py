@@ -660,3 +660,37 @@ def test_paged_search_rejects_limit_above_client_max_before_requests(monkeypatch
     code = cli.main([*POINT, "--max-records", "5", "--options", '{"limit":5000}'])
     assert code == 1 and seen == []
     assert "Invalid Regrid request parameters" in capsys.readouterr().err
+
+
+def test_cli_paging_uses_client_max_limit(monkeypatch, capsys):
+    seen = []
+
+    def handle(request):
+        seen.append(request)
+        return httpx.Response(
+            200, json={"parcels": {"type": "FeatureCollection", "features": feats(1, 10)}}
+        )
+
+    monkeypatch.setenv("REGRID_TOKEN", "secret")
+    monkeypatch.setattr(
+        cli,
+        "RegridClient",
+        lambda **kw: RegridClient(**{**kw, "max_limit": 10}, transport=httpx.MockTransport(handle)),
+    )
+    code = cli.main([*POINT, "--max-records", "20", "--options", '{"limit":50}'])
+    assert code == 1 and seen == []
+    assert "limit exceeds configured maximum" in capsys.readouterr().err
+    assert cli.main([*POINT, "--max-records", "2", "--options", '{"limit":10}']) == 0
+    assert len(seen) == 1
+
+
+def test_trimmed_siblings_never_collect_empty_uuids():
+    def parcel(uuid):
+        return {"id": 1, "properties": {"ll_uuid": uuid}}
+
+    kept, trimmed = [parcel("u3")], [parcel("")]
+    # an empty parcel ll_uuid is not collected, so a sibling listing "" is not dropped
+    assert _trim_siblings([_building([""])], kept, trimmed) == [_building([""])]
+    kept, trimmed = [parcel("")], [parcel("u4")]
+    assert _trim_siblings([_building(["", "u4"])], kept, trimmed) == []
+    assert _trim_siblings([_building(["u4"])], kept, trimmed) == []
