@@ -33,7 +33,7 @@ agent evaluation result.
 `--suite composition` uses six handoff scenarios from `composition-cases.json`:
 spreadsheet preservation, report reuse, interrupted-batch resumption, a shared
 budget across stages, conflicting source observations, and absent optional skills.
-`--suite all` combines both. The packet includes the current canonical skill and
+`--suite all` combines research, composition and feature. The packet includes the current canonical skill and
 its references, including the result schema and batch procedure, so the agent can
 produce a self-contained handoff. `--without-skill` omits those materials; a fair
 baseline requiring schema-valid output must supply the same schema separately.
@@ -297,7 +297,7 @@ and seven packaging tests. The SDK coverage gate remains 98.16%; that percentage
 covers `src/regrid`, not the bundled helper. Workflow tests exercise shared budgets,
 uncertain reservations, evidence consistency, caller IDs, explicit retries,
 checkpoint round trips, and the helper extracted from the standalone ZIP.
-Run all research and composition fixtures with:
+Run all research, composition and feature fixtures with:
 
 ```sh
 python3 plugins/regrid-research/evals/run.py validate --suite all

@@ -12,7 +12,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SOURCE = REPO_ROOT / "plugins" / "regrid-research"
 MCP_URL = "https://support.regrid.com/mcp"
 SKILLS = ("property-research", "setup")
-BASE_FILES = (".claude-plugin/plugin.json", ".mcp.json", "README.md")
+BASE_FILES = (".claude-plugin/plugin.json", ".mcp.json", "README.md", "PRIVACY.md")
 LICENSE_FILE = "LICENSE"  # read from the plugin source directory
 TOKEN_PATTERN = re.compile(rb"rg_[A-Za-z0-9_-]{8,}")
 

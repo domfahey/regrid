@@ -182,7 +182,7 @@ skill reports each parcel's `ll_last_refresh` instead.
 
 | Option | Where | Notes |
 | --- | --- | --- |
-| Premium dataset flags (`return_zoning` and the like) | Address, APN, owner, point, area, query | Only with the user's authorization ([premium datasets](skills/property-research/references/premium.md)) |
+| Premium dataset flags (`return_zoning` and the like) | Address, APN, owner, point, area, query, Regrid ID (`/parcels/{ll_uuid}`), `/parcels/path` | Only with the user's authorization ([premium datasets](skills/property-research/references/premium.md)) |
 | `return_count`, `return_geometry`, `offset_id` | Point, area and query only | `return_count` counts before pulling; MCP research may page with `offset_id` within the agreed budget; the CLI form is `--max-records` |
 
 **Offered by the server but deliberately not used:** POST `/report` (files a data
@@ -215,7 +215,7 @@ Build all three artifacts from the repository root:
 claude plugin validate ./plugins/regrid-research --strict
 ```
 
-The builder uses a file allowlist: the manifest, MCP config, README, `LICENSE`,
+The builder uses a file allowlist: the manifest, MCP config, README, `PRIVACY.md`, `LICENSE`,
 both skills' `SKILL.md`, their references (`*.md`, `*.json`), the bundled helpers
 `workflow.py`, `map.py`, `fields.py` and `freshness.py` under
 `property-research/scripts/`, and `commands/*.md` (Claude Code and Cowork archives

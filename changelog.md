@@ -12,6 +12,8 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 - SDK: `RegridClient.validate_query(fields, *, paging=False, ...)` validates a query exactly as `query()` would without sending a request, and `QueryPagingError` (exported from `regrid`, a `ValueError`) marks filters that can't be paged with `offset_id`. `regrid.offline.map.write_atomic_bytes` and `regrid.offline.freshness.check_max_age_days` are new public helpers.
 
+- Regrid Research plugin: `PRIVACY.md` (the plugin collects, stores and sends no data of its own; lookups go to Regrid's MCP server under Regrid's privacy policy; map pages load Leaflet from unpkg.com and imagery from Esri) ships in both plugin archives, and `plugin.json` declares `privacyPolicyUrl`.
+
 - Regrid Research plugin README: MCP server coverage summary (tools, endpoints, options, and deliberately unused features), linking to the skill references.
 
 ### Changed
@@ -22,6 +24,8 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 - Regrid Research skills: richer trigger descriptions, a shorter `property-research` routing page with match/answer rules in `references/answers.md`, a single budget/ledger source in `batch.md`, and consistent "neighbour" and "premium dataset" terminology.
 
 ### Fixed
+
+- Regrid Research docs: the plugin README now lists every endpoint that accepts premium dataset flags, `property-research` routes a user-supplied `/verse` file to `freshness.py` and pairs composition with the answers guide, and the evals README and feature rubric use current counts and terminology.
 
 - Paging and `address-map` edge cases: trimmed-parcel sibling removal also follows `ll_uuids` lists (a building linked to a kept parcel is retained), duplicates within one incoming page are skipped, `address-map --neighbours` skips the neighbours request when the subject outline is invalid or the path is a string outside `/us/` (a non-string path no longer blocks it), and `QueryPagingError` no longer carries the underlying exception as context.
 

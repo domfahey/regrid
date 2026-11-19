@@ -22,7 +22,7 @@ Load supporting resources only for the relevant task:
 
 - Match status and the answer to give: [answers](references/answers.md).
 - Supplied-evidence prose or reuse by another skill: [composition](references/composition.md)
-  alone. Do not load a schema merely to answer from supplied evidence.
+  plus [answers](references/answers.md) for match status. No schema needed.
 - Structured handoffs, requested checkpoints, or contract validation: additionally
   load the [versioned result schema](references/result.schema.json). Use the
   [synthetic example](references/result-example.json) only if needed.
@@ -31,7 +31,7 @@ Load supporting resources only for the relevant task:
   `/regrid-research:address-map` command runs this flow for one address.
 - Spreadsheet or GeoJSON requested: `python3 <skill>/scripts/map.py export` from the saved response
   ([map guide](references/map.md#export)), with no extra requests.
-- MCP tools missing in Claude Code but the `regrid` CLI available, files (export/freshness), tiles, or county pull dates (CLI only, even when MCP is connected): [CLI guide](references/cli.md).
+- MCP tools missing in Claude Code but the `regrid` CLI available, files (export/freshness), tiles, county pull dates (CLI only), or a user-supplied saved `/verse` file (`freshness.py`, no request): [CLI guide](references/cli.md).
 - Ambiguous or mistyped address: suggestions flow in the [tool guide](references/mcp-tools.md).
 - Field meaning: run `python3 <skill>/scripts/fields.py explain FIELD` (its large
   [data file](references/fields.json): don't open it). Only fields it lacks justify a

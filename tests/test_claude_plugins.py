@@ -453,3 +453,14 @@ def test_command_uses_skill_prefixed_paths_and_states_hosts():
 def test_skill_keeps_public_docs_vs_auth_rule():
     skill = (SKILL_ROOT / "SKILL.md").read_text()
     assert "does not establish authenticated parcel access" in " ".join(skill.split())
+
+
+def test_manifest_has_privacy_policy_url_and_privacy_note_ships(source, tmp_path):
+    manifest = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())
+    assert manifest["privacyPolicyUrl"] == (
+        "https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/PRIVACY.md"
+    )
+    note = (PLUGIN / "PRIVACY.md").read_bytes()
+    cowork, code, skill = map(archive_contents, builder.build(source, tmp_path / "out"))
+    assert cowork["PRIVACY.md"] == code["PRIVACY.md"] == note
+    assert b"https://regrid.com/terms/privacy" in note
