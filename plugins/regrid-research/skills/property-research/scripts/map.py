@@ -53,7 +53,7 @@ def _finite(value: object) -> float | None:
     if type(value) not in {int, float}:
         return None
     try:
-        number = float(value)
+        number = float(value)  # type: ignore[arg-type]
     except OverflowError:
         return None
     return number if math.isfinite(number) else None

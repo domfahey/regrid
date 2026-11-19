@@ -12,14 +12,12 @@ from pathlib import Path
 
 import pytest
 
+from regrid.offline import map as parcel_map
+
 SCRIPT = (
     Path(__file__).resolve().parents[1]
     / "plugins/regrid-research/skills/property-research/scripts/map.py"
 )
-SPEC = importlib.util.spec_from_file_location("regrid_map", SCRIPT)
-assert SPEC and SPEC.loader
-parcel_map = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(parcel_map)
 
 MapError = parcel_map.MapError
 
@@ -336,7 +334,6 @@ def test_output_respects_umask(tmp_path):
 
 
 def test_extracted_map_helper_renders(tmp_path):
-    import importlib.util
     from zipfile import ZipFile
 
     build_path = SCRIPT.parents[5] / "scripts/build_claude_plugins.py"
