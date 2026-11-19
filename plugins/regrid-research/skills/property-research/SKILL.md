@@ -63,8 +63,9 @@ failure, or silently switch data sources.
    or other external changes as part of research.
 3. For one-property research start with `limit=1`. Explicitly disable stacked
    results and premium datasets when the selected endpoint supports those flags
-   and the user has not requested them. Omit geometry unless needed or a map is
-   requested ([map guide](references/map.md)); never paste geometry into chat.
+   and the user has not requested them. Omit geometry unless needed; when a map is
+   requested keep it, passing `return_geometry=true` where supported
+   ([map guide](references/map.md)). Never paste geometry into chat.
    Only pass options the endpoint supports; do not assume a universal option set.
 4. Record execution separately from identity: `lookup_status` is `success`,
    `error`, or `not_attempted`; `match_status` is `confirmed`, `ambiguous`,

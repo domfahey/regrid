@@ -369,15 +369,11 @@ def test_skill_links_map_reference():
     assert "verbatim" in guide
 
 
-def test_chmod_by_path_works_when_fd_chmod_is_unsupported(tmp_path, monkeypatch):
-    real_chmod = os.chmod
+def test_render_does_not_touch_process_umask(tmp_path, monkeypatch):
+    def forbidden(*args):
+        raise AssertionError("os.umask must not be called")
 
-    def path_only_chmod(target, mode, *args, **kwargs):
-        if isinstance(target, int):
-            raise TypeError("chmod: path should be string, bytes or os.PathLike, not int")
-        return real_chmod(target, mode, *args, **kwargs)
-
-    monkeypatch.setattr(parcel_map.os, "chmod", path_only_chmod)
+    monkeypatch.setattr(parcel_map.os, "umask", forbidden)
     response = write_response(tmp_path / "r.json", good_feature())
     parcel_map.render(response, tmp_path / "m.html")
     assert (tmp_path / "m.html").exists()
@@ -411,3 +407,72 @@ def test_missing_fact_renders_not_in_record(tmp_path):
     response = write_response(tmp_path / "r.json", good_feature())
     parcel_map.render(response, tmp_path / "m.html")
     assert "not in record" in (tmp_path / "m.html").read_text(encoding="utf-8")
+
+
+def test_mismatch_is_named_in_warning_and_guide(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature(ll_gissqft=1.0))
+    summary = parcel_map.render(response, tmp_path / "m.html")
+    assert "mismatch" in summary["warnings"][0].lower()
+    guide = (SCRIPT.parents[1] / "references/map.md").read_text(encoding="utf-8")
+    assert "area_checks" in guide
+
+
+def test_missing_geometry_field_is_rejected(tmp_path):
+    bare = feature(None, lat="39.9", lon="-75.03")
+    del bare["geometry"]
+    with pytest.raises(MapError, match="omits geometry"):
+        parcel_map.render(write_response(tmp_path / "r.json", bare), tmp_path / "m.html")
+    assert not (tmp_path / "m.html").exists()
+
+
+def test_skill_keeps_geometry_when_mapping():
+    skill = (SCRIPT.parents[1] / "SKILL.md").read_text(encoding="utf-8")
+    guide = (SCRIPT.parents[1] / "references/map.md").read_text(encoding="utf-8")
+    assert "return_geometry=true" in skill and "return_geometry=true" in guide
+    assert "stop and report it as an open risk" not in guide
+
+
+@pytest.mark.parametrize(("lon", "lat"), [(-114.07, 51.05), (-99.13, 19.43)])  # Calgary, CDMX
+def test_bounds_reject_canada_and_mexico(lon, lat):
+    with pytest.raises(MapError, match="outside the United States"):
+        parcel_map.validate_geometry(square(lon=lon, lat=lat))
+
+
+def test_non_us_path_is_rejected(tmp_path):
+    toronto = feature(square(lon=-79.4, lat=43.7))
+    toronto["properties"]["path"] = "/ca/on/toronto/1"
+    with pytest.raises(MapError, match="outside the United States"):
+        parcel_map.render(write_response(tmp_path / "r.json", toronto), tmp_path / "m.html")
+
+
+def test_positions_with_altitude_are_accepted(tmp_path):
+    geometry = square()
+    geometry["coordinates"][0] = [[*p, 12.5] for p in geometry["coordinates"][0]]
+    parcel_map.validate_geometry(geometry)
+    assert parcel_map.geometry_area_sqft(geometry) == pytest.approx(expected_sqft(), rel=1e-6)
+    response = write_response(tmp_path / "r.json", feature(geometry, ll_gissqft=expected_sqft()))
+    assert parcel_map.render(response, tmp_path / "m.html")["warnings"] == []
+
+
+def test_antimeridian_ring_area_and_display(tmp_path):
+    ring = [[179.95, 52.0], [-179.95, 52.0], [-179.95, 52.1], [179.95, 52.1], [179.95, 52.0]]
+    geometry = {"type": "Polygon", "coordinates": [ring]}
+    parcel_map.validate_geometry(geometry)
+    expected = expected_sqft(lon=179.95, lat=52.0, size=0.1)
+    assert parcel_map.geometry_area_sqft(geometry) == pytest.approx(expected, rel=1e-3)
+    response = write_response(tmp_path / "r.json", feature(geometry, ll_gissqft=expected))
+    parcel_map.render(response, tmp_path / "m.html")
+    page = (tmp_path / "m.html").read_text(encoding="utf-8")
+    data = json.loads(re.search(r'id="parcel-data">(.*?)</script>', page, re.S).group(1))
+    lons = [p[0] for p in data[0]["geometry"]["coordinates"][0]]
+    assert max(lons) - min(lons) < 1
+
+
+def test_no_replace_never_overwrites_a_file_created_after_the_check(tmp_path, monkeypatch):
+    output = tmp_path / "m.html"
+    output.write_text("keep", encoding="utf-8")
+    monkeypatch.setattr(parcel_map.os.path, "lexists", lambda path: False)
+    with pytest.raises(MapError, match="exists"):
+        parcel_map.render(write_response(tmp_path / "r.json", good_feature()), output)
+    assert output.read_text(encoding="utf-8") == "keep"
+    assert [p.name for p in tmp_path.iterdir() if p.name.startswith(".map-")] == []

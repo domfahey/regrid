@@ -8,7 +8,7 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 
 ### Added
 
-- Regrid Research 0.6.0 adds `scripts/map.py`, a stdlib-only offline helper that renders a saved US parcel response as an interactive Esri satellite map, with boundary validation and a recorded-area cross-check. The map guide and packaging cover all three archives; the page loads Leaflet and imagery in the viewer's browser.
+- Regrid Research 0.6.0 adds `scripts/map.py`, a stdlib-only offline helper that renders a saved US parcel response as an interactive Esri satellite map, with boundary validation and a recorded-area cross-check. It refuses parcels whose Regrid path is outside `/us/`, accepts GeoJSON altitude values, handles boundaries that cross 180°, never overwrites an existing page without `--replace`, and leaves the process umask unchanged. The map guide asks for `return_geometry=true` where supported and distinguishes a missing boundary (`null`) from geometry that was not requested. The map guide and packaging cover all three archives; the page loads Leaflet and imagery in the viewer's browser.
 
 - MIT license, public contribution/security/conduct guides, issue and PR templates, pinned GitHub Actions CI, and dependency-update configuration.
 
