@@ -52,7 +52,8 @@ def test_transports_share_complete_skill_and_build_reproducibly(source, tmp_path
             assert cowork[name] == code[name]
     for name, content in skill.items():
         assert name.startswith("property-research/")
-        assert content == code["skills/" + name]
+        if name != "property-research/LICENSE":
+            assert content == code["skills/" + name]
     assert "property-research/references/packaging-test.md" in skill
     second = builder.build(source, tmp_path / "second")
     assert [p.read_bytes() for p in paths] == [p.read_bytes() for p in second]
@@ -362,3 +363,33 @@ def test_cli_is_the_fallback_route_and_freshness_script_is_routed():
     batch = (SKILL_ROOT / "references/batch.md").read_text()
     assert "with the actual\n  outcome" in batch and "uncertain" in batch
     assert "MCP `/parcels/typeahead`: returns no parcel records" not in batch
+
+
+def test_license_ships_in_every_archive_identical_to_repo_license(source, tmp_path):
+    license_text = (ROOT / "LICENSE").read_bytes()
+    cowork, code, skill = map(archive_contents, builder.build(source, tmp_path / "out"))
+    assert cowork["LICENSE"] == code["LICENSE"] == license_text
+    assert skill["property-research/LICENSE"] == license_text
+    assert "LICENSE" not in skill
+
+
+def test_manifest_carries_distribution_metadata():
+    manifest = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())
+    assert manifest["license"] == "MIT"
+    assert manifest["repository"] == "https://github.com/domfahey/regrid"
+    assert manifest["homepage"] == (
+        "https://github.com/domfahey/regrid/tree/main/plugins/regrid-research"
+    )
+
+
+def test_shipped_readme_leads_with_current_status_and_omits_history():
+    readme = (PLUGIN / "README.md").read_text()
+    section = readme.split("## Validation and acceptance", 1)[1]
+    assert section.lstrip().startswith("Status for 0.8.0")
+    assert "Historical 0.4.0" not in readme
+    assert "Historical 0.3.0" not in readme
+    history = (PLUGIN / "evals/README.md").read_text()
+    assert "## Historical verification" in history
+    assert "Historical 0.2.0 verification" in history
+    assert "results/map-hosts-0.8.0.json" in history
+    assert "map-hosts-0.7.0.json" not in history
