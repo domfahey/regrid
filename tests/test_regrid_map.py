@@ -284,6 +284,7 @@ def test_index_and_all_candidates_conflict(tmp_path):
         parcel_map.render(response, tmp_path / "m.html", index=0, all_candidates=True)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permissions")
 def test_output_respects_umask(tmp_path):
     response = write_response(tmp_path / "r.json", good_feature())
     old = os.umask(0o022)
