@@ -25,6 +25,7 @@ from .models import (
     TypeaheadResponse,
     UsageResponse,
     UTFGridResponse,
+    VerseFeature,
     VerseResponse,
 )
 from .offline.map import feature_uuid
@@ -445,7 +446,14 @@ class Runner:
         def check() -> Outcome:
             payload = self.client.verse(return_geometry=False)
             response = VerseResponse.model_validate(payload)
-            entries = response.features if response.features is not None else [response]
+            # Live /verse wraps the county collection: {"verse": FeatureCollection}.
+            entries: list[VerseFeature | VerseResponse]
+            if response.verse is not None:
+                entries = list(response.verse.features)
+            elif response.features is not None:
+                entries = list(response.features)
+            else:
+                entries = [response]
             notes = []
             county = self.subject.county if self.subject else None
             if county:

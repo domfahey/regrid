@@ -107,8 +107,13 @@ class Server:
         if path == "/usage/detailed":
             return httpx.Response(200, json=DETAILED_USAGE)
         if path == "/verse":
-            feature = {"type": "Feature", "properties": {"path": COUNTY + "/"}}
-            return httpx.Response(200, json={"type": "FeatureCollection", "features": [feature]})
+            # Live shape (verified 2026-11-19): {"verse": FeatureCollection}.
+            features = [
+                {"type": "Feature", "properties": {"path": "/us/pa/elsewhere"}},
+                {"type": "Feature", "properties": {"path": COUNTY + "/"}},
+            ]
+            body = {"verse": {"type": "FeatureCollection", "features": features}}
+            return httpx.Response(200, json=body)
         if path == "/parcels/address":
             return httpx.Response(
                 200, json={"parcels": {"type": "FeatureCollection", "features": [SUBJECT]}}
@@ -210,6 +215,7 @@ def test_happy_path(capsys):
     } == {TOKEN, live_full.BAD_TOKEN, None}
     assert "NOTE paging: ordered: true" in output
     assert "NOTE apn: match: true" in output
+    assert "PASS verse: 2 entries" in output
     assert "NOTE verse: subject county present: true" in output
     assert "PASS bad token: rejected with HTTP 401" in output
     assert "SKIP typeahead: needs an Enterprise token" in output
