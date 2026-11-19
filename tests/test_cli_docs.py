@@ -163,3 +163,111 @@ def test_cli_md_mentions_every_subcommand_and_flag() -> None:
             if not ok:
                 missing.append(f"{owner} {flag}")
     assert not missing, f"cli.md does not show on one line: {missing}"
+
+
+def _options_bullets() -> list[tuple[list[str], list[str], str]]:
+    """Return (commands, backticked keys, text) for each `--options` bullet in cli.md."""
+    text = CLI_MD.read_text(encoding="utf-8")
+    bullets = re.findall(r"^- (`--options` on .+?)(?=\n- |\n\n)", text, re.M | re.S)
+    out = []
+    for raw in bullets:
+        head, _, body = " ".join(raw.split()).partition(": ")
+        commands = re.findall(r"`([a-z-]+)`", head.replace("`--options`", ""))
+        # Only the first sentence names keys; later ones (e.g. "`typeahead` takes no ...") do not.
+        sentence = re.split(r"(?<=[.)])\.? (?=[A-Z`])", body)[0]
+        accepted = re.sub(r"\([^)]*rejected\)", "", sentence)  # "(`limit` is rejected)"
+        out.append((commands, re.findall(r"`([a-z_]+)`", accepted), body))
+    return out
+
+
+def _probe_client() -> object:
+    from regrid.client import RegridClient
+
+    return RegridClient(
+        "test", transport=httpx.MockTransport(lambda request: httpx.Response(200, json={}))
+    )
+
+
+def _accepts(command: str, key: str, value: object) -> bool:
+    """Ask the real endpoint method whether it accepts one --options key (US country)."""
+    client = _probe_client()
+    point = {"lat": 39.9, "lon": -75.1}
+    calls = {
+        "point": lambda o: client.point(**point, **o),  # type: ignore[attr-defined]
+        "area": lambda o: client.area({"type": "Point", "coordinates": [-75.1, 39.9]}, **o),  # type: ignore[attr-defined]
+        "address": lambda o: client.address("1 Main St", **o),  # type: ignore[attr-defined]
+        "apn": lambda o: client.apn("123", **o),  # type: ignore[attr-defined]
+        "owner": lambda o: client.owner("Smith", **o),  # type: ignore[attr-defined]
+        "query": lambda o: client.query({"owner": {"ilike": "smith"}}, **o),  # type: ignore[attr-defined]
+        "parcel": lambda o: client.parcel("00000000-0000-4000-8000-000000000000", **o),  # type: ignore[attr-defined]
+        "parcel-path": lambda o: client.parcel_path("/us/nj/camden/camden", **o),  # type: ignore[attr-defined]
+        "verse": lambda o: client.verse(**o),  # type: ignore[attr-defined]
+        "usage": lambda o: client.usage(**o),  # type: ignore[attr-defined]
+        "schema": lambda o: client.schema("parcel", **o),  # type: ignore[attr-defined]
+    }
+    try:
+        calls[command]({key: value})
+    except (ValueError, TypeError):
+        return False
+    return True
+
+
+# One valid value per key type, so a rejection means "unsupported key", not "bad value".
+_SAMPLE = {"limit": 1, "begin_date": "2024-01-01", "end_date": "2024-01-31"}
+
+
+def _sample(key: str) -> object:
+    return _SAMPLE.get(key, True)
+
+
+def test_options_bullets_are_found() -> None:
+    commands = {c for cmds, _, _ in _options_bullets() for c in cmds}
+    assert {"point", "parcel", "parcel-path", "verse", "usage", "schema"} <= commands
+
+
+def test_documented_options_keys_are_accepted() -> None:
+    from regrid.endpoints import _parcel_options
+
+    bad = []
+    for commands, keys, _ in _options_bullets():
+        for command in commands:
+            for key in keys:
+                if not _accepts(command, key, _sample(key)):
+                    bad.append(f"{command} --options {key}")
+    assert not bad, f"cli.md names keys the code rejects: {bad}"
+    # return_* flags: the doc says "return flags" without listing them; spot-check the set.
+    assert any(k.startswith("return_") for k in _parcel_options("us"))
+
+
+def test_documented_options_sets_are_exact_for_verse_usage_schema() -> None:
+    from regrid.endpoints import _USAGE, _parcel_options
+
+    # Every key name the code knows about, probed against the real methods.
+    universe = _parcel_options("us") | _USAGE | {"limit", "path", "premium_only", "return_geometry"}
+    documented = {c: set(k) for cmds, k, _ in _options_bullets() for c in cmds}
+    for command in ("verse", "usage", "schema"):
+        accepted = {k for k in universe if _accepts(command, k, _sample(k))}
+        assert documented[command] == accepted, command
+    # Cross-check the usage set against the code constant, not just the probe.
+    assert documented["usage"] == set(_USAGE)
+
+
+def test_parcel_commands_reject_limit_and_doc_says_so() -> None:
+    for command in ("parcel", "parcel-path"):
+        assert not _accepts(command, "limit", 1)
+    for command in ("point", "area", "address", "apn", "owner", "query"):
+        assert _accepts(command, "limit", 1)
+    for commands, keys, body in _options_bullets():
+        if "parcel" in commands:
+            assert "limit" not in keys
+            assert "`limit` is rejected" in body
+
+
+def test_typeahead_takes_no_options() -> None:
+    import inspect
+
+    from regrid.endpoints import EndpointsMixin
+
+    params = inspect.signature(EndpointsMixin.typeahead).parameters.values()
+    assert not any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params)
+    assert "takes no `--options`" in CLI_MD.read_text(encoding="utf-8")
