@@ -43,14 +43,15 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 
     `endpoints.json` adds `/parcels/path`, `/parcels/typeahead`, `/verse`, `/schemas/*`
     and `/usage/detailed`.
-  - A Windows CI job runs the offline helper and CLI tests, and it passes.
+  - A Windows CI job runs the offline helper tests and the offline/freshness CLI tests, and it passes.
   - Verification:
-    - The Claude Code (browser) map check passed with synthetic data
-      (`evals/results/map-hosts-0.8.0.json`).
+    - The map page passed a render check in a plain browser (Chromium via Playwright, synthetic
+      data; `evals/results/map-hosts-0.8.0.json`). This is not a check inside a Claude host.
     - Not run:
       - the live geometry check
-      - the Claude apps and Cowork map checks
+      - the Claude Code, Claude apps and Cowork map host checks
       - the live paging cursor (the `offset_id` cursor field is unverified against the live API)
+      - model and Cowork acceptance evaluations
 - SDK 0.2.0: `regrid map RESPONSE OUTPUT` renders a saved US parcel response as a satellite map page offline, and `regrid address-map ADDRESS OUTPUT` makes one address request, saves the response beside the page (`OUTPUT` with a `.json` suffix, or `--save-response`) and renders it. `address-map` reports `regrid: requests made: N` on stderr. `make live` now also reports whether the parcel geometry was present, null or absent. The live geometry check has not been run (awaiting user: not run).
 
 - Regrid Research 0.7.0 adds the `/regrid-research:address-map` command (Claude Code and Cowork archives only): one address request, the response saved verbatim, rendered with `scripts/map.py`, summarised and presented per the map guide. No neighbouring parcels. Host checks in Claude Code, the Claude apps and Cowork are recorded in `evals/results/map-hosts-0.7.0.json` and are all not run (awaiting user). The SDK is `0.2.0`.
@@ -76,6 +77,7 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 ### Changed
 
 - SDK 0.3.0: every CLI command that calls the API now ends stderr with `regrid: requests made: N`; `address-map` and `freshness` print it before their error lines. Stdout JSON is unchanged, but tools that compare stderr exactly will see the new line.
+- The coverage gate for `make test` and `make check` rises from 90% to 95% (`pyproject.toml` and the Makefile).
 - CI uses `actions/checkout` 7.0.1 and `actions/setup-python` 7.1.0, pinned by commit.
 
 - Regrid Research 0.8.0 reverses the satellite-map design's non-goal of GIS export files, by owner decision: `map.py export` and `regrid export` write CSV and GeoJSON from a saved response.

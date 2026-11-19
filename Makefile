@@ -35,7 +35,7 @@ typecheck:
 	$(PYTHON) -m mypy src
 
 test:
-	$(PYTHON) -m pytest -m "not e2e" --cov=regrid --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=90
+	$(PYTHON) -m pytest -m "not e2e" --cov=regrid --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=95
 
 e2e:
 	$(PYTHON) -m pytest -m e2e

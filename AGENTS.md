@@ -28,13 +28,13 @@ Processing API support unless the user explicitly asks.
 
 Target Python 3.10+. Use four-space indentation, 100-character lines, and type annotations. Use `snake_case` for functions/modules and `PascalCase` for classes. Let Ruff manage formatting and imports.
 
-Preserve dictionary responses and CLI JSON compatibility. CLI commands that call the API end stderr with `regrid: requests made: N`, counted with `RegridClient.request_count`; offline commands (`map`, `export`, `fields`) never construct a client. Check output paths before sending any request, and never overwrite a response file with its own output. Keep strict, endpoint-specific request models separate from forward-compatible response models. Retain unknown response fields and distinguish omitted values from explicit nulls.
+Preserve dictionary responses and CLI JSON compatibility. CLI commands that call the API print `regrid: requests made: N` on stderr, counted with `RegridClient.request_count`. It is the last stderr line, except in `address-map` and `freshness`, which print it before their note and error lines; offline commands (`map`, `export`, `fields`) never construct a client. Check output paths before sending any request, and never overwrite a response file with its own output. Keep strict, endpoint-specific request models separate from forward-compatible response models. Retain unknown response fields and distinguish omitted values from explicit nulls.
 
 ## Testing Guidelines
 
 Use pytest with `test_*.py` files and `test_*` functions. Add regression tests for behavior changes, especially request serialization, validation, and credential redaction. Use `httpx.MockTransport`; ordinary tests must not contact Regrid.
 
-`make test` requires at least 90% combined line and branch coverage for `src/regrid`; keep it at or above 95%. `src/regrid/offline/` counts toward coverage. The skill-only `workflow.py` is tested but excluded. Windows CI runs the offline helper and CLI tests, so mark POSIX-only assertions with `skipif(os.name == "nt")`. Mark HTTPS integration tests `e2e`; they run separately. Report blocked tests explicitly rather than treating them as passed.
+`make test` requires at least 95% combined line and branch coverage for `src/regrid`. `src/regrid/offline/` counts toward coverage. The skill-only `workflow.py` is tested but excluded. Windows CI runs the offline helper tests and the offline and freshness CLI tests (not `test_cli.py`, paging or address-map), so mark POSIX-only assertions with `skipif(os.name == "nt")`. Mark HTTPS integration tests `e2e`; they run separately. Report blocked tests explicitly rather than treating them as passed.
 
 ## Plugin Changes
 
@@ -43,7 +43,7 @@ handoff compatibility and shared request accounting; changes to the schema and
 helper must agree. The SDK and plugin have independent versions.
 
 - Build archives: `.venv/bin/python scripts/build_claude_plugins.py`.
-- Focused checks: `.venv/bin/python -m pytest tests/test_claude_plugins.py tests/test_regrid_workflow.py tests/test_regrid_workflow_composition.py tests/test_regrid_map.py tests/test_skill_helper_sync.py tests/test_cli_docs.py`.
+- Focused checks: `.venv/bin/python -m pytest tests/test_claude_plugins.py tests/test_regrid_workflow.py tests/test_regrid_workflow_composition.py tests/test_regrid_map.py tests/test_skill_helper_sync.py tests/test_cli_docs.py tests/test_offline_fields.py tests/test_offline_freshness.py tests/test_cli_offline.py tests/test_cli_freshness.py`.
 - Plugin commands live in `plugins/regrid-research/commands/`. They ship in the Claude Code and Cowork archives, not the standalone skill. `references/cli.md`'s command map is checked against the real CLI parser.
 - Validate packet fixtures: `.venv/bin/python plugins/regrid-research/evals/run.py validate --suite all`.
 - Validate plugin structure, when Claude CLI is installed: `claude plugin validate ./plugins/regrid-research --strict`.

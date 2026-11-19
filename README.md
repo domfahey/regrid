@@ -74,7 +74,7 @@ uv add /absolute/path/to/regrid
 | `make format` | Format source and tests |
 | `make format-check` | Verify formatting without editing files |
 | `make typecheck` or `make type` | Run mypy on the SDK and CLI |
-| `make test` | Run mocked tests and require at least 90% combined line and branch coverage |
+| `make test` | Run mocked tests and require at least 95% combined line and branch coverage |
 | `make doctor` | Check `.env` presence and a nonblank, non-placeholder effective token locally; no API calls |
 | `make live` | Explicit bounded live Regrid smoke test; requires token; uses the default test address |
 | `make e2e` | Run subprocess and real local HTTPS tests |
@@ -263,12 +263,12 @@ Invalid local arguments raise `ValueError` or `TypeError`. The client checks lim
 
 For Regrid Research 0.8.0 and SDK 0.3.0 (PR #6, merged as `619394a`):
 - **Tests:** `make check` passed **1106 tests** with **97.94%** SDK/CLI coverage, and `make e2e` passed 4.
-- **CI:** passed on Python 3.10 and 3.12, plus a new Windows job for the offline helper and CLI tests.
+- **CI:** passed on Python 3.10 and 3.12, plus a new Windows job for the offline helper tests and the offline and freshness CLI tests.
 - **Plugin:** the three 0.8.0 archives passed `claude plugin validate --strict`, and 19 packet fixtures validated.
-- **Map host check:** the satellite map was checked in a browser with synthetic data and passed; see `plugins/regrid-research/evals/results/map-hosts-0.8.0.json`.
+- **Map render check:** the satellite map rendered correctly in a plain browser (Chromium via Playwright) with synthetic data; this is not a check inside a Claude host; see `plugins/regrid-research/evals/results/map-hosts-0.8.0.json`.
 - **Not run:**
   - the live geometry check (`make live`)
-  - the Claude apps and Cowork map checks
+  - the Claude Code, Claude apps and Cowork map host checks
   - the live `offset_id` paging cursor
   - model and Cowork acceptance evals
 
