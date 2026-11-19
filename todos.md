@@ -44,14 +44,14 @@ Suggested batches:
 
 ## Verification
 
-- [ ] **Live outline check** (**authorization**): with one live address lookup,
+- [ ] **Live outline check** (**authorization**; code side done: `make live` reports geometry present/null/absent; awaiting user: not run): with one live address lookup,
   confirm the response includes the parcel outline (`geometry`) by default. This is
   the open risk from the satellite map design. If the outline is missing, revisit
   `references/map.md`.
 - [ ] **Windows CI job**: run `tests/test_regrid_map.py` and the workflow-helper tests
   on Windows. This covers `os.open` with `O_BINARY`, `os.link` and its fallback, and
   `python3` versus `py`.
-- [ ] **Map in Claude apps and Cowork**: confirm that unpkg (Leaflet) and the Esri
+- [ ] **Map in Claude apps and Cowork** (checklist and results file added; awaiting user: not run): confirm that unpkg (Leaflet) and the Esri
   imagery load in those hosts' pages, and record the result.
 
 ## New lookups (MCP and CLI both offer these; the skill does not use them)
@@ -110,7 +110,7 @@ Suggested batches:
 
 ## Workflow and map
 
-- [ ] **One command for the usual flow**: a plugin command that takes an address, runs
+- [x] **One command for the usual flow**: a plugin command that takes an address, runs
   the lookup, reports the property data and renders the satellite map, within one
   request and one record by default.
 - [ ] **Neighbouring parcel outlines** (**decision**): draw nearby parcels on the map

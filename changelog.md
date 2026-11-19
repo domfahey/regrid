@@ -2,11 +2,15 @@
 
 User-visible changes are grouped by release using the categories from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version numbering follows [Semantic Versioning](https://semver.org/); the current `0.x` API remains under development.
 
-No releases have been tagged in this repository. The Python SDK/CLI metadata version is `0.1.0`; the independently versioned Regrid Research plugin is `0.6.0`. These metadata versions do not establish published releases. Keep pending changes under Unreleased until an actual release is prepared.
+No releases have been tagged in this repository. The Python SDK/CLI metadata version is `0.2.0`; the independently versioned Regrid Research plugin is `0.7.0`. These metadata versions do not establish published releases. Keep pending changes under Unreleased until an actual release is prepared.
 
 ## Unreleased
 
 ### Added
+
+- `regrid map RESPONSE OUTPUT` renders a saved US parcel response as a satellite map page offline, and `regrid address-map ADDRESS OUTPUT` makes one address request, saves the response beside the page (`OUTPUT.json`, or `--save-response`) and renders it. `address-map` reports `regrid: requests made: N` on stderr. `make live` now also reports whether the parcel geometry was present, null or absent. The live geometry check has not been run (awaiting user: not run).
+
+- Regrid Research 0.7.0 adds the `/regrid-research:address-map` command (Claude Code and Cowork archives only): one address request, the response saved verbatim, rendered with `scripts/map.py`, summarised and presented per the map guide. No neighbouring parcels. Host checks in Claude Code, the Claude apps and Cowork are recorded in `evals/results/map-hosts-0.7.0.json` and are all not run (awaiting user). The SDK is `0.2.0`.
 
 - Regrid Research 0.6.0 adds `scripts/map.py`, a stdlib-only offline helper that renders a saved US parcel response as an interactive Esri satellite map, with boundary validation and a recorded-area cross-check. It refuses parcels whose Regrid path is outside `/us/`, accepts GeoJSON altitude values, handles boundaries that cross 180°, never overwrites an existing page without `--replace`, and leaves the process umask unchanged. The map guide asks for `return_geometry=true` where supported and distinguishes a missing boundary (`null`) from geometry that was not requested. The map guide and packaging cover all three archives; the page loads Leaflet and imagery in the viewer's browser.
 

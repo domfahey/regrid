@@ -35,6 +35,9 @@ a US property. Scope is US parcels only.
    - Claude Code: give the absolute path to `OUTPUT.html` and offer to open it in a browser.
    - Claude apps: show the HTML as an interactive page.
 
+Terminal users without MCP can use the CLI equivalents: `regrid address-map ADDRESS
+OUTPUT.html` (one request) or `regrid map RESPONSE.json OUTPUT.html` (offline).
+
 ## Limits
 
 - The page loads Leaflet from unpkg.com and imagery from Esri (server.arcgisonline.com).

@@ -96,7 +96,11 @@ Coverage includes every SDK and CLI module; XML output is written to ignored `co
 .venv/bin/regrid tilejson --format mvt
 .venv/bin/regrid grid 15 8828 12121
 .venv/bin/regrid tile 15 8828 12121 --format png --retina --output parcel.png
+.venv/bin/regrid map response.json parcel.html          # offline satellite map of a saved response
+.venv/bin/regrid address-map "123 Main St, Dallas, TX" parcel.html   # one request, saves parcel.html.json
 ```
+
+`regrid map RESPONSE OUTPUT [--feature N] [--all-candidates] [--retrieved-at ISO] [--replace]` renders offline with no request. `regrid address-map ADDRESS OUTPUT [--path SCOPE] [--save-response FILE] [--retrieved-at ISO] [--replace]` makes one address request, prints `regrid: requests made: N` to stderr, and saves the response next to the page unless `--save-response` is given. Pages load Leaflet and Esri imagery in the viewer's browser.
 
 Every SDK method has a CLI command: `point`, `area`, `address`, `apn`, `owner`, `query`, `parcel`, `parcel-path`, `typeahead`, `client-token-typeahead`, `schema`, `verse`, `usage`, `report`, `tilejson`, `tile`, and `grid`. Use `<command> --help` for arguments. `python -m regrid` is equivalent to the installed command.
 
@@ -288,9 +292,9 @@ Output contains only status and aggregate counts, not credentials, addresses, ow
 The [Regrid Research guide](plugins/regrid-research/README.md) covers separate
 Cowork and Claude Code packages built from one canonical research skill:
 
-- `dist/regrid-research-cowork-0.6.0.zip`: remote connector declaration and skills.
-- `dist/regrid-research-claude-code-0.6.0.zip`: local bridge and skills.
-- `dist/regrid-property-research-skill-0.6.0.zip`: standalone skill with references.
+- `dist/regrid-research-cowork-0.7.0.zip`: remote connector declaration and skills.
+- `dist/regrid-research-claude-code-0.7.0.zip`: local bridge and skills.
+- `dist/regrid-property-research-skill-0.7.0.zip`: standalone skill with references.
 
 Build with `.venv/bin/python scripts/build_claude_plugins.py`. For Cowork,
 configure `x-regrid-token` privately in the custom web connector's Request headers

@@ -8,7 +8,10 @@ from zipfile import ZipFile
 
 import pytest
 
+import regrid
+
 ROOT = Path(__file__).resolve().parents[1]
+PLUGIN = ROOT / "plugins/regrid-research"
 SPEC = importlib.util.spec_from_file_location(
     "build_claude_plugins", ROOT / "scripts" / "build_claude_plugins.py"
 )
@@ -135,3 +138,26 @@ def test_query_endpoint_notes_required_filter():
         ).read_text()
     )
     assert "fields[<field>][<op>]" in endpoints["endpoints"]["/parcels/query"]["skill_note"]
+
+
+def test_command_ships_in_plugin_archives_only(source, tmp_path):
+    cowork, code, standalone = map(archive_contents, builder.build(source, tmp_path / "out"))
+    assert "commands/address-map.md" in code and "commands/address-map.md" in cowork
+    assert not any(name.startswith("commands/") for name in standalone)
+
+
+def test_command_is_bounded_and_links_map_guide():
+    text = (PLUGIN / "commands/address-map.md").read_text()
+    assert text.startswith("---\n") and "argument-hint:" in text
+    assert "one request" in text and "references/map.md" in text
+    assert "neighbour" not in text.lower()
+
+
+def test_host_results_never_claim_unrun_checks():
+    data = json.loads((PLUGIN / "evals/results/map-hosts-0.7.0.json").read_text())
+    assert set(data["hosts"].values()) <= {"verified", "failed", "not_run"}
+
+
+def test_versions():
+    assert json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())["version"] == "0.7.0"
+    assert regrid.__version__ == "0.2.0"

@@ -243,3 +243,15 @@ and overshoot accounting. Run the focused regressions with:
 
 `jsonschema` is a development dependency used to test the portable contract;
 the shipped helper still requires only Python 3.10+ and the standard library.
+
+## Satellite map host checklist
+
+Run per host (Claude Code, Claude apps, Cowork) with the 0.7.0 archive:
+
+1. Run `/regrid-research:address-map <US address>` (or render a saved response) and
+   open the page.
+2. Confirm the satellite imagery, the parcel outline, the info panel and the Esri
+   credit all show.
+3. Check the browser console for blocked scripts or tile errors.
+4. Record `verified`, `failed` or `not_run` per host in
+   `results/map-hosts-0.7.0.json`, with notes. Leave `not_run` without evidence.

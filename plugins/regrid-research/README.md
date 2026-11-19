@@ -14,16 +14,20 @@ its references. Setup is separate from research; choose only one connection.
 
 | Package in `dist/` | Use |
 | --- | --- |
-| `regrid-research-cowork-0.6.0.zip` | Cowork plugin with a remote HTTP connector declaration; credentials configured in Claude |
-| `regrid-research-claude-code-0.6.0.zip` | Claude Code plugin with the local `mcp-remote` bridge and environment placeholder |
-| `regrid-property-research-skill-0.6.0.zip` | Standalone research skill for an already configured Regrid connector |
+| `regrid-research-cowork-0.7.0.zip` | Cowork plugin with a remote HTTP connector declaration; credentials configured in Claude |
+| `regrid-research-claude-code-0.7.0.zip` | Claude Code plugin with the local `mcp-remote` bridge and environment placeholder |
+| `regrid-property-research-skill-0.7.0.zip` | Standalone research skill for an already configured Regrid connector |
+
+The two plugin packages also ship the `/regrid-research:address-map <US street
+address>` command: one address request, the saved response rendered as a satellite
+map and summarised. The standalone skill archive has no commands.
 
 The two plugin packages have the same plugin name and skills; install one variant
 per host rather than enabling both. Archives through `0.4.0` are superseded.
 
 ## Connect in Cowork
 
-Upload `regrid-research-cowork-0.6.0.zip` under Customize > Plugins > Add > Upload
+Upload `regrid-research-cowork-0.7.0.zip` under Customize > Plugins > Add > Upload
 plugin. Its connector declaration contains only the remote URL, not a local
 process or credential. Add/connect Regrid from the plugin's Connectors tab, or
 configure the same URL through Customize > Connectors:
@@ -38,7 +42,7 @@ configure the same URL through Customize > Connectors:
    without retrieving parcels; public documentation access alone does not verify auth.
 6. Run `/regrid-research:setup`, then ask who owns a specific address once
    authenticated access is verified. If using the standalone skill instead of
-   the plugin, upload `regrid-property-research-skill-0.6.0.zip` through Claude's
+   the plugin, upload `regrid-property-research-skill-0.7.0.zip` through Claude's
    skill interface and ask for the same lookup with your connected Regrid tools.
 
 **Request-header authentication is a limited beta.** If the section is absent,
@@ -60,7 +64,7 @@ been verified in this account.
 
 ## Connect in Claude Code
 
-`regrid-research-claude-code-0.6.0.zip` contains the research and setup skills plus a local
+`regrid-research-claude-code-0.7.0.zip` contains the research and setup skills plus a local
 stdio bridge using `npx -y mcp-remote`, the Regrid MCP URL, and the
 `x-regrid-token: ${REGRID_TOKEN}` header. Node/npx and the host environment token
 are required. Do not enable this bridge alongside an equivalent active connector.
