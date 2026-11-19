@@ -39,6 +39,9 @@ def _text(value: object) -> str | None:
 
 
 def _features(verse: object) -> list[object]:
+    # The real /verse body wraps the collection under "verse"; a bare collection also works.
+    if isinstance(verse, dict) and isinstance(verse.get("verse"), dict):
+        verse = verse["verse"]
     if isinstance(verse, dict) and isinstance(verse.get("features"), list):
         return verse["features"]
     return [verse]

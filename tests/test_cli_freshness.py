@@ -8,7 +8,7 @@ from regrid import cli
 from regrid.client import RegridClient
 from regrid.offline import freshness
 
-VERSE = {
+COLLECTION = {
     "type": "FeatureCollection",
     "features": [
         {
@@ -24,6 +24,8 @@ VERSE = {
         }
     ],
 }
+# The real /verse body wraps the collection under a top-level "verse" key.
+VERSE = {"verse": COLLECTION}
 
 
 def _install(monkeypatch, handler):
@@ -135,7 +137,7 @@ def test_missing_token_makes_no_request(tmp_path, verse_server, monkeypatch, cap
 
 def test_freshness_keeps_result_when_cache_cannot_be_serialized(tmp_path, monkeypatch, capsys):
     nan_verse = json.loads(json.dumps(VERSE))
-    nan_verse["features"][0]["properties"]["extra"] = float("nan")
+    nan_verse["verse"]["features"][0]["properties"]["extra"] = float("nan")
 
     class NanClient(RegridClient):
         def verse(self, **kwargs):

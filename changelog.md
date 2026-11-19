@@ -6,7 +6,16 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
-No changes yet.
+### Fixed
+
+- `--max-records` paging now starts at `offset_id=0` (verified live: point and area return a spatially ordered first page without `offset_id`, which could repeat records and skip ids below the cursor); it stops with `complete: false` and `regrid: paging stopped: results not in cursor order` if a page is not ascending past the cursor. `make live-full` checks the same ordering.
+- `regrid freshness` and the skill's `freshness.py` now read the live `/verse` response, which wraps the county collection as `{"verse": FeatureCollection}`; before, every county lookup failed against the real API with "No verse entry found".
+- SDK models: `VerseResponse` validates the wrapped `/verse` body and `DetailedUsageRow.area` accepts the live integer, so typed `verse` and `usage --detailed` validate real responses.
+- Tests: an autouse `tests/conftest.py` points HOME, USERPROFILE, XDG_CACHE_HOME and LOCALAPPDATA at a temp dir so no test can write the real `~/.cache/regrid`.
+
+### Added
+
+- `make live-full`: an opt-in, bounded (about 26 requests, hard cap 30) live check of every read-only endpoint that prints only aggregate PASS/FAIL/SKIP/NOTE lines.
 
 ## [SDK 0.4.3][sdk-v0.4.3] and [Regrid Research 0.9.3][regrid-research-v0.9.3] - 2026-11-19
 

@@ -182,6 +182,36 @@ def test_detailed_usage():
     assert result.to_dict() == payload
 
 
+def test_detailed_usage_real_shape():
+    payload = {
+        "usage": {
+            "cycle_dates": {"begin": 1782864000, "end": 1785542400},
+            "cycle_usage": [
+                {"country": "us", "service": "parcels", "requests": 3, "parcels": 7, "area": 12}
+            ],
+            "date_range": {
+                "begin_ts": 1782864000,
+                "begin": "2026-11-01",
+                "end": "2026-11-19",
+                "total": [
+                    {"service": "parcels", "country": "us", "requests": 3, "parcels": 7, "area": 0}
+                ],
+                "extra": 1,
+            },
+        }
+    }
+    result = DetailedUsageResponse.model_validate(payload)
+    assert result.usage.cycle_usage[0].area == 12
+    assert result.usage.date_range.total[0].parcels == 7
+    assert result.to_dict() == payload
+
+
+def test_detailed_usage_area_measurements_still_valid():
+    payload = {"usage": {"cycle_usage": [{"area": {"acres": 2.5}}]}}
+    result = DetailedUsageResponse.model_validate(payload)
+    assert result.usage.cycle_usage[0].area.acres == 2.5
+
+
 @pytest.mark.parametrize(
     "payload",
     [
@@ -196,6 +226,45 @@ def test_metadata_feature_and_collection(payload):
     else:
         assert result.features[0].properties.admin2 == "Division 22"
     assert result.to_dict() == payload
+
+
+def test_metadata_real_wrapped_collection():
+    payload = {
+        "verse": {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "path": "/us/nj/camden",
+                        "msa": "Philadelphia",
+                        "partial": "complete",
+                        "buildings_count": 241025.0,
+                    },
+                    "id": 2293,
+                }
+            ],
+        }
+    }
+    result = VerseResponse.model_validate(payload)
+    assert result.verse.features[0].properties.path == "/us/nj/camden"
+    assert result.verse.features[0].properties.msa == "Philadelphia"
+    assert result.verse.features[0].properties.buildings_count == 241025.0
+    assert result.to_dict() == payload
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"verse": {"type": "FeatureCollection"}},
+        {"verse": {"features": None}},
+        {"verse": []},
+        {"verse": None},
+    ],
+)
+def test_wrapped_metadata_requires_features(payload):
+    with pytest.raises(ValidationError):
+        VerseResponse.model_validate(payload)
 
 
 @pytest.mark.parametrize(
@@ -246,3 +315,14 @@ def test_report_and_tilejson_roundtrip():
 def test_response_envelopes_validate_known_fields(model, payload):
     with pytest.raises(ValidationError):
         model.model_validate(payload)
+
+
+def test_verse_wrapper_with_feature_type_still_requires_properties():
+    import pytest
+
+    with pytest.raises(ValueError):
+        VerseResponse.model_validate(
+            {"verse": {"type": "FeatureCollection", "features": []}, "type": "Feature"}
+        )
+    wrapped = {"verse": {"type": "FeatureCollection", "features": []}}
+    assert VerseResponse.model_validate(wrapped).verse is not None

@@ -173,7 +173,11 @@ def test_country_default_us_and_ca_paths(server):
 def _serve_cursor_pages(server, path, total=5):
     def pages(request):
         limit = int(request.params["limit"][0])
-        start = int(request.params.get("offset_id", ["0"])[0]) + 1  # exclusive cursor
+        if "offset_id" not in request.params:  # real API: spatial order without a cursor
+            body = parcel_response(limit, total - limit + 1)
+            body["parcels"]["features"].reverse()
+            return body
+        start = int(request.params["offset_id"][0]) + 1  # exclusive cursor, ascending ids
         count = max(0, min(limit, total - start + 1))
         return parcel_response(count, start)
 
@@ -186,7 +190,7 @@ def _assert_three_pages(server, result):
     assert (data["pages"], data["complete"]) == (3, True)
     assert feature_ids(data) == [1, 2, 3, 4, 5]
     assert [r.params["limit"] for r in server.requests] == [["2"], ["2"], ["1"]]
-    assert [r.params.get("offset_id") for r in server.requests] == [None, ["2"], ["4"]]
+    assert [r.params.get("offset_id") for r in server.requests] == [["0"], ["2"], ["4"]]
 
 
 def test_max_records_pages_over_https(server):

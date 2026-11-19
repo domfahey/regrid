@@ -82,7 +82,9 @@ Premium `return_*` flags need user authorization (see also [premium datasets](pr
 
 Before an open-ended point, area or query search, an optional `return_count=true` call
 is one request and zero records: it reports how many parcels match, so the user can
-set the record budget. Page with `offset_id` only within that budget and one task.
+set the record budget. Page with `offset_id` only within that budget and one task; pass
+`offset_id=0` on the first page so pages are id-ordered (verified live; without it the
+first point/area page is spatially ordered and the cursor can skip records).
 
 Schemas: use `python3 "<skill>/scripts/fields.py" explain FIELD` first (offline). Call
 `/schemas/*` only when `fields.py` lacks the field, one request each, reserved as a diagnostic.

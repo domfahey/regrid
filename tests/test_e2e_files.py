@@ -18,7 +18,7 @@ pytestmark = pytest.mark.e2e
 TOKEN = "secret-token"
 ADDRESS = "/api/v2/parcels/address"
 POINT = "/api/v2/parcels/point"
-VERSE = {
+COLLECTION = {
     "type": "FeatureCollection",
     "features": [
         {
@@ -34,6 +34,8 @@ VERSE = {
         }
     ],
 }
+# The real /verse body wraps the collection under a top-level "verse" key.
+VERSE = {"verse": COLLECTION}
 
 
 def good_response(uuid="00000000-0000-4000-8000-000000000001", **fields):

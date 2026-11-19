@@ -452,7 +452,7 @@ class DetailedUsageRow(RegridModel):
     ownership: int | None = None
     zoning: int | None = None
     parcels: int | None = None
-    area: AreaMeasurements | None = None
+    area: Number | AreaMeasurements | None = None
     date: str | None = None
 
 
@@ -504,6 +504,12 @@ class VerseProperties(RegridModel):
     population: int | str | None = None
     sqmi: Number | None = None
     sqkm: Number | None = None
+    msa: str | None = None
+    partial: str | None = None
+    address_date: str | None = None
+    address_count: Number | None = None
+    buildings_data_dates: str | None = None
+    buildings_count: Number | None = None
 
 
 class VerseFeature(RegridModel):
@@ -513,10 +519,16 @@ class VerseFeature(RegridModel):
     id: int | str | None = None
 
 
-class VerseResponse(RegridModel):
-    """County metadata, supporting both documented Feature and collection envelopes."""
+class VerseCollection(RegridModel):
+    type: Literal["FeatureCollection"] = "FeatureCollection"
+    features: list[VerseFeature]
 
-    type: Literal["Feature", "FeatureCollection"]
+
+class VerseResponse(RegridModel):
+    """County metadata: the live ``{"verse": collection}`` wrapper, or a bare Feature/collection."""
+
+    type: Literal["Feature", "FeatureCollection"] | None = None
+    verse: VerseCollection | None = None
     geometry: Geometry | None = None
     properties: VerseProperties | None = None
     features: list[VerseFeature] | None = None
@@ -526,6 +538,10 @@ class VerseResponse(RegridModel):
     @classmethod
     def require_shape_content(cls, value: Any) -> Any:
         if isinstance(value, dict):
+            if value.get("type") is None:
+                if value.get("verse") is not None:
+                    return value
+                raise ValueError("Verse metadata requires a type or a verse collection")
             if value.get("type") == "FeatureCollection" and not isinstance(
                 value.get("features"), list
             ):
