@@ -173,7 +173,7 @@ def run_trial(
             "auth_blocked": auth_blocked,
             "invalid_trace_lines": invalid,
             "tool_calls": calls,
-            "read_paths": [c["input"].get("file_path") for c in calls if c["name"] == "Read"],
+            "read_paths": discovery.read_paths(calls),
             "helper_execution": "unavailable_read_only",
             "grading_status": "not_graded",
             "scope": "CLI navigation trial; not Cowork acceptance or executed helper validation",

@@ -631,7 +631,8 @@
             "default": false
           }
         }
-      ]
+      ],
+      "skill_note": "Not part of the live schema. The live name 'fields[:field_name][:operator]' is a pattern: send at least one filter as fields[<field>][<op>] (for example fields[ll_gisacre][gte]=5) with a path or geojson scope. Never send an unfiltered query."
     },
     "/parcels/{ll_uuid}": {
       "method": "GET",

@@ -93,6 +93,10 @@ def _validate_request(request: Any, version: str) -> None:
 
 def validate(document: Document) -> None:
     """Check identity, evidence, status, and ledger invariants without changing data."""
+    _validate(document, check_budget=True)
+
+
+def _validate(document: Document, *, check_budget: bool) -> None:
     path = "$"
 
     def require(condition: bool, message: str, field: str = "") -> None:
@@ -327,6 +331,8 @@ def validate(document: Document) -> None:
             reconciled.add(key)
             uncertain -= attempt["record_limit"]
             consumed += proof["returned_records"]
+    if not check_budget:
+        return
     path = "$.budget"
     for field, expected in (
         ("attempted_requests", len(attempts)),
@@ -406,18 +412,9 @@ def reconcile_attempt(
     _require(evidence_verified is True, "Authoritative per-attempt proof must be verified")
     result = deepcopy(document)
     result["reconciliations"].append({"attempt_id": attempt_id, "proof": deepcopy(proof)})
-    # Validate proof and uniqueness before calculating counters, using the validator as authority.
-    attempt = next((a for a in result["attempts"] if a["attempt_id"] == attempt_id), None)
-    _require(attempt is not None, "Unknown reconciliation attempt")
-    _require(attempt["state"] == "uncertain", "Only uncertain attempts can be reconciled")
-    _require(
-        all(entry["attempt_id"] != attempt_id for entry in document["reconciliations"]),
-        "Attempt already reconciled",
-    )
-    _require(
-        isinstance(proof, dict) and _integer(proof.get("returned_records")),
-        "Missing reconciliation proof count",
-    )
+    # The validator is the sole authority on the new entry; counters are adjusted only after it.
+    _validate(result, check_budget=False)
+    attempt = next(a for a in result["attempts"] if a["attempt_id"] == attempt_id)
     result["budget"]["uncertain_records"] -= attempt["record_limit"]
     result["budget"]["returned_records"] += proof["returned_records"]
     validate(result)

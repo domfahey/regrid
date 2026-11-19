@@ -125,14 +125,21 @@ def extract_calls(events: list[dict[str, Any]]) -> tuple[set[str], list[dict[str
         content = message.get("content")
         for block in content if isinstance(content, list) else []:
             if isinstance(block, dict) and block.get("type") == "tool_use":
+                # Keep the input exactly as recorded; only an absent/null input becomes {}.
                 tool_input = block.get("input")
                 calls.append(
-                    {
-                        "name": block.get("name"),
-                        "input": tool_input if isinstance(tool_input, dict) else {},
-                    }
+                    {"name": block.get("name"), "input": {} if tool_input is None else tool_input}
                 )
     return models, calls
+
+
+def read_paths(calls: list[dict[str, Any]]) -> list[Any]:
+    """Requested Read paths; a non-object input yields None but is preserved in tool_calls."""
+    return [
+        c["input"].get("file_path") if isinstance(c["input"], dict) else None
+        for c in calls
+        if c["name"] == "Read"
+    ]
 
 
 def record(manifest: dict[str, Any], trace: Path, model: str, cli_version: str) -> dict[str, Any]:
@@ -148,7 +155,7 @@ def record(manifest: dict[str, Any], trace: Path, model: str, cli_version: str) 
         "observed_models": sorted(observed_models),
         "cli_version": cli_version,
         "tool_calls": calls,
-        "read_paths": [c["input"].get("file_path") for c in calls if c["name"] == "Read"],
+        "read_paths": read_paths(calls),
         "trace_sha256": hashlib.sha256(raw.encode()).hexdigest(),
         "trace": events,
         "grading_status": "not_graded",

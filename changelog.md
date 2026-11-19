@@ -26,9 +26,8 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 
 ### Changed
 
-- Regrid Research MCP references re-audited against the live server (Regrid Support 2.3.1, November 18, 2026): all seven tools are documented with their role and request accounting; spec titles now carry the ` (reference)` suffix; `fetch` uses `project/section/slug` IDs, an optional `format`, and reports unknown IDs without `isError`; `endpoints.json` now covers the APN, owner, point, area, query, and Regrid ID endpoints the skill advertises, in addition to address and usage.
+- Regrid Research 0.5.2 re-audits the MCP references against the live server (Regrid Support 2.3.1, November 18, 2026): all seven tools are documented with their role and request accounting; spec titles, including the setup usage example, carry the ` (reference)` suffix; `fetch` uses `project/section/slug` IDs, an optional `format`, and reports unknown IDs without `isError`; `endpoints.json` now covers the APN, owner, point, area, query, and Regrid ID endpoints the skill advertises, in addition to address and usage, and notes that parcel queries require a field filter. It also states US-only scope and tightens workflow-helper and eval-runner validation (see Fixed). Saved evaluation reports predate these reference changes. Handoff schemas are unchanged.
 
-- Regrid Research 0.5.2 refreshes the MCP references against the live server, states US-only scope, and tightens workflow-helper and eval-runner validation (see Fixed). Handoff schemas are unchanged.
 - Regrid Research 0.5.1 is a fix-only version: strict boolean checkpoint/retry flags in the workflow helper and corrected authentication detection in the discovery runner (see Fixed). Handoff schemas are unchanged. Detection was checked against a logged-out Claude CLI 2.1.327, which records the first trial as blocked; an expired OAuth session was not reproduced.
 
 - Regrid Research 0.5.0 adds opt-in `1.1` query handoffs and explicit upgrades while retaining `1.0` compatibility; caller-verified per-attempt reconciliation preserves uncertain history. Setup diagnostic calls share the workflow request budget without consuming property records. Evidence-only prose avoids loading schemas/examples, and saved tool catalogs load only for unavailable or mismatched live schemas. New regression scenarios cover these composition boundaries; offline evaluations remain separate from Claude/Cowork acceptance.
@@ -48,8 +47,8 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 ### Fixed
 
 - Reject `ll_updated_at` timestamps whose time-zone offset minutes are 60–99 (previously accepted and silently normalized).
-- Regrid Research workflow helper: `reserve_attempt` rejects non-list or non-string input IDs instead of splitting a string into characters; `set_result` raises `ValidationError` for non-object rows and unknown input IDs; `reconcile_attempt` reports "Only uncertain attempts can be reconciled" or "Attempt already reconciled" instead of a misleading budget-counter error. `ValidationError` remains a `ValueError` subclass.
-- Discovery eval runners ignore blank stream-JSON lines and tolerate explicit nulls in `message`, `content`, `name`, and `input` instead of failing or crashing.
+- Regrid Research workflow helper: `reserve_attempt` rejects non-list or non-string input IDs instead of splitting a string into characters; `set_result` raises `ValidationError` for non-object rows and unknown input IDs; `reconcile_attempt` runs the validator's reconciliation checks before adjusting budget counters, so it reports the actual reason (for example "Only uncertain attempts can be reconciled") instead of a misleading budget-counter error. `ValidationError` remains a `ValueError` subclass.
+- Discovery eval runners ignore blank stream-JSON lines and tolerate explicit nulls in `message`, `content`, `name`, and `input` instead of failing or crashing; non-object tool inputs are kept as recorded rather than replaced with `{}`.
 - Restrict automatic parcel-search limits to parcel routes so public address-schema requests receive no search parameters.
 - Reject non-finite upstream JSON numbers before serialization can silently convert them to null.
 - `TypedRegridClient.grid()` accepts the `TileJSON` model returned by `TypedRegridClient.tilejson()` as `metadata`.

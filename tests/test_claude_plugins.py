@@ -109,3 +109,22 @@ def test_workflow_helper_is_shared_but_scratch_scripts_are_excluded(source, tmp_
     name = "skills/property-research/scripts/workflow.py"
     assert cowork[name] == code[name] == standalone["property-research/scripts/workflow.py"]
     assert all(b"DO_NOT_PACKAGE" not in value for value in code.values())
+
+
+def test_mcp_examples_use_current_spec_title():
+    import re
+
+    text = (
+        ROOT / "plugins/regrid-research/skills/property-research/references/mcp-tools.md"
+    ).read_text()
+    titles = re.findall(r'"title":\s*"([^"]+)"', text)
+    assert titles and all(t == "Regrid OpenAPI Specification (reference)" for t in titles)
+
+
+def test_query_endpoint_notes_required_filter():
+    endpoints = json.loads(
+        (
+            ROOT / "plugins/regrid-research/skills/property-research/references/endpoints.json"
+        ).read_text()
+    )
+    assert "fields[<field>][<op>]" in endpoints["endpoints"]["/parcels/query"]["skill_note"]
