@@ -489,3 +489,17 @@ def test_private_key_blocks_are_rejected(tmp_path, kind):
     (tmp_path / "k.md").write_text(f"-----BEGIN {kind}PRIVATE KEY-----\n")
     with pytest.raises(ValueError, match="credential"):
         builder.read_public_file(tmp_path, "k.md")
+
+
+def test_paging_and_refresh_guidance_match_the_workflow_helper():
+    refs = SKILL_ROOT / "references"
+    batch = (refs / "batch.md").read_text()
+    assert (
+        "N + (K - 1) records" in batch
+        and "authorized_retry=True" in batch.split("Paged searches")[1].split("## Neighbour")[0]
+    )
+    assert "refresh" in batch.split("## Resume")[1] and (
+        "authorized_retry=True" in batch.split("An explicit refresh")[1][:600]
+    )
+    cli = (refs / "cli.md").read_text()
+    assert cli.count('"limit":1') >= 6 and "return_stacked" in cli
