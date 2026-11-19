@@ -17,6 +17,13 @@ for name in ("discovery", "run_discovery_claude"):
     sys.modules[name] = module
     spec.loader.exec_module(module)
 runner = sys.modules["run_discovery_claude"]
+EXPECTED_RUNS = (
+    len(runner.MODELS)
+    * len(
+        sys.modules["discovery"].read_json(sys.modules["discovery"].ROOT / "discovery-cases.json")
+    )
+    * 2  # skill and baseline variants
+)
 
 
 def success_trace():
@@ -60,8 +67,8 @@ def test_suite_uses_restricted_argv_and_records_models(tmp_path, monkeypatch):
     monkeypatch.setattr(runner.subprocess, "run", fake_run)
     monkeypatch.setenv("REGRID_TOKEN", "test-secret-not-forwarded")
     report = runner.run_suite(tmp_path / "results")
-    assert len(calls) == 25
-    assert len(report["runs"]) == 24
+    assert len(calls) == EXPECTED_RUNS + 1  # plus --version
+    assert len(report["runs"]) == EXPECTED_RUNS
     assert all(item["status"] == "completed" for item in report["runs"])
     assert report["runs"][0]["resolved_model_ids"] == ["claude-test-20261028"]
     assert report["runs"][0]["grading_status"] == "not_graded"
@@ -83,7 +90,7 @@ def test_auth_failure_stops_remaining_runs(tmp_path, monkeypatch):
     assert report["runs"][0]["status"] == "blocked"
     assert report["runs"][0]["resolved_model_ids"] == []
     assert report["runs"][0]["auth_blocked"] is True
-    assert len(report["runs"]) == 24
+    assert len(report["runs"]) == EXPECTED_RUNS
     assert all(item["status"] == "not_run" for item in report["runs"][1:])
     assert len(calls) == 2  # --version plus the single blocked trial; nothing after it runs
 
@@ -133,7 +140,7 @@ def test_suite_continues_after_successful_trial_mentioning_auth_phrases(tmp_path
 
     monkeypatch.setattr(runner.subprocess, "run", fake_run)
     report = runner.run_suite(tmp_path / "results")
-    assert len(report["runs"]) == 24
+    assert len(report["runs"]) == EXPECTED_RUNS
     assert all(item["status"] == "completed" for item in report["runs"])
 
 

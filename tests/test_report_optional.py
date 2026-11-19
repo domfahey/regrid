@@ -16,5 +16,5 @@ def test_report_all_parameters_optional():
     assert request.method == "POST"
     assert request.url.path == "/api/v2/report"
     # Omitted optionals are not sent as empty values, in the query or in a body.
-    assert request.url.params.multi_items() == [("token", "test-token")]
+    assert sorted(request.url.params.multi_items()) == [("token", "test-token")]
     assert request.content == b""

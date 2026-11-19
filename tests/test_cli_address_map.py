@@ -456,7 +456,8 @@ def test_non_string_path_does_not_block_neighbours(tmp_path, monkeypatch):
         return httpx.Response(200, json={"parcels": {"features": [feature]}})
 
     seen = _install(monkeypatch, handler)
-    cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"])
+    code = cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"])
+    assert code == 0
     assert [r.url.path for r in seen] == ["/api/v2/parcels/address", "/api/v2/parcels/point"]
 
 

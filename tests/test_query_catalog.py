@@ -72,19 +72,23 @@ def test_unknown_escape_hatch_and_legacy_queries_still_work():
         client.query({"future": {"eq": "x"}}, validate_fields=True, allow_unknown_fields=True)
         client.query({"future": {"future_operator": "x"}})
     # SDK-only flags are consumed locally; the wire sees just the filter and defaults.
-    assert [request.url.params.multi_items() for request in calls] == [
-        [
-            ("return_parcels", "true"),
-            ("fields[future][eq]", "x"),
-            ("limit", "5"),
-            ("token", "test"),
-        ],
-        [
-            ("return_parcels", "true"),
-            ("fields[future][future_operator]", "x"),
-            ("limit", "5"),
-            ("token", "test"),
-        ],
+    assert [sorted(request.url.params.multi_items()) for request in calls] == [
+        sorted(
+            [
+                ("return_parcels", "true"),
+                ("fields[future][eq]", "x"),
+                ("limit", "5"),
+                ("token", "test"),
+            ]
+        ),
+        sorted(
+            [
+                ("return_parcels", "true"),
+                ("fields[future][future_operator]", "x"),
+                ("limit", "5"),
+                ("token", "test"),
+            ]
+        ),
     ]
 
 

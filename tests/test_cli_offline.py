@@ -4,6 +4,7 @@ import json
 
 import pytest
 from map_fixtures import good_feature, write_response
+from test_offline_fields import ASSESSMENT_HITS
 
 from regrid import cli
 
@@ -33,7 +34,7 @@ def test_map_os_error_is_one_line(tmp_path, capsys):
     assert cli.main(["map", str(tmp_path / "missing.json"), str(tmp_path / "m.html")]) == 1
     err = capsys.readouterr().err
     missing = tmp_path / "missing.json"
-    assert err == f"regrid: [Errno 2] No such file or directory: '{missing}'\n"
+    assert err == f"regrid: [Errno 2] No such file or directory: {str(missing)!r}\n"
     assert not (tmp_path / "m.html").exists()
 
 
@@ -74,16 +75,7 @@ def test_regrid_fields_cli(monkeypatch, capsys):
 def test_regrid_fields_search_cli(capsys):
     assert cli.main(["fields", "search", "ASSESSMENT"]) == 0
     matches = json.loads(capsys.readouterr().out)["matches"]
-    assert [m["name"] for m in matches] == [
-        "agval",
-        "homestead_exemption",
-        "improvval",
-        "landval",
-        "parval",
-        "parvaltype",
-        "taxamt",
-        "taxyear",
-    ]
+    assert [m["name"] for m in matches] == ASSESSMENT_HITS
 
 
 def test_export_cli_offline(tmp_path, monkeypatch, capsys):
