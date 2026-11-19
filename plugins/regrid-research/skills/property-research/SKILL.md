@@ -69,7 +69,7 @@ failure, or silently switch data sources.
    arguments, not just the handoff. If the exposed tool cannot express it, stop
    and report that limitation; never issue an unscoped substitute. Keep requests
    read-only. Do not submit issue reports or other external changes as part of research.
-3. For one-property research start with `limit=1`. Disable stacked results and
+3. For one-property research start with `limit=1`. Explicitly disable stacked results and
    premium datasets when supported and not requested. Omit geometry unless needed; when a map is
    requested keep it, passing `return_geometry=true` where supported
    ([map guide](references/map.md)). Never paste geometry into chat.
