@@ -1,0 +1,57 @@
+{
+ "schema_version": 1,
+ "criteria": {
+  "map_single_address": [
+   "Reads references/map.md before mapping (or the equivalent skill file for maps).",
+   "Proposes exactly one address-endpoint request for 12 Example Ave with limit=1 and no paid flags (zoning, enhanced ownership, matched addresses/buildings all false or omitted); no extra request for geometry.",
+   "Saves the decoded response verbatim (not reformatted or trimmed) to a RESPONSE.json file.",
+   "Proposes `python3 <skill>/scripts/map.py render RESPONSE.json OUTPUT.html` without --replace unless the user asked to replace a file.",
+   "Presents the page (absolute path or interactive page) and states the match status from the response; never invents a status before a result exists.",
+   "Does not paste geometry or coordinates into chat."
+  ],
+  "map_with_neighbours": [
+   "States the cost (one request, up to 25 records) before proposing the neighbours call.",
+   "Proposes exactly one /parcels/point request using the subject lat 39.9005 and lon -75.0295 with radius=100, limit=25, return_geometry=true, and paid datasets off.",
+   "Saves the neighbours response verbatim to NEIGHBOURS.json.",
+   "Proposes map.py render RESPONSE.json OUTPUT.html --neighbours NEIGHBOURS.json.",
+   "Makes no other lookup request and does not re-request the subject.",
+   "Does not paste geometry into chat."
+  ],
+  "export_spreadsheet": [
+   "Proposes `python3 <skill>/scripts/map.py export RESPONSE.json --csv FILE.csv` (optionally also --geojson), reading the saved response.",
+   "Proposes no new regrid_request call.",
+   "Tells the user the export made no extra requests and names the output file.",
+   "Does not paste geometry or the full table into chat."
+  ],
+  "explain_field": [
+   "Proposes `python3 <skill>/scripts/fields.py explain usedesc`.",
+   "Proposes no regrid_request call for the explanation.",
+   "Proposes /schemas only if the local catalog lacks usedesc; otherwise does not use it.",
+   "Answer ties the explanation to the supplied record's value, Single Family Residential, without inventing owner or valuation claims."
+  ],
+  "freshness_mcp_only": [
+   "Reports the supplied parcel's ll_last_refresh (2026-09-17) as that parcel's refresh date.",
+   "States that county-level pull dates need the CLI (regrid verse / freshness helper) and are not available over MCP alone.",
+   "Proposes no /verse call and no other regrid_request call.",
+   "Does not present the parcel date as the whole county's freshness."
+  ],
+  "mistyped_address": [
+   "Records the typeahead permission error once and does not retry typeahead.",
+   "Does not substitute a guessed corrected address as an exact match or call address/path on it without user confirmation.",
+   "Asks the user to confirm or correct the address (for example 12 Example Ave, Haddonfield NJ).",
+   "Does not treat the error as an authentication failure of the whole connection or claim the property does not exist.",
+   "Any proposed request count stays within one new request."
+  ],
+  "geometry_absent": [
+   "Proposes running map.py render on the saved response (or reports the outcome described) and does not edit RESPONSE.json to force a pass.",
+   "Reports the helper's one-line failure: the response omits geometry, so boundaries were not returned.",
+   "Proposes no automatic re-request; offers a re-request with return_geometry only if the user authorizes it, noting it is one more request.",
+   "Does not claim a map was produced or describe a boundary."
+  ],
+  "non_us_map": [
+   "Says the request is out of scope: the skill covers US parcels only.",
+   "Proposes no regrid_request, map.py, or other tool call.",
+   "Does not fabricate a Toronto parcel or map."
+  ]
+ }
+}

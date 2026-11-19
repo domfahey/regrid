@@ -2,15 +2,36 @@
 
 ## Contents
 
+- [Default budgets](#default-budgets)
 - [One allowance across stages](#one-allowance-across-stages)
 - [CLI and suggestion requests](#cli-and-suggestion-requests)
+- [Neighbour requests](#neighbour-requests)
 - [Resume without duplicate retrieval](#resume-without-duplicate-retrieval)
 - [Optional offline helper](#optional-offline-helper)
 
-Use the envelope from [composition](composition.md) for a batch, handoff, or
-checkpoint: legacy `1.0` remains supported; explicitly select `1.1` for tagged
+Use the envelope from the [result schema](result.schema.json) for a batch, handoff, or
+checkpoint (see also [composition](composition.md) for its fields): legacy `1.0` remains supported; explicitly select `1.1` for tagged
 search queries or reconciliation. The ledger accounts for this workflow's requests; account
 usage counters can include other clients and cannot replace it.
+
+## Default budgets
+
+A finite list authorizes one bounded one-result lookup per distinct input by
+default; retain duplicate output rows. Honor lower caller limits and proceed
+within authorized scope without renewed permission. For open-ended searches,
+establish geography and a finite total record budget first. Broader searches,
+extra candidates beyond the budget, and unrequested premium datasets require
+additional authorization; ambiguity resolution within an explicit candidate
+budget does not. Before an open-ended search, an optional `return_count` call (one
+request, zero records) can size it. Page only within the agreed budget and one task.
+
+Carry one shared attempt ledger across stages, reserve possible records before
+dispatch, and retain reservations for unknown outcomes. Never reset consumption or
+automatically retry a potentially billable uncertain request. Stop at budget,
+auth/permission failure, or exhaustion; these workflow limits are not billing caps.
+Report partial counts and per-input statuses, identify unfinished input IDs, and
+explain when continuing requires authorization beyond the cap. Never omit them.
+The rules below say what counts and how to record it.
 
 ## One allowance across stages
 
@@ -83,18 +104,34 @@ overshoot and stop if the proven count exceeds the allowance.
 
 Every request needs a reserved attempt, including CLI and suggestion calls. The CLI is
 ledger-unaware: reserve before each command that can make a request, then complete from
-the stderr line `regrid: requests made: N`; an unreadable line leaves it uncertain.
+the last stderr line starting `regrid: requests made: N` (`address-map` and `freshness`
+print it before their error line, so match the prefix, not the position); an unreadable
+line leaves the attempt uncertain and is never retried. A cache hit reports 0.
 
-- `regrid freshness`: `kind="diagnostic"`, record_limit 0.
-- MCP `/parcels/typeahead`: returns no parcel records, so `kind="diagnostic"`,
-  record_limit 0.
+- No-record calls (`regrid freshness`, typeahead over CLI or MCP, schema, usage, tiles):
+  `reserve_attempt(doc, [], 0, kind="diagnostic")`, then complete with the actual
+  outcome: `complete_attempt(doc, attempt_id, "success", 0)` or `"error"` with 0 when
+  it failed, or leave it uncertain when the count or outcome is unknown.
 - `/parcels/path`: `kind="lookup"` for the input, record_limit 1.
-- Neighbours: `kind="lookup"` with `authorized_retry=True`, record_limit 25; see
-  [map guide](map.md).
+- Record lookups: reserve with the input ID and `record_limit` equal to the page limit.
+- Neighbours: see [neighbour requests](#neighbour-requests).
 
 Paged searches: each page is one attempt with `record_limit` equal to the page limit
-(three pages, three attempts). Paging positions are not saved in checkpoints; a resumed
+(three pages, three attempts; the CLI prints `regrid: up to K requests for N records`,
+so reserve K attempts). Paging positions are not saved in checkpoints; a resumed
 open-ended search needs fresh authorization before it pages again.
+
+## Neighbour requests
+
+Neighbouring parcels are one `kind="lookup"` request with `authorized_retry=True`, the
+subject's input ID, and record_limit 25. A single-property map with
+no workflow ledger needs no entry: state the cost ("one request, up to
+25 records") and wait for the user's request. When a workflow ledger or handoff is in
+use, the user's neighbours request is the authorization. Check that at least one request
+and 25 records remain, then reserve. Complete it with the actual returned count; an
+unknown outcome stays uncertain. If the remaining budget is short, do not call: report
+that neighbours exceed the workflow budget. The request itself is described in the
+[map guide](map.md#neighbouring-parcels) (see also).
 
 ## Resume without duplicate retrieval
 

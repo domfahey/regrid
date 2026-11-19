@@ -19,7 +19,8 @@ a US property. Scope is US parcels only.
 2. Save the decoded `execute-request` JSON verbatim to `RESPONSE.json`. Do not
    reformat, re-indent, or trim coordinates; the helper checks the boundary against
    the recorded area.
-3. Render with the bundled helper, using the skill directory:
+3. Render with the bundled helper. `<skill>` is the `property-research` skill folder,
+   the one that contains `SKILL.md` and `scripts/` (not the plugin root):
 
    ```
    python3 <skill>/scripts/map.py render RESPONSE.json OUTPUT.html [--retrieved-at ISO]
@@ -34,6 +35,9 @@ a US property. Scope is US parcels only.
 5. Present the page:
    - Claude Code: give the absolute path to `OUTPUT.html` and offer to open it in a browser.
    - Claude apps: show the HTML as an interactive page.
+   - State the match status with the page path, for example "Confirmed match: one
+     parcel — page at /abs/path/OUTPUT.html". For ambiguous results say
+     "candidates, not confirmed" and list the candidates.
 
 Terminal users without MCP can use the CLI equivalents: `regrid address-map ADDRESS
 OUTPUT.html` (one request) or `regrid map RESPONSE.json OUTPUT.html` (offline).
@@ -42,7 +46,7 @@ OUTPUT.html` (one request) or `regrid map RESPONSE.json OUTPUT.html` (offline).
 
 Only when the user asks. First state the cost: "one request, up to 25 records".
 Then make one `/parcels/point` request with the subject's `lat` and `lon`,
-`radius=100`, `limit=25`, `return_geometry=true`, and paid datasets off. Save the
+`radius=100`, `limit=25`, `return_geometry=true`, and premium datasets off. Save the
 response verbatim to `NEIGHBOURS.json` and run:
 
 ```
@@ -52,13 +56,8 @@ python3 <skill>/scripts/map.py render RESPONSE.json OUTPUT.html --neighbours NEI
 The CLI equivalent, `regrid address-map ADDRESS OUTPUT.html --neighbours`, makes the
 extra request (counted in its `requests made: N`) and saves `OUTPUT.neighbours.json`.
 
-Ledger: a single-property map with no workflow ledger needs no entry; state the cost and
-wait for the user's request. When a workflow ledger or handoff is in use, the user's
-neighbours request is the authorization. Check that at least one request and 25 records
-remain, then reserve `authorized_retry=True` (kind lookup, the subject's input ID,
-record_limit 25). Complete it with the actual returned count; an unknown outcome stays
-uncertain. If the remaining budget is short, do not call: report that neighbours exceed
-the workflow budget.
+Ledger and budget: follow [batch](batch.md#neighbour-requests); never call when it says
+the budget is short.
 
 ## Export
 

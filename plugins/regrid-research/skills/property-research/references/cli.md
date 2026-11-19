@@ -53,6 +53,10 @@ page and keep it out of chat. `tile` requires `--output FILE`. Each call is one 
 pull dates are not available over MCP; say they need the CLI. Report dates only and
 never label data stale.
 
+If the user supplies a saved `/verse` response file, run
+`python3 <skill>/scripts/freshness.py county VERSE.json --path /us/<st>/<county>`
+offline (no request). Over MCP never call `/verse`.
+
 ```
 regrid freshness --path /us/<st>/<county> [--cache FILE] [--refresh] [--max-age-days N]
 ```
@@ -67,15 +71,6 @@ stderr note.
 
 ## Ledger
 
-Every CLI command that calls the API ends stderr with `regrid: requests made: N`
-(`address-map` and `freshness` print it before their error line, so parse it by its
-`regrid: requests made:` prefix, not by position). The CLI is ledger-unaware:
-reserve before the command, complete from that line, and treat an unreadable line as
-`uncertain`; do not retry.
-
-- Count-only or no-record calls (freshness, typeahead, schema, usage, tiles):
-  `reserve_attempt(doc, [], 0, kind="diagnostic")`, then
-  `complete_attempt(doc, attempt_id, "success", 0)`. A cache hit reports 0.
-- Record lookups: reserve with the input ID and `record_limit` equal to the page limit.
-  A paged run is one attempt per page (K attempts); `up to K requests` is the
-  reservation to make.
+Every CLI command that calls the API ends stderr with `regrid: requests made: N`. The CLI
+is ledger-unaware: reserve before the command and complete from that line, as
+[batch and resume](batch.md#cli-and-suggestion-requests) describes.

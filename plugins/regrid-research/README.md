@@ -181,7 +181,7 @@ skill reports each parcel's `ll_last_refresh` instead.
 
 | Option | Where | Notes |
 | --- | --- | --- |
-| Paid-dataset flags (`return_zoning` and the like) | Address, APN, owner, point, area, query | Only with the user's authorization ([premium datasets](skills/property-research/references/premium.md)) |
+| Premium dataset flags (`return_zoning` and the like) | Address, APN, owner, point, area, query | Only with the user's authorization ([premium datasets](skills/property-research/references/premium.md)) |
 | `return_count`, `return_geometry`, `offset_id` | Point, area and query only | `return_count` counts before pulling; MCP research may page with `offset_id` within the agreed budget; the CLI form is `--max-records` |
 
 **Offered by the server but deliberately not used:** POST `/report` (files a data

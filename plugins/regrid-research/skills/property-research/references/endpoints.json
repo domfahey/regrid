@@ -845,7 +845,7 @@
           }
         }
       ],
-      "skill_note": "Returns every US county and Puerto Rico in one call (with last full data pull dates); there is no county filter, so use return_geometry=false to shrink it."
+      "skill_note": "Returns every US county and Puerto Rico in one call (with last full data pull dates); there is no county filter, so use return_geometry=false to shrink it. CLI only (`regrid freshness`); never call /verse through MCP — report the parcel's ll_last_refresh instead."
     },
     "/schemas/parcel": {
       "method": "GET",

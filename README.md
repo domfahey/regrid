@@ -340,7 +340,7 @@ Regrid Research 0.6.0 to 0.8.0 add:
 - **Export:** CSV and GeoJSON (`map.py export`, also `regrid export`).
 - **Field catalog:** `scripts/fields.py`, with `references/fields.json`.
 - **County freshness:** pull dates via the CLI (`regrid freshness`).
-- **Guidance:** paid datasets, address suggestions, refresh by Regrid path, count before pulling, and paging.
+- **Guidance:** premium datasets, address suggestions, refresh by Regrid path, count before pulling, and paging.
 - **CLI path:** `references/cli.md` lets Claude Code run lookups through the `regrid` CLI under the same request budget.
 
 Regrid Research 0.5.0 includes versioned handoffs, separate lookup/match statuses,

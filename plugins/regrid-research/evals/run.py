@@ -19,12 +19,28 @@ def validate_handoff(document: dict) -> None:
     module.validate(document)
 
 
+def _strings(value: object):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from _strings(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _strings(item)
+
+
+def _is_canadian_route(arguments: dict) -> bool:
+    """True for path-like values starting /ca/; /us/ca/... (California) is fine."""
+    return any(text.strip().lower().startswith(("/ca/", "ca/")) for text in _strings(arguments))
+
+
 def load_cases(suite: str = "research") -> list[dict]:
     if suite == "all":
-        cases = load_cases("research") + load_cases("composition")
+        cases = load_cases("research") + load_cases("composition") + load_cases("feature")
         assert len({case["id"] for case in cases}) == len(cases)
         return cases
-    prefix = "composition-" if suite == "composition" else ""
+    prefix = {"composition": "composition-", "feature": "feature-"}.get(suite, "")
     data = json.loads((ROOT / f"{prefix}cases.json").read_text())
     rubric = json.loads((ROOT / f"{prefix}rubric.json").read_text())
     assert data["schema_version"] == rubric["schema_version"] == 1
@@ -40,23 +56,45 @@ def load_cases(suite: str = "research") -> list[dict]:
         assert names or case.get("supplied_evidence")
         if suite == "composition":
             validate_handoff(case["supplied_evidence"])
+        if suite == "feature":
+            assert case["us_only"] is True
+            assert names
         for event in case["tool_history"]:
             assert event["tool"] in names
             assert isinstance(event["arguments"], dict)
             assert isinstance(event["result"]["isError"], bool)
             assert event["result"]["content"]
+            if suite == "feature":
+                assert not _is_canadian_route(event["arguments"])
             if not event["result"]["isError"]:
                 result = json.loads(event["result"]["content"][0]["text"])
                 assert result["parcels"]["type"] == "FeatureCollection"
                 assert isinstance(result["parcels"]["features"], list)
+    if suite == "feature":
+        load_trigger_cases()
+    return cases
+
+
+TRIGGER_LABELS = {"property-research", "setup", "none"}
+
+
+def load_trigger_cases() -> list[dict]:
+    data = json.loads((ROOT / "trigger-cases.json").read_text())
+    assert data["schema_version"] == 1
+    assert data["synthetic"] is True
+    cases = data["cases"]
+    for key in ("id", "prompt"):
+        values = [case[key] for case in cases]
+        assert all(values) and len(values) == len(set(values))
+    assert all(case["expected_skill"] in TRIGGER_LABELS for case in cases)
     return cases
 
 
 def packet(cases: list[dict], include_skill: bool) -> dict:
     instructions = (
         "Offline behavioral evaluation. Do not call live tools, read .env, or use the network. "
-        "The only simulated callable tool is the supplied test double; its name is not a "
-        "production MCP name. Treat tool_history as results already retrieved in the current "
+        "Only the supplied test doubles are callable (the regrid test double, and in the feature "
+        "suite also shell and read_file); their names are not production MCP names. Treat tool_history as results already retrieved in the current "
         "task. For each case, decide the next action and answer the user using only the "
         "evidence supplied. If more retrieval is needed, propose the exact tool call but "
         "do not fabricate its result. Return JSON with a results array; each item has id, "
@@ -86,7 +124,9 @@ def main() -> None:
     parser.add_argument("mode", choices=["validate", "packet"])
     parser.add_argument("--case", action="append", dest="selected")
     parser.add_argument("--without-skill", action="store_true")
-    parser.add_argument("--suite", choices=["research", "composition", "all"], default="research")
+    parser.add_argument(
+        "--suite", choices=["research", "composition", "feature", "all"], default="research"
+    )
     args = parser.parse_args()
     cases = load_cases(args.suite)
     if args.selected:
