@@ -126,9 +126,48 @@ def test_missing_token_makes_no_request(tmp_path, seen, monkeypatch, capsys):
     assert seen == [] and "requests made: 0" in capsys.readouterr().err
 
 
-def test_unwritable_response_reports_os_error(tmp_path, seen, capsys):
+def test_missing_output_directory_refuses_before_request(tmp_path, seen, capsys):
     assert cli.main(["address-map", "x", str(tmp_path / "no" / "dir" / "m.html")]) == 1
-    assert "Could not write output file" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert seen == [] and "requests made: 0" in err and "directory does not exist" in err
+
+
+def test_missing_response_directory_refuses_before_request(tmp_path, seen, capsys):
+    argv = [
+        "address-map",
+        "x",
+        str(tmp_path / "m.html"),
+        "--save-response",
+        str(tmp_path / "n/r.json"),
+    ]
+    assert cli.main(argv) == 1
+    assert seen == [] and "requests made: 0" in capsys.readouterr().err
+
+
+def test_same_file_via_relative_spelling_refused(tmp_path, seen, capsys, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "m.json").write_text("keep")
+    argv = ["address-map", "x", "m.json", "--save-response", str(tmp_path / "m.json"), "--replace"]
+    assert cli.main(argv) == 1
+    assert seen == [] and "different files" in capsys.readouterr().err
+    assert (tmp_path / "m.json").read_text() == "keep"
+
+
+def test_render_failure_reports_saved_response(tmp_path, empty_response, capsys):
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 1
+    err = capsys.readouterr().err
+    saved = f"regrid: response saved to {tmp_path / 'm.json'}"
+    assert err.index("requests made") < err.index(saved) < err.index("no parcels")
+
+
+def test_type_error_is_sanitized(tmp_path, seen, monkeypatch, capsys):
+    def boom(*a, **k):
+        raise TypeError("secret private-address")
+
+    monkeypatch.setattr(cli.parcel_map, "render", boom)
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 1
+    err = capsys.readouterr().err
+    assert "Invalid input or output file" in err and "private-address" not in err
 
 
 def test_cli_saved_response_renders_like_mcp_body(tmp_path, seen):

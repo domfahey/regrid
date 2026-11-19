@@ -43,12 +43,15 @@ def _run_map(args: dict[str, Any]) -> None:
     print(json.dumps(summary, indent=2, ensure_ascii=False, allow_nan=False))
 
 
-def _address_map(args: dict[str, Any], sent: list[int]) -> None:
+def _address_map(args: dict[str, Any], sent: list[int], saved: list[Path]) -> None:
     output = Path(args["output"])
     response_path = Path(args["save_response"] or output.with_suffix(".json"))
     replace = args["replace"]
-    if response_path == output:
+    if response_path.resolve() == output.resolve():
         raise ValueError("Saved response and map output must be different files")
+    for target in (response_path, output):
+        if not target.parent.is_dir():
+            raise ValueError("Output directory does not exist")
     for target in (response_path, output):
         if not replace and os.path.lexists(target):
             raise ValueError(f"{target} exists; pass --replace to overwrite it")
@@ -75,6 +78,7 @@ def _address_map(args: dict[str, Any], sent: list[int]) -> None:
     body = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
     with open(response_path, "w" if replace else "x", encoding="utf-8") as handle:
         handle.write(body)
+    saved.append(response_path)
     retrieved_at = args["retrieved_at"] or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     summary = parcel_map.render(response_path, output, retrieved_at=retrieved_at, replace=replace)
     print(
@@ -89,17 +93,22 @@ def _address_map(args: dict[str, Any], sent: list[int]) -> None:
 
 def _run_address_map(args: dict[str, Any]) -> int:
     sent: list[int] = []
+    saved: list[Path] = []
     message = None
     try:
-        _address_map(args, sent)
-    except (RegridError, ValueError, OSError) as exc:  # MapError is a ValueError
+        _address_map(args, sent, saved)
+    except (RegridError, ValueError, TypeError, OSError) as exc:  # MapError is a ValueError
         if isinstance(exc, RegridError):
             message = str(exc)
         elif isinstance(exc, OSError):
             message = "Could not write output file"
+        elif isinstance(exc, TypeError):
+            message = "Invalid input or output file"
         else:
             message = " ".join(str(exc).split())
     print(f"regrid: requests made: {len(sent)}", file=sys.stderr)
+    if message is not None and saved:
+        print(f"regrid: response saved to {saved[0]}", file=sys.stderr)
     if message is not None:
         print(f"regrid: {message}", file=sys.stderr)
         return 1

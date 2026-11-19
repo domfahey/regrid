@@ -8,7 +8,7 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 
 ### Added
 
-- `regrid map RESPONSE OUTPUT` renders a saved US parcel response as a satellite map page offline, and `regrid address-map ADDRESS OUTPUT` makes one address request, saves the response beside the page (`OUTPUT.json`, or `--save-response`) and renders it. `address-map` reports `regrid: requests made: N` on stderr. `make live` now also reports whether the parcel geometry was present, null or absent. The live geometry check has not been run (awaiting user: not run).
+- `regrid map RESPONSE OUTPUT` renders a saved US parcel response as a satellite map page offline, and `regrid address-map ADDRESS OUTPUT` makes one address request, saves the response beside the page (`OUTPUT` with a `.json` suffix, or `--save-response`) and renders it. `address-map` reports `regrid: requests made: N` on stderr. `make live` now also reports whether the parcel geometry was present, null or absent. The live geometry check has not been run (awaiting user: not run).
 
 - Regrid Research 0.7.0 adds the `/regrid-research:address-map` command (Claude Code and Cowork archives only): one address request, the response saved verbatim, rendered with `scripts/map.py`, summarised and presented per the map guide. No neighbouring parcels. Host checks in Claude Code, the Claude apps and Cowork are recorded in `evals/results/map-hosts-0.7.0.json` and are all not run (awaiting user). The SDK is `0.2.0`.
 

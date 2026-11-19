@@ -151,10 +151,14 @@ def test_command_is_bounded_and_links_map_guide():
     assert text.startswith("---\n") and "argument-hint:" in text
     assert "one request" in text and "references/map.md" in text
     assert "neighbour" not in text.lower()
+    assert "limit=1" in text and "US" in text
+    assert "map the single returned parcel" in text and "token" in text
+    assert "--all-candidates" not in text
 
 
 def test_host_results_never_claim_unrun_checks():
     data = json.loads((PLUGIN / "evals/results/map-hosts-0.7.0.json").read_text())
+    assert set(data["hosts"]) == {"claude_code", "claude_apps", "cowork"}
     assert set(data["hosts"].values()) <= {"verified", "failed", "not_run"}
 
 

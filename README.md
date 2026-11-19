@@ -97,7 +97,7 @@ Coverage includes every SDK and CLI module; XML output is written to ignored `co
 .venv/bin/regrid grid 15 8828 12121
 .venv/bin/regrid tile 15 8828 12121 --format png --retina --output parcel.png
 .venv/bin/regrid map response.json parcel.html          # offline satellite map of a saved response
-.venv/bin/regrid address-map "123 Main St, Dallas, TX" parcel.html   # one request, saves parcel.html.json
+.venv/bin/regrid address-map "123 Main St, Dallas, TX" parcel.html   # one request, saves parcel.json
 ```
 
 `regrid map RESPONSE OUTPUT [--feature N] [--all-candidates] [--retrieved-at ISO] [--replace]` renders offline with no request. `regrid address-map ADDRESS OUTPUT [--path SCOPE] [--save-response FILE] [--retrieved-at ISO] [--replace]` makes one address request, prints `regrid: requests made: N` to stderr, and saves the response next to the page unless `--save-response` is given. Pages load Leaflet and Esri imagery in the viewer's browser.
