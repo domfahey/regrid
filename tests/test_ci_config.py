@@ -8,6 +8,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 WINDOWS_TESTS = (
     "test_regrid_map.py",
+    "test_regrid_workflow.py",
+    "test_regrid_workflow_composition.py",
     "test_skill_helper_sync.py",
     "test_offline_fields.py",
     "test_offline_freshness.py",
@@ -17,10 +19,17 @@ WINDOWS_TESTS = (
 
 
 def windows_job() -> str:
-    ci = (ROOT / ".github/workflows/ci.yml").read_text()
-    match = re.search(r"^  windows:\n(.*?)(?=^  \S|\Z)", ci, re.DOTALL | re.MULTILINE)
-    assert match, "ci.yml has no windows job"
-    return match.group(1)
+    """Return the lines nested under the `windows:` job key, whatever the indentation."""
+    lines = (ROOT / ".github/workflows/ci.yml").read_text().splitlines()
+    start = next((i for i, line in enumerate(lines) if line.strip() == "windows:"), None)
+    assert start is not None, "ci.yml has no windows job"
+    indent = len(lines[start]) - len(lines[start].lstrip())
+    body = []
+    for line in lines[start + 1 :]:
+        if line.strip() and len(line) - len(line.lstrip()) <= indent:
+            break
+        body.append(line)
+    return "\n".join(body)
 
 
 def test_windows_job_runs_on_windows():

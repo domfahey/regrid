@@ -131,7 +131,7 @@ def test_helper_cli_errors(tmp_path, capsys):
     missing = tmp_path / "missing.json"
     assert freshness.main(["county", str(missing), "--path", "/us/nj/a"]) == 1
     captured = capsys.readouterr()
-    assert captured.err == f"freshness: [Errno 2] No such file or directory: '{missing}'\n"
+    assert captured.err == f"freshness: [Errno 2] No such file or directory: {str(missing)!r}\n"
     assert captured.out == ""
     verse.write_text("not json")
     assert freshness.main(["county", str(verse), "--path", "/us/nj/camden"]) == 1

@@ -64,10 +64,12 @@ def test_freshness_caches_and_reuses(tmp_path, verse_server, capsys):
 def test_refresh_forces_request(tmp_path, verse_server, capsys):
     cache = tmp_path / "verse.json"
     args = ["freshness", "--path", "/us/nj/camden", "--cache", str(cache)]
-    cli.main(args)
-    cli.main([*args, "--refresh"])
+    assert cli.main(args) == 0
+    first = json.loads(capsys.readouterr().out)
+    assert cli.main([*args, "--refresh"]) == 0
+    second = json.loads(capsys.readouterr().out)
     assert len(verse_server) == 2
-    assert '"cache": "miss"' in capsys.readouterr().out.split("}\n{")[-1]
+    assert first["cache"] == "miss" and second["cache"] == "miss"
 
 
 def test_unknown_county_exits_1_without_retry(tmp_path, verse_server, capsys):

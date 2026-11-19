@@ -39,8 +39,9 @@ def _deep_body(depth, wrap='{"parcels":{"features":[]},"x":%s}'):
 DEEP = (
     "Response or input is nested too deeply",
     "Regrid returned invalid JSON",
-    "No verse entry found for /us/nj/camden",  # decodable body that is not a verse listing
 )
+# Only the freshness command can reach a decodable body that is not a verse listing.
+DEEP_FRESHNESS = (*DEEP, "No verse entry found for /us/nj/camden")
 BAD_INPUT = "Invalid input or output file"
 
 
@@ -78,7 +79,7 @@ def test_deep_response_body(monkeypatch, capsys, tmp_path, argv, depth):
     argv = [str(tmp_path / "m.html") if a == "OUTPATH" else a for a in argv]
     argv = [str(tmp_path / "c.json") if a == "CACHE" else a for a in argv]
     assert cli.main(argv) == 1
-    _assert_clean_failure(capsys, 1, DEEP)
+    _assert_clean_failure(capsys, 1, DEEP_FRESHNESS if argv[0] == "freshness" else DEEP)
     assert len(seen) == 1
 
 

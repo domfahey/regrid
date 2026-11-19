@@ -21,16 +21,14 @@ OWNER = {
     "category": "Ownership",
     "description": "Owner name",
 }
-ASSESSMENT_HITS = [
-    "agval",
-    "homestead_exemption",
-    "improvval",
-    "landval",
-    "parval",
-    "parvaltype",
-    "taxamt",
-    "taxyear",
-]
+# Derived from the catalog file with the documented rule (name, description or category contains
+# the term, case-insensitive), so catalog refreshes do not require editing a literal list.
+ASSESSMENT_HITS = sorted(
+    entry["name"]
+    for entry in json.loads(SKILL_FIELDS.read_text(encoding="utf-8"))["fields"]
+    if "assessment"
+    in " ".join(str(entry.get(k) or "") for k in ("name", "description", "category")).lower()
+)
 
 
 def _load(name: str, path: Path):
@@ -56,7 +54,7 @@ def test_explain_known_and_unknown():
 def test_search_matches_description_case_insensitive():
     catalog = fields.load_catalog(SKILL_FIELDS)
     hits = fields.search(catalog, "ASSESSMENT")
-    assert [h["name"] for h in hits] == ASSESSMENT_HITS
+    assert ASSESSMENT_HITS and [h["name"] for h in hits] == ASSESSMENT_HITS
     assert fields.search(catalog, "no-such-field-term") == []
     # A term found only in a category (not in the name) still matches.
     assert OWNER in fields.search(catalog, "ownership")
@@ -66,7 +64,7 @@ def test_compact_and_full_catalogs_agree():
     compact = fields.load_catalog(SKILL_FIELDS)
     full = fields.load_catalog(ROOT / "src/regrid/data/parcel_fields.json")
     assert [f["name"] for f in compact] == sorted(f["name"] for f in full)
-    assert len(compact) == 169
+    assert len(compact) == len(full)
     assert set(compact[0]) == {"name", "datatype", "tier", "category", "description"}
     assert set(full[0]) == set(compact[0])
 
@@ -112,7 +110,7 @@ def test_main_default_catalog_and_errors(tmp_path, capsys):
     missing = tmp_path / "none.json"
     assert fields.main(["explain", "owner", "--catalog", str(missing)]) == 1
     captured = capsys.readouterr()
-    assert captured.err == f"fields: [Errno 2] No such file or directory: '{missing}'\n"
+    assert captured.err == f"fields: [Errno 2] No such file or directory: {str(missing)!r}\n"
     assert captured.out == ""
 
 
@@ -144,7 +142,8 @@ def test_main_reports_missing_default_catalog(monkeypatch, capsys):
 
 def test_sdk_copy_falls_back_to_packaged_catalog():
     assert fields.DEFAULT_CATALOG == ROOT / "src/regrid/data/parcel_fields.json"
-    assert len(fields.load_catalog(fields.DEFAULT_CATALOG)) == 169
+    packaged = json.loads(fields.DEFAULT_CATALOG.read_text(encoding="utf-8"))["fields"]
+    assert len(fields.load_catalog(fields.DEFAULT_CATALOG)) == len(packaged)
 
 
 def test_fields_helper_runs_from_extracted_archive(tmp_path):

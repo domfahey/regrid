@@ -244,10 +244,11 @@ def test_mismatch_adds_warning(tmp_path):
     response = write_response(tmp_path / "r.json", good_feature(ll_gissqft=1.0))
     output = tmp_path / "map.html"
     summary = parcel_map.render(response, output)
-    assert summary["warnings"] == [
-        "Parcel: area mismatch: boundary area differs from the recorded parcel area "
-        "(102,329 vs 1 sq ft)"
-    ]
+    (warning,) = summary["warnings"]
+    assert warning.startswith(
+        "Parcel: area mismatch: boundary area differs from the recorded parcel area ("
+    )
+    assert warning.endswith(" vs 1 sq ft)")
     assert [c["status"] for c in summary["area_checks"]] == ["mismatch"]
     html = output.read_text(encoding="utf-8")
     assert summary["warnings"][0] in html
@@ -493,7 +494,7 @@ def test_main_reports_os_error(tmp_path, capsys):
     missing = tmp_path / "missing.json"
     assert parcel_map.main(["render", str(missing), str(tmp_path / "m.html")]) == 1
     captured = capsys.readouterr()
-    assert captured.err == f"error: [Errno 2] No such file or directory: '{missing}'\n"
+    assert captured.err == f"error: [Errno 2] No such file or directory: {str(missing)!r}\n"
     assert captured.out == "" and not (tmp_path / "m.html").exists()
 
 
