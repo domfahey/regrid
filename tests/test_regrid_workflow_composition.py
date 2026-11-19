@@ -377,3 +377,17 @@ def test_neighbours_reservation_after_subject_lookup_needs_authorized_retry_and_
     assert doc["budget"]["returned_records"] == 13
     with pytest.raises(ValueError, match="budget"):
         workflow.reserve_attempt(settled(20), ["input-000001"], 25, authorized_retry=True)
+
+
+def test_paged_search_reserves_one_attempt_per_page_with_page_limit():
+    query = {"query_type": "area", "bbox": [-75.2, 39.8, -75.0, 40.0]}
+    doc = workflow.new_workflow("paged", [query], 3, 30, schema_version="1.1")
+    for page in range(1, 4):
+        doc = workflow.reserve_attempt(doc, ["input-000001"], 10, authorized_retry=page > 1)
+        assert doc["attempts"][-1]["record_limit"] == 10
+        workflow.validate(doc)
+        doc = workflow.complete_attempt(doc, f"attempt-{page:06}", "success", 10)
+        workflow.validate(doc)
+    assert len(doc["attempts"]) == 3
+    assert doc["budget"]["attempted_requests"] == 3
+    assert doc["budget"]["returned_records"] == 30

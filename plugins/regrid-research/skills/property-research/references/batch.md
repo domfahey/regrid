@@ -92,6 +92,10 @@ the stderr line `regrid: requests made: N`; an unreadable line leaves it uncerta
 - Neighbours: `kind="lookup"` with `authorized_retry=True`, record_limit 25; see
   [map guide](map.md).
 
+Paged searches: each page is one attempt with `record_limit` equal to the page limit
+(three pages, three attempts). Paging positions are not saved in checkpoints; a resumed
+open-ended search needs fresh authorization before it pages again.
+
 ## Resume without duplicate retrieval
 
 Persist a checkpoint only when the user requests saving/resuming or approves a
