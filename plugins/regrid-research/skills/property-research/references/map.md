@@ -1,7 +1,8 @@
 # Satellite parcel maps
 
 Use this guide only when the user asks for a map, boundary, or parcel outline for
-a US property. Scope is US parcels only.
+a US property. Scope is US parcels only. The `/regrid-research:address-map` command is
+Claude Code and Cowork only; other hosts follow the steps below directly.
 
 ## When to map
 

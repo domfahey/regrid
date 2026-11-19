@@ -152,3 +152,10 @@ def test_feature_suite_validates_trigger_cases(tmp_path, monkeypatch):
     _write(tmp_path, monkeypatch, triggers=triggers)
     with pytest.raises(AssertionError):
         run.load_cases("feature")
+
+
+def test_packet_omits_fields_json_content():
+    refs = run.packet(run.load_cases("feature"), True)["references"]
+    note = refs["fields.json"]
+    assert "fields.py" in note and len(note) < 200 and "\n" not in note
+    assert "answers.md" in refs and "result.schema.json" in refs

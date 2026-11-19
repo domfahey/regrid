@@ -90,6 +90,9 @@ def load_trigger_cases() -> list[dict]:
     return cases
 
 
+FIELDS_NOTE = "Large data file read only by scripts/fields.py; content omitted from this packet."
+
+
 def packet(cases: list[dict], include_skill: bool) -> dict:
     instructions = (
         "Offline behavioral evaluation. Do not call live tools, read .env, or use the network. "
@@ -112,7 +115,7 @@ def packet(cases: list[dict], include_skill: bool) -> dict:
         skill = ROOT.parent / "skills/property-research"
         result["skill"] = (skill / "SKILL.md").read_text()
         result["references"] = {
-            path.name: path.read_text()
+            path.name: (FIELDS_NOTE if path.name == "fields.json" else path.read_text())
             for path in sorted((skill / "references").iterdir())
             if path.suffix in {".md", ".json"}
         }

@@ -14,6 +14,7 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ### Changed
 
+- Regrid Research skills: both descriptions now state exclusions (non-US, Batch API, data-issue reports, appraisals and legal opinions; setup is not for lookups), every helper invocation uses one `python3 <skill>/scripts/<name>.py` convention (also in the `address-map` command), `SKILL.md` tells agents not to open `fields.json`, and `evals/run.py packet` no longer inlines `fields.json`.
 - Regrid Research skills: richer trigger descriptions, a shorter `property-research` routing page with match/answer rules in `references/answers.md`, a single budget/ledger source in `batch.md`, and consistent "neighbour" and "premium dataset" terminology.
 
 ### Fixed

@@ -362,3 +362,47 @@ def test_cli_is_the_fallback_route_and_freshness_script_is_routed():
     batch = (SKILL_ROOT / "references/batch.md").read_text()
     assert "with the actual\n  outcome" in batch and "uncertain" in batch
     assert "MCP `/parcels/typeahead`: returns no parcel records" not in batch
+
+
+def test_descriptions_state_exclusions():
+    import re
+
+    for path, words in (
+        (SKILL_FILES[0], ("non-us", "batch", "data-issue", "appraisal", "legal ownership")),
+        (SKILL_FILES[1], ("property lookup",)),
+    ):
+        desc = re.search(r"^description: (.+)$", path.read_text(), re.M).group(1).lower()
+        assert "do not use for" in desc, path
+        for word in words:
+            assert word in desc, (path, word)
+
+
+def test_skill_md_defines_skill_path_and_hides_fields_json():
+    skill = (SKILL_ROOT / "SKILL.md").read_text()
+    assert "`<skill>`" in skill and "contains `SKILL.md`" in skill
+    assert "python3 <skill>/scripts/fields.py explain" in skill
+    assert "don't open it" in skill and "](references/fields.json)" in skill
+
+
+def test_one_script_path_convention():
+    import re
+
+    for path in DOC_FILES:
+        text = path.read_text()
+        assert "/path/to/property-research" not in text, path
+        assert "../scripts/" not in text, path
+        assert not re.search(r"python3 scripts/", text), path
+    for path in DOC_FILES:
+        text = path.read_text()
+        for match in re.finditer(r"python3 (\S+\.py)", text):
+            assert match.group(1).startswith("<skill>/scripts/"), (path, match.group(1))
+
+
+def test_command_uses_skill_prefixed_paths_and_states_hosts():
+    import re
+
+    text = (PLUGIN / "commands/address-map.md").read_text()
+    assert "`<skill>` is the property-research skill folder" in text
+    assert "python3 <skill>/scripts/map.py render" in text
+    assert not re.search(r"(?<!<skill>/)(?<![\w/.-])(scripts|references)/", text)
+    assert "Claude Code and Cowork only" in (SKILL_ROOT / "references/map.md").read_text()

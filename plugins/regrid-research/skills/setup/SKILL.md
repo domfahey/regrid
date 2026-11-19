@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Checks whether the Regrid research plugin's MCP tools and authentication are available, and diagnoses setup and connection failures without revealing credentials. Use when Regrid tools are missing, authentication or permission errors appear, or someone asks whether Regrid is connected or how to set it up.
+description: Checks whether the Regrid research plugin's MCP tools and authentication are available, and diagnoses setup and connection failures without revealing credentials. Use when Regrid tools are missing, authentication or permission errors appear, or someone asks whether Regrid is connected or how to set it up. Do not use for actual property lookups.
 ---
 
 # Check Regrid setup
