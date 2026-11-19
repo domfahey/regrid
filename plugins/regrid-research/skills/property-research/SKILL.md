@@ -24,6 +24,7 @@ Load supporting resources only for the relevant task:
   load the [versioned result schema](references/result.schema.json). Consult the
   [synthetic result example](references/result-example.json) only if an example is needed.
 - Multiple inputs, shared budgets, or requested checkpoints: [batch and resume](references/batch.md).
+- Map or boundary requested: [map guide](references/map.md).
 - Offline validation or saving: run [workflow.py](scripts/workflow.py) as described in
   the batch reference; requires Python 3.10+ and only the standard library.
 - First live lookup: [MCP tool guide](references/mcp-tools.md) and relevant live tool
@@ -62,8 +63,10 @@ failure, or silently switch data sources.
    or other external changes as part of research.
 3. For one-property research start with `limit=1`. Explicitly disable stacked
    results and premium datasets when the selected endpoint supports those flags
-   and the user has not requested them. Omit geometry unless needed. Only pass
-   options the endpoint supports; do not assume a universal option set.
+   and the user has not requested them. Omit geometry unless needed; when a map is
+   requested keep it, passing `return_geometry=true` where supported
+   ([map guide](references/map.md)). Never paste geometry into chat.
+   Only pass options the endpoint supports; do not assume a universal option set.
 4. Record execution separately from identity: `lookup_status` is `success`,
    `error`, or `not_attempted`; `match_status` is `confirmed`, `ambiguous`,
    `unmatched`, or `not_assessed`. A successful evaluation of supplied evidence

@@ -2,11 +2,13 @@
 
 User-visible changes are grouped by release using the categories from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version numbering follows [Semantic Versioning](https://semver.org/); the current `0.x` API remains under development.
 
-No releases have been tagged in this repository. The Python SDK/CLI metadata version is `0.1.0`; the independently versioned Regrid Research plugin is `0.5.2`. These metadata versions do not establish published releases. Keep pending changes under Unreleased until an actual release is prepared.
+No releases have been tagged in this repository. The Python SDK/CLI metadata version is `0.1.0`; the independently versioned Regrid Research plugin is `0.6.0`. These metadata versions do not establish published releases. Keep pending changes under Unreleased until an actual release is prepared.
 
 ## Unreleased
 
 ### Added
+
+- Regrid Research 0.6.0 adds `scripts/map.py`, a stdlib-only offline helper that renders a saved US parcel response as an interactive Esri satellite map, with boundary validation and a recorded-area cross-check. It refuses parcels whose Regrid path is outside `/us/`, accepts GeoJSON altitude values, handles boundaries that cross 180°, never overwrites an existing page without `--replace`, and leaves the process umask unchanged. The map guide asks for `return_geometry=true` where supported and distinguishes a missing boundary (`null`) from geometry that was not requested. The map guide and packaging cover all three archives; the page loads Leaflet and imagery in the viewer's browser.
 
 - MIT license, public contribution/security/conduct guides, issue and PR templates, pinned GitHub Actions CI, and dependency-update configuration.
 
@@ -25,6 +27,8 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 - Contributor, architecture, API coverage, parcel interpretation, and UTFGrid documentation; placeholder-only `.env.sample`.
 
 ### Changed
+
+- Regrid Research 0.6.0 adds satellite parcel maps (see Added); request budget and handoff schemas are unchanged.
 
 - Regrid Research 0.5.2 re-audits the MCP references against the live server (Regrid Support 2.3.1, November 18, 2026): all seven tools are documented with their role and request accounting; spec titles, including the setup usage example, carry the ` (reference)` suffix; `fetch` uses `project/section/slug` IDs, an optional `format`, and reports unknown IDs without `isError`; `endpoints.json` now covers the APN, owner, point, area, query, and Regrid ID endpoints the skill advertises, in addition to address and usage, and notes that parcel queries require a field filter. It also states US-only scope and tightens workflow-helper and eval-runner validation (see Fixed). Saved evaluation reports predate these reference changes. Handoff schemas are unchanged.
 

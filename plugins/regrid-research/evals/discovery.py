@@ -22,6 +22,7 @@ ALLOWLIST = (
     "references/result.schema.json",
     "references/result-example.json",
     "scripts/workflow.py",
+    "scripts/map.py",
 )
 DISTRACTORS = {
     "editing-spreadsheets": "Edits spreadsheet files and formats cells. Use when creating or changing spreadsheet files.",

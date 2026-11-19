@@ -111,6 +111,13 @@ def test_workflow_helper_is_shared_but_scratch_scripts_are_excluded(source, tmp_
     assert all(b"DO_NOT_PACKAGE" not in value for value in code.values())
 
 
+def test_map_helper_is_shared_across_all_archives(source, tmp_path):
+    cowork, code, standalone = map(archive_contents, builder.build(source, tmp_path / "out"))
+    name = "skills/property-research/scripts/map.py"
+    assert name in code
+    assert cowork[name] == code[name] == standalone["property-research/scripts/map.py"]
+
+
 def test_mcp_examples_use_current_spec_title():
     import re
 
