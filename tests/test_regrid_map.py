@@ -1019,3 +1019,88 @@ def test_export_refuses_unicode_variant_targets(tmp_path):
         )
     with pytest.raises(MapError, match="Output must not be the response file"):
         parcel_map.export(response, csv_path=tmp_path / "R.JSON", replace=True)
+
+
+def _fields_only(**extra):
+    item = good_feature(ll_uuid="00000000-0000-4000-8000-0000000000aa", **extra)
+    del item["properties"]["ll_uuid"]
+    return item
+
+
+def test_feature_uuid_prefers_top_level_then_fields():
+    uuid = parcel_map.feature_uuid
+    assert uuid({"properties": {"ll_uuid": "a", "fields": {"ll_uuid": "b"}}}) == "a"
+    assert uuid({"properties": {"ll_uuid": "", "fields": {"ll_uuid": "b"}}}) == "b"
+    assert uuid({"properties": {"ll_uuid": 5, "fields": {"ll_uuid": "b"}}}) == "b"
+    assert uuid({"properties": {"fields": {"ll_uuid": ""}}}) is None
+    assert uuid({"properties": []}) is None
+    assert uuid({}) is None
+
+
+def test_export_reads_fields_only_ll_uuid(tmp_path):
+    response = write_response(tmp_path / "r.json", _fields_only(zoning="R1"))
+    parcel_map.export(
+        response, csv_path=tmp_path / "o.csv", geojson_path=tmp_path / "o.geojson", all_fields=True
+    )
+    rows = list(csv.DictReader((tmp_path / "o.csv").read_text(encoding="utf-8-sig").splitlines()))
+    assert rows[0]["ll_uuid"] == "00000000-0000-4000-8000-0000000000aa"
+    header = (tmp_path / "o.csv").read_text(encoding="utf-8-sig").splitlines()[0].split(",")
+    assert header.count("ll_uuid") == 1 and "zoning" in header
+    props = json.loads((tmp_path / "o.geojson").read_text())["features"][0]["properties"]
+    assert props["ll_uuid"] == "00000000-0000-4000-8000-0000000000aa"
+
+
+def test_export_keeps_numeric_properties_ll_uuid_as_given(tmp_path):
+    item = good_feature()
+    item["properties"]["ll_uuid"] = 12345
+    response = write_response(tmp_path / "r.json", item)
+    parcel_map.export(response, csv_path=tmp_path / "o.csv", geojson_path=tmp_path / "o.geojson")
+    assert _rows(tmp_path / "o.csv")[1][CORE_COLUMNS.index("ll_uuid")] == "12345"
+    props = json.loads((tmp_path / "o.geojson").read_text())["features"][0]["properties"]
+    assert props["ll_uuid"] == 12345
+
+
+def test_geojson_honours_all_fields(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature(zoning="R1", alpha=2))
+    summary = parcel_map.export(response, geojson_path=tmp_path / "o.geojson", all_fields=True)
+    props = json.loads((tmp_path / "o.geojson").read_text())["features"][0]["properties"]
+    assert list(props)[: len(CORE_COLUMNS)] == CORE_COLUMNS
+    assert list(props)[len(CORE_COLUMNS) :] == ["alpha", "zoning"]
+    assert props["zoning"] == "R1" and summary["columns"] == list(props)
+    plain = parcel_map.export(response, geojson_path=tmp_path / "p.geojson")
+    assert plain["columns"] == CORE_COLUMNS
+    plain_props = json.loads((tmp_path / "p.geojson").read_text())["features"][0]["properties"]
+    assert "zoning" not in plain_props
+
+
+def test_render_excludes_fields_only_subject_from_neighbours(tmp_path):
+    subject = _fields_only()
+    response = write_response(tmp_path / "r.json", subject)
+    near = write_response(tmp_path / "n.json", subject)
+    summary = parcel_map.render(response, tmp_path / "m.html", neighbours_path=near)
+    assert summary["neighbours"] == 0
+
+
+def test_export_rejects_directory_target_even_with_replace(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    (tmp_path / "d").mkdir()
+    with pytest.raises(MapError, match="Output path is a directory"):
+        parcel_map.export(
+            response, csv_path=tmp_path / "o.csv", geojson_path=tmp_path / "d", replace=True
+        )
+    assert not (tmp_path / "o.csv").exists()
+
+
+def test_export_nan_geojson_is_a_map_error(tmp_path):
+    item = good_feature()
+    item["properties"]["headline"] = float("nan")
+    response = write_response(tmp_path / "r.json", item)
+    with pytest.raises(MapError, match="NaN or Infinity"):
+        parcel_map.export(response, geojson_path=tmp_path / "o.geojson")
+    assert not (tmp_path / "o.geojson").exists()
+
+
+def test_export_geojson_only_columns_follow_all_fields(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature(zoning="R1"))
+    summary = parcel_map.export(response, geojson_path=tmp_path / "o.geojson", all_fields=True)
+    assert summary["columns"] == [*parcel_map.CORE_COLUMNS, "zoning"]

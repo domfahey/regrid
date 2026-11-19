@@ -11,6 +11,7 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
+from .config import validate_limit
 from .requests import (
     CountryInput,
     GeometryInput,
@@ -89,6 +90,8 @@ def _parcel_options(country: str) -> set[str]:
 
 class EndpointsMixin:
     """Endpoint methods used by the synchronous client transport."""
+
+    max_limit: int
 
     def _request(
         self,
@@ -225,6 +228,10 @@ class EndpointsMixin:
         With ``paging=True`` the filters are also checked for use with ``offset_id`` paging;
         a filter that is valid unpaged but not pageable raises ``QueryPagingError``.
         """
+        if type(paging) is not bool:
+            raise ValueError("paging must be a boolean")
+        if options.get("limit") is not None:
+            validate_limit(options["limit"], self.max_limit)
         kwargs: dict[str, Any] = {
             "country": country,
             "validate_fields": validate_fields,

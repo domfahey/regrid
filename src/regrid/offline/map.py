@@ -265,6 +265,18 @@ def _fields(feature: dict) -> dict:
     return fields if isinstance(fields, dict) else {}
 
 
+def feature_uuid(feature: Any) -> str | None:
+    """The parcel's ll_uuid: a non-empty ``properties.ll_uuid``, else ``properties.fields.ll_uuid``."""
+    properties = feature.get("properties") if isinstance(feature, dict) else None
+    if not isinstance(properties, dict):
+        return None
+    for source in (properties, properties.get("fields")):
+        value = source.get("ll_uuid") if isinstance(source, dict) else None
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
 def _text(value: object) -> str:
     return MISSING if value is None or value == "" else str(value)
 
@@ -366,9 +378,8 @@ def load_neighbours(path: Path, subject_ids: set[str]) -> tuple[list[dict[str, A
     drawn: list[dict[str, Any]] = []
     warnings: list[str] = []
     for number, feature in enumerate(features):
-        properties = feature.get("properties") if isinstance(feature, dict) else None
-        uuid = properties.get("ll_uuid") if isinstance(properties, dict) else None
-        if isinstance(uuid, str) and uuid in subject_ids:
+        uuid = feature_uuid(feature)
+        if uuid is not None and uuid in subject_ids:
             continue
         try:
             data, dropped = _neighbour_data(feature)
@@ -642,9 +653,8 @@ def render(
     if neighbours_path is not None:
         subject_ids = set()
         for feature in chosen:
-            props = feature.get("properties")
-            uuid = props.get("ll_uuid") if isinstance(props, dict) else None
-            if isinstance(uuid, str):
+            uuid = feature_uuid(feature)
+            if uuid is not None:
                 subject_ids.add(uuid)
         try:
             neighbours, skipped = load_neighbours(neighbours_path, subject_ids)
@@ -713,6 +723,13 @@ def _csv_cell(value: object) -> str:
 
 
 def _core_value(feature: dict, name: str) -> Any:
+    if name == "ll_uuid":
+        properties = feature.get("properties")
+        for source in (properties, _fields(feature)):
+            value = source.get("ll_uuid") if isinstance(source, dict) else None
+            if value is not None:
+                return value
+        return None
     properties = feature.get("properties")
     source = properties if name in _PROPERTY_COLUMNS and isinstance(properties, dict) else None
     return (source if source is not None else _fields(feature)).get(name)
@@ -735,6 +752,8 @@ def export(
     for target in targets:
         if not target.parent.is_dir():
             raise MapError("Output directory does not exist")
+        if target.is_dir():
+            raise MapError("Output path is a directory")
         if same_file_key(target) == same_file_key(response_path):
             raise MapError("Output must not be the response file")
     try:
@@ -784,14 +803,23 @@ def export(
                 {
                     "type": "Feature",
                     "geometry": feature["geometry"],
-                    "properties": {name: _core_value(feature, name) for name in CORE_COLUMNS},
+                    "properties": {
+                        name: _core_value(feature, name)
+                        if name in CORE_COLUMNS
+                        else _fields(feature).get(name)
+                        for name in columns
+                    },
                 }
                 for feature in features
             ],
         }
-        geojson_data = (json.dumps(collection, ensure_ascii=False, allow_nan=False) + "\n").encode(
-            "utf-8"
-        )
+        try:
+            text = json.dumps(collection, ensure_ascii=False, allow_nan=False)
+        except ValueError as error:
+            raise MapError(
+                "GeoJSON output contains a value that is not JSON (NaN or Infinity)"
+            ) from error
+        geojson_data = (text + "\n").encode("utf-8")
     if csv_path is not None and csv_data is not None:
         _write_atomic_bytes(Path(csv_path), csv_data, replace=replace)
     if geojson_path is not None and geojson_data is not None:

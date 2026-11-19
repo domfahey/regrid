@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .client import RegridClient, RegridError
+from .config import validate_limit
 from .endpoints import QueryPagingError
 from .offline import fields as parcel_fields
 from .offline import freshness as county_freshness
@@ -353,6 +354,10 @@ def _validate_paging(
     """Run page 2's validation up front so it cannot fail after page 1 is billed."""
     if options.get("return_count"):
         raise _PagingError("--max-records conflicts with return_count")
+    try:
+        validate_limit(options.get("limit"), client.max_limit)
+    except ValueError as exc:
+        raise _PagingError(_error_message(exc, os_error="", type_error="")) from None
     if command == "query":
         try:
             client.validate_query(**args, paging=True, **options)
@@ -378,14 +383,12 @@ def _drop_trimmed_siblings(merged: dict[str, Any], kept: list[Any], trimmed: lis
     def uuids(features: list[Any]) -> set[Any]:
         found = set()
         for feature in features:
+            if (own := parcel_map.feature_uuid(feature)) is not None:
+                found.add(own)
             properties = feature.get("properties") if isinstance(feature, dict) else None
-            if not isinstance(properties, dict):
-                continue
-            single, many = properties.get("ll_uuid"), properties.get("ll_uuids")
-            if isinstance(single, str):
-                found.add(single)
+            many = properties.get("ll_uuids") if isinstance(properties, dict) else None
             if isinstance(many, list):
-                found.update(u for u in many if isinstance(u, str))
+                found.update(u for u in many if isinstance(u, str) and u)
         return found
 
     kept_uuids = uuids(kept)

@@ -6,7 +6,18 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
-No changes yet.
+### Fixed
+
+- Offline helpers: `export`, `map` and the paging sibling trim now read a parcel's `ll_uuid` from `properties.fields` when `properties.ll_uuid` is absent (new `regrid.offline.map.feature_uuid`), so exports keep the ID as Regrid gave it (any type), `--all-fields` no longer drops it and neighbour maps exclude the subject.
+- `export --all-fields` now also adds the extra fields to GeoJSON properties, and the summary `columns` lists what was written.
+- `export` refuses a directory as an output path before writing anything, even with `--replace`, reports NaN/Infinity in GeoJSON as a clean error, and lists only the core columns in its summary when no CSV is written.
+- SDK: `validate_query` requires a boolean `paging` and checks a non-null `limit` against the client's `max_limit`, like `query`.
+- CLI: `--max-records` paging rejects a `limit` above the client maximum before any request.
+- `freshness` rejects booleans for `max_age_days`.
+
+### Changed
+
+- The property-research skill description now covers parcel field definitions and codes; the CLI reference states exactly where the `regrid: requests made: N` line appears.
 
 ## [SDK 0.4.1][sdk-v0.4.1] and [Regrid Research 0.9.1][regrid-research-v0.9.1] - 2026-11-19
 

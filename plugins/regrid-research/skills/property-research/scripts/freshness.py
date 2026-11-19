@@ -71,6 +71,8 @@ def default_cache_path(env: Mapping[str, str] | None = None, os_name: str | None
 
 def check_max_age_days(value: object) -> float:
     """Return ``value`` as a float, or raise ValueError unless it is finite and in 0..36500."""
+    if isinstance(value, bool):
+        raise ValueError(f"max_age_days must be a finite number between 0 and {MAX_AGE_DAYS_LIMIT}")
     try:
         number = float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError, OverflowError):
