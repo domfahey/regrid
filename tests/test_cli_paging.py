@@ -757,3 +757,28 @@ def test_trimmed_siblings_never_collect_empty_uuids():
     kept, trimmed = [parcel("")], [parcel("u4")]
     assert _trim_siblings([_building(["", "u4"])], kept, trimmed) == []
     assert _trim_siblings([_building(["u4"])], kept, trimmed) == []
+
+
+def test_paging_note_reflects_response_pages_added_on_later_page(monkeypatch, capsys):
+    first = _page([1, 2], pages="s")
+    second = _page([2, 3], response_pages=[1])
+    _paged(monkeypatch, first, second)
+    assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
+    out, err = capsys.readouterr()
+    data = json.loads(out)
+    assert data["response_pages"] == [1] and data["pages"] == 2
+    lines = err.splitlines()
+    assert "regrid: paging note: response pages not kept (response_pages already present)" in lines
+    assert not any("kept as response_pages" in line for line in lines)
+    assert sum("paging note: response" in line for line in lines) == 1
+
+
+def test_paging_note_for_pages_first_seen_on_later_page(monkeypatch, capsys):
+    _paged(monkeypatch, _page([1, 2]), _page([2, 3], pages=[7], complete=[8]))
+    assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
+    out, err = capsys.readouterr()
+    data = json.loads(out)
+    assert data["response_pages"] == [7] and data["response_complete"] == [8]
+    assert data["pages"] == 2 and data["complete"] is True
+    note = "regrid: paging note: response pages/complete kept as response_pages/response_complete"
+    assert err.splitlines().count(note) == 1

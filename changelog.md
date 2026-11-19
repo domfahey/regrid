@@ -8,6 +8,12 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ### Fixed
 
+- Offline helpers: a path through a symlink loop gives a clean `Path contains a symlink loop` error in `map`, `export`, `address-map` (zero requests) and the skill's `map.py`, instead of a `RuntimeError` traceback. `render()`/`regrid map` refuse an output path that is a directory before rendering, like `export`. Exports fall back to `properties.fields.ll_uuid` when the top-level `ll_uuid` is an empty string, matching `feature_uuid`.
+- `fields.py`/`regrid fields`: a custom `--catalog` too deeply nested to print gives the clean `fields:` error instead of a `RecursionError` traceback.
+- CLI: the `--max-records` paging note about `pages`/`complete` keys in Regrid's response is computed from the final merged result, so it matches the output when those keys first appear on a later page.
+- Evals: `_is_canadian_route` checks only route-bearing keys (`url`, `path`, `endpoint`), URL-decodes them, skips empty segments and flags `/schemas/ca`; free-text address fields such as `Los Angeles/CA/90001` are no longer flagged.
+- Docs: `references/cli.md` says `address` defaults to 1 record (the other searches to 5); `references/mcp-tools.md` no longer says `fields.py` marks queryability (use `regrid query --validate-fields`) and notes that `return_parcels` on POST search is unverified.
+- Changelog: the 0.4.2 `export` bullet no longer says the summary lists only core columns when no CSV is written; `columns` includes the extra fields whenever `--all-fields` is used.
 - SDK: typed parcel validation accepts `ll_updated_at` timestamps with a space before a numeric offset (`2025-03-14 09:26:53 -0400`), the shape the live API returns. Before this, `ParcelFields`, `TypedRegridClient` and `make live` rejected real parcel responses.
 - CLI: `--max-records` paging treats `offset_id` as exclusive, as verified live: later pages no longer request (and bill) one extra record, the printed worst case is `ceil(N / limit)` requests, and a page that adds no new records stops with `complete: false`.
 - Skill: `references/batch.md` budgets `--max-records` paging as K = ceil(N / limit) requests and N records (it reserved N + (K - 1) records for the old extra-record behaviour).
@@ -41,7 +47,7 @@ Patch release with the fixes from the third audit (PR #17). Unverified at releas
 
 - Offline helpers: `export`, `map` and the paging sibling trim now read a parcel's `ll_uuid` from `properties.fields` when `properties.ll_uuid` is absent (new `regrid.offline.map.feature_uuid`), so exports keep the ID as Regrid gave it (any type), `--all-fields` no longer drops it and neighbour maps exclude the subject.
 - `export --all-fields` now also adds the extra fields to GeoJSON properties, and the summary `columns` lists what was written.
-- `export` refuses a directory as an output path before writing anything, even with `--replace`, reports NaN/Infinity in GeoJSON as a clean error, and lists only the core columns in its summary when no CSV is written.
+- `export` refuses a directory as an output path before writing anything, even with `--replace`, reports NaN/Infinity in GeoJSON as a clean error.
 - SDK: `validate_query` requires a boolean `paging` and checks a non-null `limit` against the client's `max_limit`, like `query`.
 - CLI: `--max-records` paging rejects a `limit` above the client maximum before any request.
 - `freshness` rejects booleans for `max_age_days`.

@@ -110,8 +110,9 @@ Never call `/report` (a POST that files a data issue), `/client_token/typeahead`
 
 **Field filter (`/parcels/query`).** Send 1-4 filters as `fields[<field>][<op>]`, e.g.
 `fields[owner][ilike]=smith` or `fields[geoid][eq]=48113`. Find queryable fields offline first:
-`python3 "<skill>/scripts/fields.py" search TEXT` / `explain FIELD` (the catalog marks
-queryability). The CLI check `--validate-fields` applies the same catalog to operators:
+`python3 "<skill>/scripts/fields.py" search TEXT` / `explain FIELD` (it lists fields; it does
+not say which are queryable). Queryability comes from `regrid query --validate-fields`, which
+checks the SDK catalog, including operators:
 text fields take `eq`, `ne`, `isnull`, `in`, `nin`, `ilike`; numeric and date fields
 take `eq`, `ne`, `isnull`, `in`, `nin`, `between` (two values, e.g. `[2000,2999]`),
 `gt`, `gte`, `lt`, `lte`, `order` (`ASC` or `DESC`, not with paging);
@@ -172,6 +173,7 @@ POST point takes no `offset_id` or `return_geometry`; POST area accepts `limit`,
 `radius`, `return_count`, `offset_id`, `return_geometry` and the premium flags. Every
 other POST (`/report`, Batch creation) stays forbidden, as do `/client_token/typeahead`
 and all DELETEs.
+Whether POST accepts `return_parcels` is unverified; GET searches set it explicitly.
 
 ### Response options
 

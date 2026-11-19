@@ -27,8 +27,8 @@ request count is on stderr. Apply the same scope, limit and premium rules as ove
 | `/usage/detailed` | `regrid usage --detailed` |
 | `/usage` | `regrid usage` |
 
-Single-result searches take `"limit":1`: `address`, `apn`, `owner` and `point` default to
-5 records. `parcel` and `parcel-path` return one record and reject `limit`.
+Single-result searches take `"limit":1`: `address` defaults to 1 record, while `apn`,
+`owner`, `point`, `area` and `query` default to 5. `parcel` and `parcel-path` return one record and reject `limit`.
 The CLI does not default premium or stacked flags to false; pass
 `"return_stacked":false,"return_zoning":false,...` in `--options` as SKILL.md says,
 unless the user requested them. This applies to `parcel` and `parcel-path` too, which

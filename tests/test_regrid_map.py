@@ -1157,3 +1157,80 @@ def test_export_geojson_only_columns_follow_all_fields(tmp_path):
     response = write_response(tmp_path / "r.json", good_feature(zoning="R1"))
     summary = parcel_map.export(response, geojson_path=tmp_path / "o.geojson", all_fields=True)
     assert summary["columns"] == [*parcel_map.CORE_COLUMNS, "zoning"]
+
+
+def test_export_empty_top_level_ll_uuid_falls_back_to_fields(tmp_path):
+    item = good_feature()
+    item["properties"]["ll_uuid"] = ""
+    item["properties"].setdefault("fields", {})["ll_uuid"] = "abc"
+    response = write_response(tmp_path / "r.json", item)
+    parcel_map.export(response, csv_path=tmp_path / "o.csv", geojson_path=tmp_path / "o.geojson")
+    assert _rows(tmp_path / "o.csv")[1][CORE_COLUMNS.index("ll_uuid")] == "abc"
+    assert (
+        json.loads((tmp_path / "o.geojson").read_text())["features"][0]["properties"]["ll_uuid"]
+        == "abc"
+    )
+
+
+def test_render_refuses_existing_directory(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    target = tmp_path / "out"
+    target.mkdir()
+    with pytest.raises(MapError, match="Output path is a directory"):
+        parcel_map.render(response, target, replace=True)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlinks need privilege on Windows")
+def test_same_file_key_symlink_loop(tmp_path):
+    (tmp_path / "a").symlink_to(tmp_path / "b")
+    (tmp_path / "b").symlink_to(tmp_path / "a")
+    with pytest.raises(MapError, match="symlink loop"):
+        parcel_map.same_file_key(tmp_path / "a")
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlinks need privilege on Windows")
+def test_same_file_key_dangling_output_through_loop(tmp_path):
+    (tmp_path / "a").symlink_to(tmp_path / "b")
+    (tmp_path / "b").symlink_to(tmp_path / "a")
+    with pytest.raises(MapError, match="symlink loop"):
+        parcel_map.same_file_key(tmp_path / "a" / "out.html")
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlinks need privilege on Windows")
+def test_same_file_key_detects_loop_when_resolve_is_silent(tmp_path, monkeypatch):
+    # Python 3.13+ non-strict resolve no longer raises on a loop.
+    (tmp_path / "a").symlink_to(tmp_path / "b")
+    (tmp_path / "b").symlink_to(tmp_path / "a")
+    monkeypatch.setattr(Path, "resolve", lambda self, strict=False: self)
+    with pytest.raises(MapError, match="symlink loop"):
+        parcel_map.same_file_key(tmp_path / "a")
+
+
+def test_same_file_key_missing_output_is_fine(tmp_path):
+    assert parcel_map.same_file_key(tmp_path / "nope" / "out.html")
+
+
+def test_same_file_key_other_oserror_is_not_labelled_a_loop(tmp_path, monkeypatch):
+    def boom(self, strict=False):
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(Path, "resolve", boom)
+    with pytest.raises(MapError, match="Cannot resolve path: Permission denied") as info:
+        parcel_map.same_file_key(tmp_path / "x")
+    assert "loop" not in str(info.value)
+
+
+def test_core_value_keeps_empty_ll_uuid_as_given():
+    core = parcel_map._core_value
+    assert core({"properties": {"ll_uuid": "", "fields": {"ll_uuid": ""}}}, "ll_uuid") == ""
+    assert core({"properties": {"ll_uuid": "", "fields": {}}}, "ll_uuid") == ""
+    assert core({"properties": {"fields": {}}}, "ll_uuid") is None
+    assert core({"properties": {"ll_uuid": "", "fields": {"ll_uuid": "b"}}}, "ll_uuid") == "b"
+
+
+def test_render_output_under_a_regular_file_reports_missing_directory(tmp_path):
+    response = write_response(tmp_path / "response.json", good_feature())
+    parent = tmp_path / "file"
+    parent.write_text("x")
+    with pytest.raises(MapError, match="^Output directory does not exist$"):
+        parcel_map.render(response, parent / "out.html")

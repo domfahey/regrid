@@ -484,3 +484,13 @@ def test_map_command_refuses_case_variant_of_response(tmp_path, capsys):
     argv = ["map", str(tmp_path / "RESP.json"), str(tmp_path / "resp.json"), "--replace"]
     assert cli.main(argv) == 1
     assert "Output must not be the response file" in capsys.readouterr().err
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="symlinks need privilege on Windows")
+def test_symlink_loop_output_makes_no_request(tmp_path, seen, capsys):
+    (tmp_path / "a").symlink_to(tmp_path / "b")
+    (tmp_path / "b").symlink_to(tmp_path / "a")
+    assert cli.main(["address-map", "x", str(tmp_path / "a")]) == 1
+    err = capsys.readouterr().err
+    assert seen == [] and "Path contains a symlink loop" in err
+    assert "Traceback" not in err and err.count("requests made: 0") == 1

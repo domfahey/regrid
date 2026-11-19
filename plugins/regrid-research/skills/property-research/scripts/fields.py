@@ -82,13 +82,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         catalog = load_catalog(args.catalog or default_catalog())
     except (OSError, ValueError, RecursionError) as exc:
-        print(f"fields: {' '.join(str(exc).split())}", file=sys.stderr)
+        print(f"fields: {' '.join(str(exc).split()) or type(exc).__name__}", file=sys.stderr)
         return 1
     if args.command == "explain":
         result: dict = explain(catalog, args.names)
     else:
         result = {"matches": search(catalog, args.term)}
-    print(json.dumps(result, indent=2, ensure_ascii=False))
+    try:
+        text = json.dumps(result, indent=2, ensure_ascii=False)
+    except (OSError, ValueError, RecursionError) as exc:
+        print(f"fields: {' '.join(str(exc).split()) or type(exc).__name__}", file=sys.stderr)
+        return 1
+    print(text)
     return 0
 
 
