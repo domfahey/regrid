@@ -53,15 +53,29 @@ def square(lon=-75.03, lat=39.9, size=0.001):
     ring = [[lon, lat], [lon + size, lat], [lon + size, lat + size], [lon, lat + size], [lon, lat]]
     return {"type": "Polygon", "coordinates": [ring]}
 
+
 def expected_sqft(lon=-75.03, lat=39.9, size=0.001):
     r = 6378137.0
-    m2 = r * r * math.radians(size) * (math.sin(math.radians(lat + size)) - math.sin(math.radians(lat)))
+    m2 = (
+        r
+        * r
+        * math.radians(size)
+        * (math.sin(math.radians(lat + size)) - math.sin(math.radians(lat)))
+    )
     return m2 * 10.763910416709722
 
+
 def feature(geometry, **fields):
-    return {"type": "Feature", "geometry": geometry,
-            "properties": {"headline": "12 Example Ave", "path": "/us/nj/camden/haddonfield/1",
-                           "ll_uuid": "00000000-0000-4000-8000-000000000001", "fields": fields}}
+    return {
+        "type": "Feature",
+        "geometry": geometry,
+        "properties": {
+            "headline": "12 Example Ave",
+            "path": "/us/nj/camden/haddonfield/1",
+            "ll_uuid": "00000000-0000-4000-8000-000000000001",
+            "fields": fields,
+        },
+    }
 ```
 
 - [ ] **Step 1: Write failing tests** in `tests/test_regrid_map.py`, loading `map.py` via `importlib.util.spec_from_file_location` (same pattern as `tests/test_regrid_workflow.py:10-17`):
@@ -81,7 +95,8 @@ def _ring_area_m2(ring):
     total = 0.0
     for (lon1, lat1), (lon2, lat2) in zip(ring, ring[1:]):
         total += math.radians(lon2 - lon1) * (
-            2 + math.sin(math.radians(lat1)) + math.sin(math.radians(lat2)))
+            2 + math.sin(math.radians(lat1)) + math.sin(math.radians(lat2))
+        )
     return abs(total) * R * R / 2
 ```
 
