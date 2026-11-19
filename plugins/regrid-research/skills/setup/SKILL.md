@@ -1,9 +1,13 @@
 ---
 name: setup
-description: Checks whether the Regrid research plugin's MCP tools and authentication are available, or diagnoses setup and connection failures without revealing credentials.
+description: Checks whether the Regrid research plugin's MCP tools and authentication are available, and diagnoses setup and connection failures without revealing credentials. Use when Regrid tools are missing, authentication or permission errors appear, or someone asks whether Regrid is connected or how to set it up.
 ---
 
 # Check Regrid setup
+
+This skill requires the property-research skill, which ships in the same plugin
+archives; the references linked below belong to it, and the budget rules are in its
+[batch guide](../property-research/references/batch.md).
 
 1. Inherit the caller's constraints before doing anything: offline/no-network
    means no remote discovery, documentation fetch, authentication probe, or API
@@ -33,14 +37,11 @@ description: Checks whether the Regrid research plugin's MCP tools and authentic
 5. Report three statuses: tools available, documentation reachable, authenticated
    access verified. A configured header alone does not pass the third check.
 
-Tool listing, input-schema inspection, and documentation-only tools are distinct
-from an API executor invocation. They consume no API request allowance, though a
-remote call still requires network permission. Every API executor invocation
-counts toward the shared request bound, including usage diagnostics, count-only
-queries, failed calls, and uncertain outcomes, even when non-billable. Reserve
-zero parcel records for a usage diagnostic, and preserve the attempt if it fails.
-If a tool's API behavior or request bound is unknown, skip the probe and report
-authentication unverified. Do not hide diagnostic requests outside the ledger.
+Tool and schema inspection consume no request allowance; every API executor call,
+including a failed or uncertain usage diagnostic, is counted as the
+[batch guide](../property-research/references/batch.md#one-allowance-across-stages)
+says (zero parcel records, never hidden outside the ledger). If a tool's API behavior
+or request bound is unknown, skip the probe and report authentication unverified.
 
 Honor a caller's requested format. An optional structured setup result can carry
 `tools_available`, `documentation_reachable`, and `authenticated_access_verified`

@@ -227,7 +227,8 @@ def test_refresh_rule_never_unscoped():
 def test_cli_freshness_neighbours_and_suggestions_guidance():
     refs = SKILL_ROOT / "references"
     cli = (refs / "cli.md").read_text()
-    assert "requests made" in cli and "record_limit" in cli and "ll_last_refresh" in cli
+    assert "requests made" in cli and "ll_last_refresh" in cli
+    assert "record_limit" in (refs / "batch.md").read_text()
     assert "cli.md" in (SKILL_ROOT / "SKILL.md").read_text()
     map_guide = (refs / "map.md").read_text()
     for text in ("radius=100", "limit=25", "up to 25 records", "--neighbours"):
@@ -240,9 +241,10 @@ def test_cli_freshness_neighbours_and_suggestions_guidance():
 def test_neighbours_and_suggestions_are_ledger_accounted():
     refs = SKILL_ROOT / "references"
     for text in ((refs / "map.md").read_text(), (PLUGIN / "commands/address-map.md").read_text()):
-        assert "record_limit 25" in text and "uncertain" in text
-        assert "authorized_retry=True" in text and "no workflow ledger" in text
+        assert "batch.md" in text
     batch = (refs / "batch.md").read_text()
+    assert "record_limit 25" in batch and "uncertain" in batch
+    assert "authorized_retry=True" in batch and "no workflow ledger" in batch
     assert "## CLI and suggestion requests" in batch
     assert "typeahead" in batch and "record_limit 1" in batch
     for line in (refs / "mcp-tools.md").read_text().splitlines():
@@ -266,6 +268,64 @@ def test_cli_path_paging_schema_usage_and_export_guidance():
     assert "fields.py" in tools and "one request each" in tools
     assert "map.py export" in (refs / "map.md").read_text()
     skill = (SKILL_ROOT / "SKILL.md").read_text()
-    assert "return_count" in skill and "map.py export" in skill
+    assert "map.py export" in skill and "return_count" in (refs / "batch.md").read_text()
     assert "not saved in checkpoints" in (refs / "batch.md").read_text()
     assert "CLI" in (PLUGIN / "skills/setup/SKILL.md").read_text()
+
+
+SKILL_FILES = [SKILL_ROOT / "SKILL.md", PLUGIN / "skills/setup/SKILL.md"]
+DOC_FILES = [*SKILL_FILES, *(SKILL_ROOT / "references").glob("*.md"), *PLUGIN.glob("commands/*.md")]
+
+
+def test_every_reference_is_linked_directly_from_skill():
+    skill = (SKILL_ROOT / "SKILL.md").read_text()
+    refs = [p for p in (SKILL_ROOT / "references").iterdir() if p.suffix in {".md", ".json"}]
+    assert (SKILL_ROOT / "references/answers.md") in refs
+    for ref in refs:
+        assert f"](references/{ref.name}" in skill, ref.name
+
+
+def test_skill_is_a_short_routing_page():
+    assert len((SKILL_ROOT / "SKILL.md").read_text().split()) < 900
+
+
+def test_budget_rules_have_one_authoritative_copy():
+    batch = (SKILL_ROOT / "references/batch.md").read_text()
+    assert "## Default budgets" in batch and "## Neighbour requests" in batch
+    skill = (SKILL_ROOT / "SKILL.md").read_text()
+    assert "reserve possible records" not in skill and "attempted_requests" not in skill
+
+
+def test_mcp_tools_has_toc_and_dated_facts_only_in_history():
+    text = (SKILL_ROOT / "references/mcp-tools.md").read_text()
+    head, _, history = text.partition("## Observed history")
+    assert "## Contents" in head and history
+    assert "November" not in head and "October" not in head
+
+
+def test_setup_declares_property_research_dependency():
+    assert "requires the property-research skill" in (PLUGIN / "skills/setup/SKILL.md").read_text()
+
+
+def test_consistent_terminology():
+    import re
+
+    for path in DOC_FILES:
+        text = path.read_text()
+        assert not re.search(r"(?i)\bneighbors?\b", text), path
+        assert "paid dataset" not in text.lower(), path
+
+
+def test_skill_descriptions_are_third_person_and_bounded():
+    import re
+
+    for path in SKILL_FILES:
+        desc = re.search(r"^description: (.+)$", path.read_text(), re.M).group(1)
+        assert len(desc) <= 1024, path
+        assert "Use when" in desc or "Use for" in desc, path
+        assert not re.search(r"(?i)\b(i|you|your|my)\b", desc), path
+    research = re.search(r"^description: (.+)$", SKILL_FILES[0].read_text(), re.M).group(1).lower()
+    for word in ("map", "satellite", "boundar", "export", "csv", "geojson"):
+        assert word in research, word
+    setup = re.search(r"^description: (.+)$", SKILL_FILES[1].read_text(), re.M).group(1).lower()
+    assert "tools" in setup and "auth" in setup
