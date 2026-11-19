@@ -152,7 +152,8 @@ standalone skill archive has no commands), which drives `property-research`.
 
 **MCP tools.** Only `execute-request` makes API calls; the other six use no request
 allowance. `setup` inspects tool schemas, may make one documentation discovery call,
-and runs one `/usage` check through `execute-request`.
+and, only when a non-billable usage operation is exposed and one request remains,
+makes at most one `/usage` check through `execute-request`.
 
 | MCP tool | What it does |
 | --- | --- |
