@@ -6,7 +6,9 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
-No changes yet.
+### Added
+
+- `make live-full`: an opt-in, bounded (about 26 requests, hard cap 30) live check of every read-only endpoint that prints only aggregate PASS/FAIL/SKIP/NOTE lines.
 
 ## [SDK 0.4.3][sdk-v0.4.3] and [Regrid Research 0.9.3][regrid-research-v0.9.3] - 2026-11-19
 

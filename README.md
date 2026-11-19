@@ -77,6 +77,7 @@ uv add /absolute/path/to/regrid
 | `make test` | Run mocked tests and require at least 95% combined line and branch coverage |
 | `make doctor` | Check `.env` presence and a nonblank, non-placeholder effective token locally; no API calls |
 | `make live` | Explicit bounded live Regrid smoke test; requires token; uses the default test address |
+| `make live-full` | Explicit live check of every read-only endpoint (about 26 requests, hard cap 30); requires token |
 | `make e2e` | Run subprocess and real local HTTPS tests |
 | `make check` | Run lint, format-check, typecheck, and the coverage-gated mocked suite |
 | `uv build` | Build wheel and source archives into `dist/` |
@@ -338,7 +339,7 @@ REGRID_LIVE_ADDRESS="your complete US property address" make live
 
 The runner fetches the public parcel schema, records usage, looks up one address with `limit=1` and premium datasets disabled, validates the same response using Pydantic and opt-in parcel fields, then checks usage again. It makes at most four requests with no retries, pagination, or expanded searches. A parcel lookup may incur a charge. A single result is not proof of an exact address match, and usage can lag or include concurrent clients. Schema type drift is reported as a count. After the lookup it prints whether the parcel's geometry is present, null (no boundary on file) or absent (the satellite map would fail), without printing coordinates.
 
-Output contains only status and aggregate counts, not credentials, addresses, owners, response bodies, or exception details. HTTP logging is disabled in the runner process. The underlying `regrid.live` module exits 2 for a missing or placeholder token before any network request, 1 for request/validation failures, and 0 on success. The Makefile recipe wraps any nonzero module or environment-loader result in a generic failure; do not rely on the module's exit code propagating through `make live`. If lookup or validation fails, final usage is still attempted. Tiles and premium datasets are not tested. This target runs separately from ordinary checks and local HTTPS E2E tests.
+Output contains only status and aggregate counts, not credentials, addresses, owners, response bodies, or exception details. HTTP logging is disabled in the runner process. The underlying `regrid.live` module exits 2 for a missing or placeholder token before any network request, 1 for request/validation failures, and 0 on success. The Makefile recipe wraps any nonzero module or environment-loader result in a generic failure; do not rely on the module's exit code propagating through `make live`. If lookup or validation fails, final usage is still attempted. Tiles and premium datasets are not tested. This target runs separately from ordinary checks and local HTTPS E2E tests. `make live-full` (`regrid.live_full`) exercises every read-only endpoint, including POST search, paging, tiles and a deliberately invalid token, in about 26 requests with a hard cap of 30; it can incur a few parcel and tile charges, every search returns one or two records without premium datasets, and Enterprise typeahead runs only with `REGRID_LIVE_ENTERPRISE=1`. Its output has the same privacy rules as `make live` and adds PASS/FAIL/SKIP/NOTE lines with counts and status codes only, never addresses, coordinates, identifiers, owners or response bodies.
 
 ## Claude plugin
 
