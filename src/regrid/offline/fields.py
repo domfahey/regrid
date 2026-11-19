@@ -81,7 +81,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         catalog = load_catalog(args.catalog or default_catalog())
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, RecursionError) as exc:
         print(f"fields: {' '.join(str(exc).split())}", file=sys.stderr)
         return 1
     if args.command == "explain":

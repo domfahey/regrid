@@ -32,10 +32,18 @@ def _strings(value: object):
 
 
 def _is_canadian_route(arguments: dict) -> bool:
-    """True for values with a /ca/ path segment (also inside URLs); /us/ca/ is California."""
-    return any(
-        re.search(r"(?<!/us)/ca/", text.strip().lower()) is not None for text in _strings(arguments)
-    )
+    """True when a `ca` path segment is followed by more segments and is not /us/ca/ (California).
+
+    Works on path-like strings, URL paths and query values such as path=/ca/on/x.
+    """
+    for text in _strings(arguments):
+        parts = re.split(r"[/?&=#]", text.strip().lower())
+        for i, part in enumerate(parts[:-1]):
+            if part != "ca" or (i and parts[i - 1] == "us"):
+                continue
+            if parts[i + 1][:1].strip():
+                return True
+    return False
 
 
 def load_cases(suite: str = "research") -> list[dict]:

@@ -145,3 +145,11 @@ def test_load_catalog_requires_string_names(tmp_path, name):
     path.write_text(json.dumps({"fields": [{"name": name}]}))
     with pytest.raises(ValueError, match="non-empty string"):
         fields.load_catalog(path)
+
+
+def test_deeply_nested_catalog_is_a_clean_error(tmp_path, capsys):
+    path = tmp_path / "deep.json"
+    path.write_text("[" * 200000 + "]" * 200000)
+    assert fields.main(["search", "x", "--catalog", str(path)]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("fields:") and len(err.strip().splitlines()) == 1

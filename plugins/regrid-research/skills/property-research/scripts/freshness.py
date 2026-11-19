@@ -148,7 +148,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         document = json.loads(args.verse.read_text(encoding="utf-8"))
         result = county_dates(document, args.path)
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, RecursionError) as exc:
         print(f"freshness: {' '.join(str(exc).split())}", file=sys.stderr)
         return 1
     print(json.dumps(result, indent=2, ensure_ascii=False))

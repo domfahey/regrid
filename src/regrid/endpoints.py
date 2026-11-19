@@ -58,7 +58,7 @@ def _text(value: str, name: str) -> str:
 def _json(value: Any) -> str:
     try:
         return json.dumps(value, separators=(",", ":"), allow_nan=False)
-    except (TypeError, ValueError, OverflowError):
+    except (TypeError, ValueError, OverflowError, RecursionError):
         pass
     # Raise outside the except block: __context__ would retain the raw input.
     raise ValueError("Invalid Regrid JSON request")
@@ -69,7 +69,7 @@ def _geometry(value: Mapping[str, Any] | str) -> dict[str, Any]:
         valid = True
         try:
             value = json.loads(value)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, RecursionError):
             valid = False
         # Raise outside the except block: __context__ would retain the raw input.
         if not valid:

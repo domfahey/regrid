@@ -194,7 +194,14 @@ def test_packet_research_suite_keeps_placeholder(monkeypatch, capsys):
         ("/us/ca/los-angeles", False),
         ("https://x.test/api/v2/us/ca/parcels/address", False),
         ("CA/ something else", False),
-        ("ca/on", False),
+        ("ca/on", True),
+        ("ca/on/toronto", True),
+        ("https://x.test/api/v2/ca/parcels/address", True),
+        ("https://x.test/api/v2/parcels/path?path=/ca/on/x", True),
+        ("path=ca/on/x", True),
+        ("us/ca/los-angeles", False),
+        ("path=us/ca/x", False),
+        ("ca", False),
     ],
 )
 def test_canadian_route_detection(value, expected):

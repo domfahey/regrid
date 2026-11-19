@@ -233,7 +233,6 @@ def test_other_top_level_keys_are_preserved(monkeypatch, capsys):
     [
         {"parcels": "oops"},
         {"parcels": {"features": "oops"}},
-        {"parcels": {"features": [{"id": [1]}]}},
     ],
 )
 def test_malformed_later_page_returns_partial(monkeypatch, capsys, bad):
@@ -596,3 +595,36 @@ def test_sibling_dropped_only_when_it_references_dropped_and_no_kept_uuid():
     straddle = _building(["u3", "u4"])
     assert _trim_siblings([mixed_unfetched, straddle], kept, trimmed) == [straddle]
     assert _trim_siblings([straddle], kept, trimmed) == [straddle]
+
+
+def test_parcel_dedupe_handles_unhashable_ids(monkeypatch, capsys):
+    def with_ids(*ids):
+        return {
+            "parcels": {
+                "type": "FeatureCollection",
+                "features": [{"type": "Feature", "id": i, "properties": {}} for i in ids],
+            }
+        }
+
+    first, second = with_ids({"k": 1}, 5), with_ids(5, 6)
+    _paged(monkeypatch, first, second)
+    code = cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}'])
+    assert code == 0
+    data = json.loads(capsys.readouterr().out)
+    assert [f["id"] for f in data["parcels"]["features"]] == [{"k": 1}, 5, 6]
+
+
+def test_existing_response_keys_are_never_overwritten(monkeypatch, capsys):
+    page = _page([1, 2], pages="s", complete="c", response_pages="mine", response_complete="mine-c")
+    _paged(monkeypatch, page, page)
+    assert cli.main([*POINT, "--max-records", "2", "--options", '{"limit":2}']) == 0
+    out, err = capsys.readouterr()
+    data = json.loads(out)
+    assert data["response_pages"] == "mine"
+    assert data["pages"] == 1 and data["complete"] is True
+    assert data["response_complete"] == "mine-c"
+    note = (
+        "regrid: paging note: response pages/complete not kept "
+        "(response_pages/response_complete already present)"
+    )
+    assert err.splitlines().count(note) == 1

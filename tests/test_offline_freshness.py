@@ -217,3 +217,11 @@ def test_read_cache_treats_deeply_nested_json_as_corrupt(tmp_path):
     path = tmp_path / "verse.json"
     path.write_text("[" * 200000 + "]" * 200000)
     assert freshness.read_cache(path) is None
+
+
+def test_main_treats_deeply_nested_verse_as_clean_error(tmp_path, capsys):
+    path = tmp_path / "verse.json"
+    path.write_text("[" * 200000 + "]" * 200000)
+    assert freshness.main(["county", str(path), "--path", "/us/nj/camden"]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("freshness:") and len(err.strip().splitlines()) == 1

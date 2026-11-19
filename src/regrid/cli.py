@@ -130,11 +130,6 @@ def _subject_mappable(subject: Any) -> bool:
     return True
 
 
-def _collision_key(path: Path) -> str:
-    """Resolved path folded for case-insensitive filesystems (conservative on case-sensitive)."""
-    return os.path.normcase(str(path.resolve())).casefold()
-
-
 def _address_map(
     args: dict[str, Any], sent: list[int], saved: list[Path], notes: list[str]
 ) -> None:
@@ -143,7 +138,7 @@ def _address_map(
     neighbours_path = output.with_name(f"{output.stem}.neighbours.json")
     replace = args["replace"]
     targets = [response_path, output] + ([neighbours_path] if args["neighbours"] else [])
-    if len({_collision_key(target) for target in targets}) != len(targets):
+    if len({parcel_map.same_file_key(target) for target in targets}) != len(targets):
         raise ValueError("Saved response and map output must be different files")
     for target in targets:
         if not target.parent.is_dir():
@@ -272,12 +267,6 @@ def _parse_page(result: Any) -> list[Any]:
         return []
     if not isinstance(page, list):
         raise _PagingError("paging stopped: malformed page in response")
-    try:
-        for feature in page:
-            if isinstance(feature, dict):
-                hash(feature.get("id"))
-    except TypeError:
-        raise _PagingError("paging stopped: malformed page in response") from None
     return page
 
 
@@ -445,7 +434,7 @@ def _paged_search(
     requests_cap = 1 + -(-(total - first) // (limit - 1))
     print(f"regrid: up to {requests_cap} requests for {total} records", file=sys.stderr)
     features: list[Any] = []
-    seen_ids: set[tuple[str, Any]] = set()
+    seen_ids: set[str] = set()
     merged: dict[str, Any] = {}
     noted: set[str] = set()
     pages = 0
@@ -463,7 +452,13 @@ def _paged_search(
         pages += 1
         if pages == 1:
             merged = _copy_first_page(result)
-            if "pages" in merged or "complete" in merged:
+            if any(f"response_{key}" in merged for key in ("pages", "complete") if key in merged):
+                print(
+                    "regrid: paging note: response pages/complete not kept "
+                    "(response_pages/response_complete already present)",
+                    file=sys.stderr,
+                )
+            elif "pages" in merged or "complete" in merged:
                 print(
                     "regrid: paging note: response pages/complete kept as "
                     "response_pages/response_complete",
@@ -473,12 +468,11 @@ def _paged_search(
             _merge_page(merged, result, noted)
         new = []
         for feature in page:
-            fid = _feature_id(feature)
-            if fid is not None:
-                key = (type(fid).__name__, fid)
-                if key in seen_ids:
+            if _feature_id(feature) is not None:
+                identity = _identity(feature)
+                if identity in seen_ids:
                     continue
-                seen_ids.add(key)
+                seen_ids.add(identity)
             new.append(feature)
         features.extend(new)
         _drop_trimmed_siblings(merged, features[:total], features[total:])
@@ -509,7 +503,7 @@ def _paged_result(
     collection.setdefault("type", "FeatureCollection")
     result = {**merged, "parcels": collection}
     for key in ("pages", "complete"):
-        if key in merged:
+        if key in merged and f"response_{key}" not in merged:
             result[f"response_{key}"] = merged[key]
     return {**result, "pages": pages, "complete": complete}
 
