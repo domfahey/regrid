@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +43,69 @@ def _run_map(args: dict[str, Any]) -> None:
     print(json.dumps(summary, indent=2, ensure_ascii=False, allow_nan=False))
 
 
+def _address_map(args: dict[str, Any], sent: list[int]) -> None:
+    output = Path(args["output"])
+    response_path = Path(args["save_response"] or output.with_suffix(".json"))
+    replace = args["replace"]
+    if response_path == output:
+        raise ValueError("Saved response and map output must be different files")
+    for target in (response_path, output):
+        if not replace and os.path.lexists(target):
+            raise ValueError(f"{target} exists; pass --replace to overwrite it")
+    options: dict[str, Any] = {
+        "limit": 1,
+        "return_parcels": True,
+        "return_stacked": False,
+        "return_zoning": False,
+        "return_matched_buildings": False,
+        "return_matched_addresses": False,
+        "return_enhanced_ownership": False,
+    }
+    if args["path"] is not None:
+        options["path"] = args["path"]
+    with RegridClient(
+        token=(os.environ.get("REGRID_TOKEN") or "").strip() or None,
+        timeout=args["timeout"],
+        base_url=args["base_url"],
+        tiles_base_url=args["tiles_base_url"],
+    ) as client:
+        # Count requests as httpx is about to send them, so failures before sending count 0.
+        client._http.event_hooks["request"].append(lambda request: sent.append(1))
+        result = client.address(args["address"], **options)
+    body = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+    with open(response_path, "w" if replace else "x", encoding="utf-8") as handle:
+        handle.write(body)
+    retrieved_at = args["retrieved_at"] or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    summary = parcel_map.render(response_path, output, retrieved_at=retrieved_at, replace=replace)
+    print(
+        json.dumps(
+            {"response": str(response_path), **summary},
+            indent=2,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+    )
+
+
+def _run_address_map(args: dict[str, Any]) -> int:
+    sent: list[int] = []
+    message = None
+    try:
+        _address_map(args, sent)
+    except (RegridError, ValueError, OSError) as exc:  # MapError is a ValueError
+        if isinstance(exc, RegridError):
+            message = str(exc)
+        elif isinstance(exc, OSError):
+            message = "Could not write output file"
+        else:
+            message = " ".join(str(exc).split())
+    print(f"regrid: requests made: {len(sent)}", file=sys.stderr)
+    if message is not None:
+        print(f"regrid: {message}", file=sys.stderr)
+        return 1
+    return 0
+
+
 # Commands that run locally: no token, no HTTP client.
 _OFFLINE = {"map": _run_map}
 
@@ -69,6 +133,17 @@ def _parser() -> argparse.ArgumentParser:
     offline.add_argument("--all-candidates", action="store_true", help="Map every feature")
     offline.add_argument("--retrieved-at", metavar="ISO", help="Retrieval timestamp to display")
     offline.add_argument("--replace", action="store_true", help="Overwrite an existing output")
+    address_map = commands.add_parser(
+        "address-map",
+        help="Look up one address (one API request) and render it as an offline satellite map",
+        description="Make one address lookup, save the response, and render a satellite map.",
+    )
+    address_map.add_argument("address")
+    address_map.add_argument("output", help="Destination HTML file")
+    address_map.add_argument("--path", help="Regrid path scope, e.g. /us/nj/camden")
+    address_map.add_argument("--save-response", metavar="FILE", help="Response JSON destination")
+    address_map.add_argument("--retrieved-at", metavar="ISO", help="Retrieval timestamp to show")
+    address_map.add_argument("--replace", action="store_true", help="Overwrite existing outputs")
     option_commands = {
         "point",
         "area",
@@ -205,6 +280,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"regrid: {' '.join(str(exc).split())}", file=sys.stderr)
             return 1
         return 0
+    if command == "address_map":
+        return _run_address_map(args)
     timeout = args.pop("timeout")
     base_url = args.pop("base_url")
     tiles_base_url = args.pop("tiles_base_url")

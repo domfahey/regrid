@@ -512,11 +512,15 @@ def test_temp_name_collision_is_retried(tmp_path, monkeypatch):
     assert (tmp_path / "m.html").exists()
 
 
-def test_module_runs_as_script(tmp_path, monkeypatch):
-    import runpy
+def test_module_runs_as_script(tmp_path):
+    import subprocess
 
     response = write_response(tmp_path / "r.json", good_feature())
-    monkeypatch.setattr(sys, "argv", ["map", "render", str(response), str(tmp_path / "m.html")])
-    with pytest.raises(SystemExit) as exit_info:
-        runpy.run_module("regrid.offline.map", run_name="__main__")
-    assert exit_info.value.code == 0
+    proc = subprocess.run(
+        [sys.executable, "-W", "error", "-m", "regrid.offline.map", "render", str(response)]
+        + [str(tmp_path / "m.html")],
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert (tmp_path / "m.html").exists()
