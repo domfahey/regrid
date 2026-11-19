@@ -57,18 +57,24 @@ Global, before the command: `--timeout SECONDS`, `--base-url URL`, `--tiles-base
 point them at another host).
 `--options`, `--geojson`, `--fields` and `--metadata` take a JSON string or `@file`.
 Endpoint commands also take `--country us|ca` (default `us`; Canada stays as legacy,
-out of this skill's scope).
+out of this skill's scope):
+Commands accepting `--country`: `point`, `area`, `address`, `apn`, `owner`, `query`, `parcel`, `parcel-path`, `typeahead`, `verse`, `usage`.
+`--options` JSON (limit, return flags) goes on `area`, `query`, `parcel-path` and `verse`
+as well as the commands in the map.
 
 - `area --method GET|POST`: `POST` sends the GeoJSON as a JSON body for geometry too
   large for a URL; same read-only search, same one request per page. See
   [mcp-tools](mcp-tools.md#large-geometry-post-search). `point --method POST` needs GeoJSON.
 - `query --validate-fields`: check fields and operators against the offline US field
-  catalog before any request; `--allow-unknown-fields` lets through fields absent from
-  the catalog (fields it marks non-queryable still fail).
-- `usage --options '{"begin_date":"YYYY-MM-DD","end_date":"YYYY-MM-DD"}'` and
+  catalog before any request.
+- `query --allow-unknown-fields` lets through fields absent from the catalog (fields it
+  marks non-queryable still fail).
+- `usage --detailed --options '{"begin_date":"YYYY-MM-DD","end_date":"YYYY-MM-DD"}'` and
   `schema --options '{"premium_only":true}'` (parcel schema only).
-- `address-map ADDRESS OUT.html`: `--path PATH` county scope, `--save-response FILE`
-  keeps the lookup JSON, `--retrieved-at ISO` sets the shown timestamp, `--replace`.
+- `address-map ADDRESS OUT.html --path PATH`: county scope; `--save-response FILE`
+  keeps the lookup JSON; `--neighbours` adds one neighbours request.
+- `address-map ADDRESS OUT.html --retrieved-at ISO` sets the shown timestamp;
+  `address-map ... --replace` allows overwriting the output.
 - `map RESPONSE OUT.html`: `--feature N`, `--all-candidates`, `--retrieved-at ISO`,
   `--neighbours FILE`, `--replace`; see [map](map.md).
 - `tilejson [--format mvt|png]`, `tile Z X Y --output FILE [--format mvt|png] [--retina]`,

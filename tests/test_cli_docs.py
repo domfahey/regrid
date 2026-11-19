@@ -116,29 +116,44 @@ def test_documented_invocation_executes(
     assert cli.main(argv) == 0, (argv, capsys.readouterr().err)
 
 
-def _walk(parser: "argparse.ArgumentParser", prefix: str = "") -> "tuple[set[str], set[str]]":
-    """Return (subcommand names, long option strings) for a parser tree."""
+def _walk(parser: "argparse.ArgumentParser") -> "tuple[set[str], dict[str, set[str]]]":
+    """Return (subcommand names, {subcommand or "global": long option strings})."""
     names: set[str] = set()
-    flags: set[str] = set()
-    for action in parser._actions:
-        if isinstance(action, argparse._SubParsersAction):
-            for name, sub in action.choices.items():
-                names.add(name)
-                sub_names, sub_flags = _walk(sub)
-                names |= sub_names
-                flags |= sub_flags
-        else:
-            flags |= {
-                opt for opt in action.option_strings if opt.startswith("--") and opt != "--help"
-            }
+    flags: dict[str, set[str]] = {}
+
+    def visit(p: "argparse.ArgumentParser", owner: str) -> None:
+        for action in p._actions:
+            if isinstance(action, argparse._SubParsersAction):
+                for name, sub in action.choices.items():
+                    names.add(name)
+                    visit(sub, name)
+            else:
+                found = {
+                    opt for opt in action.option_strings if opt.startswith("--") and opt != "--help"
+                }
+                if found:
+                    flags.setdefault(owner, set()).update(found)
+
+    visit(parser, "global")
     return names, flags
+
+
+def _word(token: str) -> "re.Pattern[str]":
+    return re.compile(rf"(?<![\w-]){re.escape(token)}(?![\w-])")
 
 
 def test_cli_md_mentions_every_subcommand_and_flag() -> None:
     names, flags = _walk(_parser())
-    text = CLI_MD.read_text(encoding="utf-8")
-    missing = sorted(
-        {n for n in names if not re.search(rf"(?<![\w-]){re.escape(n)}(?![\w-])", text)}
-        | {f for f in flags if f not in text}
-    )
-    assert not missing, f"cli.md does not mention: {missing}"
+    lines = CLI_MD.read_text(encoding="utf-8").splitlines()
+    missing = sorted(n for n in names if not any(_word(n).search(ln) for ln in lines))
+    for owner, owned in flags.items():
+        for flag in sorted(owned):
+            flag_re = _word(flag)
+            if owner == "global":
+                ok = any(flag_re.search(ln) for ln in lines)
+            else:
+                cmd_re = _word(owner)
+                ok = any(flag_re.search(ln) and cmd_re.search(ln) for ln in lines)
+            if not ok:
+                missing.append(f"{owner} {flag}")
+    assert not missing, f"cli.md does not show on one line: {missing}"

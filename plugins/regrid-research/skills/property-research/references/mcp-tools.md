@@ -117,6 +117,8 @@ queryability). The CLI check `--validate-fields` applies the same catalog to ope
 text fields take `eq`, `ne`, `isnull`, `in`, `nin`, `ilike`; numeric and date fields
 take `eq`, `ne`, `isnull`, `in`, `nin`, `between` (two values), `gt`, `gte`, `lt`,
 `lte`, `order` (`ASC` or `DESC`, not with paging); boolean fields only `eq`, `ne`, `isnull`.
+The boolean-like text fields `usps_vacancy` and `rdi` also take only `eq`, `ne`, `isnull`.
+Exception: `zoning` additionally allows `between` and `order`.
 Scope with `path` or `geojson`, and run a `return_count` first.
 
 **Area (`/parcels/area`).** `geojson` is a Polygon, MultiPolygon, Point, MultiPoint,
@@ -171,7 +173,7 @@ all four are off unless asked.
 - `return_custom_id=true`: with GeoJSON features carrying `properties.custom_id`,
   associates results with those IDs (selected endpoints).
 - `return_stacked`: the API default is true. The skill sets false so identical,
-  stacked geometries (units, condos) return one parcel and cost fewer records. That
+  stacked geometries (units, condos) return only the first parcel among them. That
   can hide distinct records, so opt in with `true` when the user asks about units or
   condos in a building or the address is ambiguous between stacked parcels, and fit
   the extra records into the budget.
