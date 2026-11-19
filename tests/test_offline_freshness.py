@@ -31,33 +31,39 @@ def test_county_path_trims_parcel_path():
 
 @pytest.mark.parametrize("bad", ["/ca/on/toronto", "/us/nj", "nj/camden", "", "/us//camden"])
 def test_county_path_rejects(bad):
-    with pytest.raises(freshness.FreshnessError):
+    with pytest.raises(freshness.FreshnessError, match="^Expected a US path with state and county"):
         freshness.county_path(bad)
 
 
 def test_county_dates_reports_dates_only():
     result = freshness.county_dates(VERSE, "/us/nj/camden/haddonfield/123")
-    assert result["last_refresh"] == "2026-09-01" and "stale" not in json.dumps(result).lower()
-    assert result["usps_data_date"] is None and result["county"] == "Camden"
-    assert set(result) == {
-        "path",
-        "county",
-        "state",
-        "last_refresh",
-        "assessor_data_date",
-        "usps_data_date",
+    assert result == {
+        "path": "/us/nj/camden",
+        "county": "Camden",
+        "state": "NJ",
+        "last_refresh": "2026-09-01",
+        "assessor_data_date": "2026-08-15",
+        "usps_data_date": None,
     }
 
 
 def test_county_dates_accepts_single_feature():
     result = freshness.county_dates(VERSE["features"][0], "/us/nj/camden")
     assert result["path"] == "/us/nj/camden"
+    assert result["county"] == "Camden" and result["last_refresh"] == "2026-09-01"
 
 
 def test_county_dates_non_string_values_become_none():
     feature = {"properties": {"path": "/us/nj/camden", "last_refresh": 5, "county": ["x"]}}
     result = freshness.county_dates(feature, "/us/nj/camden")
-    assert result["last_refresh"] is None and result["county"] is None
+    assert result == {
+        "path": "/us/nj/camden",
+        "county": None,
+        "state": None,
+        "last_refresh": None,
+        "assessor_data_date": None,
+        "usps_data_date": None,
+    }
 
 
 @pytest.mark.parametrize(
@@ -70,7 +76,7 @@ def test_county_dates_non_string_values_become_none():
     ],
 )
 def test_county_dates_unknown_county(document):
-    with pytest.raises(freshness.FreshnessError):
+    with pytest.raises(freshness.FreshnessError, match="^No verse entry found for /us/nj/camden$"):
         freshness.county_dates(document, "/us/nj/camden")
 
 
@@ -110,17 +116,28 @@ def test_helper_cli_county(tmp_path, capsys):
     verse = tmp_path / "v.json"
     verse.write_text(json.dumps(VERSE))
     assert freshness.main(["county", str(verse), "--path", "/us/nj/camden/x/1"]) == 0
-    assert json.loads(capsys.readouterr().out)["state"] == "NJ"
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == freshness.county_dates(VERSE, "/us/nj/camden")
+    assert json.loads(captured.out)["state"] == "NJ" and captured.err == ""
 
 
 def test_helper_cli_errors(tmp_path, capsys):
     verse = tmp_path / "v.json"
     verse.write_text(json.dumps(VERSE))
     assert freshness.main(["county", str(verse), "--path", "/us/nj/other"]) == 1
-    assert freshness.main(["county", str(tmp_path / "missing.json"), "--path", "/us/nj/a"]) == 1
+    captured = capsys.readouterr()
+    assert captured.err == "freshness: No verse entry found for /us/nj/other\n"
+    assert captured.out == ""
+    missing = tmp_path / "missing.json"
+    assert freshness.main(["county", str(missing), "--path", "/us/nj/a"]) == 1
+    captured = capsys.readouterr()
+    assert captured.err == f"freshness: [Errno 2] No such file or directory: '{missing}'\n"
+    assert captured.out == ""
     verse.write_text("not json")
     assert freshness.main(["county", str(verse), "--path", "/us/nj/camden"]) == 1
-    assert capsys.readouterr().err.count("freshness:") == 3
+    captured = capsys.readouterr()
+    assert captured.err.startswith("freshness: Expecting value")
+    assert captured.err.count("\n") == 1 and captured.out == ""
 
 
 def test_write_cache_failure_cleans_temp(tmp_path, monkeypatch):
@@ -143,7 +160,8 @@ def test_helper_cli_main_guard(tmp_path):
         capture_output=True,
         text=True,
     )
-    assert result.returncode == 0 and "Camden" in result.stdout
+    assert result.returncode == 0 and result.stderr == ""
+    assert json.loads(result.stdout) == freshness.county_dates(VERSE, "/us/nj/camden")
 
 
 def test_cache_base_url_round_trip_and_mismatch(tmp_path):

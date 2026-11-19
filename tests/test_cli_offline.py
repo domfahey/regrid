@@ -13,7 +13,12 @@ def test_map_renders_without_token_or_client(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cli, "RegridClient", lambda **kw: pytest.fail("no client for offline map"))
     response = write_response(tmp_path / "r.json", good_feature())
     assert cli.main(["map", str(response), str(tmp_path / "m.html")]) == 0
-    assert json.loads(capsys.readouterr().out)["features"] == 1
+    captured = capsys.readouterr()
+    summary = json.loads(captured.out)
+    assert summary["features"] == 1 and summary["output"] == str(tmp_path / "m.html")
+    assert (tmp_path / "m.html").exists()
+    # Offline commands never print the request counter.
+    assert "requests made" not in captured.err
 
 
 def test_map_errors_are_one_line(tmp_path, capsys):
@@ -21,15 +26,18 @@ def test_map_errors_are_one_line(tmp_path, capsys):
     assert cli.main(["map", str(response), str(tmp_path / "m.html")]) == 1
     err = capsys.readouterr().err
     assert err.startswith("regrid: Response has several parcels") and err.count("\n") == 1
+    assert not (tmp_path / "m.html").exists()
 
 
 def test_map_os_error_is_one_line(tmp_path, capsys):
     assert cli.main(["map", str(tmp_path / "missing.json"), str(tmp_path / "m.html")]) == 1
     err = capsys.readouterr().err
-    assert err.startswith("regrid: ") and err.count("\n") == 1
+    missing = tmp_path / "missing.json"
+    assert err == f"regrid: [Errno 2] No such file or directory: '{missing}'\n"
+    assert not (tmp_path / "m.html").exists()
 
 
-def test_map_flags_pass_through(tmp_path):
+def test_map_flags_pass_through(tmp_path, capsys):
     response = write_response(tmp_path / "r.json", good_feature(), good_feature())
     assert (
         cli.main(
@@ -47,6 +55,7 @@ def test_map_flags_pass_through(tmp_path):
     page = (tmp_path / "m.html").read_text(encoding="utf-8")
     assert "Candidate 2" in page and "2026-11-19T00:00:00Z" in page
     assert cli.main(["map", str(response), str(tmp_path / "m.html"), "--feature", "0"]) == 1
+    assert "exists" in capsys.readouterr().err
     assert (
         cli.main(["map", str(response), str(tmp_path / "m.html"), "--feature", "0", "--replace"])
         == 0
@@ -58,12 +67,23 @@ def test_regrid_fields_cli(monkeypatch, capsys):
     monkeypatch.setattr(cli, "RegridClient", lambda **kw: pytest.fail("no client for fields"))
     assert cli.main(["fields", "explain", "owner", "zzz"]) == 0
     out = json.loads(capsys.readouterr().out)
-    assert out["found"][0]["name"] == "owner" and out["unknown"] == ["zzz"]
+    assert [f["name"] for f in out["found"]] == ["owner"] and out["unknown"] == ["zzz"]
+    assert out["found"][0]["description"] == "Owner name"
 
 
 def test_regrid_fields_search_cli(capsys):
     assert cli.main(["fields", "search", "ASSESSMENT"]) == 0
-    assert json.loads(capsys.readouterr().out)["matches"]
+    matches = json.loads(capsys.readouterr().out)["matches"]
+    assert [m["name"] for m in matches] == [
+        "agval",
+        "homestead_exemption",
+        "improvval",
+        "landval",
+        "parval",
+        "parvaltype",
+        "taxamt",
+        "taxyear",
+    ]
 
 
 def test_export_cli_offline(tmp_path, monkeypatch, capsys):
@@ -74,11 +94,14 @@ def test_export_cli_offline(tmp_path, monkeypatch, capsys):
     assert cli.main([*argv, "--geojson", str(tmp_path / "o.geojson"), "--all-fields"]) == 0
     summary = json.loads(capsys.readouterr().out)
     assert summary["features"] == 1 and summary["geojson"] == str(tmp_path / "o.geojson")
+    assert summary["csv"] == str(tmp_path / "o.csv") and "ll_gissqft" in summary["columns"]
+    assert (tmp_path / "o.csv").exists() and (tmp_path / "o.geojson").exists()
     assert cli.main(argv) == 1
     assert "--replace" in capsys.readouterr().err
     assert cli.main([*argv, "--replace"]) == 0
+    assert json.loads(capsys.readouterr().out)["geojson"] is None
     assert cli.main(["export", str(response)]) == 1
-    assert "Choose --csv and/or --geojson" in capsys.readouterr().err
+    assert capsys.readouterr().err == "regrid: Choose --csv and/or --geojson\n"
 
 
 def test_export_cli_non_finite_is_one_line(tmp_path, capsys):
@@ -103,3 +126,4 @@ def test_map_neighbours_passthrough(tmp_path, capsys):
     out = tmp_path / "m.html"
     assert cli.main(["map", str(response), str(out), "--neighbours", str(neighbours)]) == 0
     assert json.loads(capsys.readouterr().out)["neighbours"] == 1
+    assert out.exists()

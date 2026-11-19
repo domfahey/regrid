@@ -69,14 +69,18 @@ def test_address_map_one_request_exact_params(tmp_path, seen, capsys):
 def test_existing_output_refuses_before_request(tmp_path, seen, capsys):
     (tmp_path / "m.json").write_text("keep")
     assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 1
-    assert seen == [] and "requests made: 0" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert seen == [] and "requests made: 0" in err and "exists; pass --replace" in err
     assert (tmp_path / "m.json").read_text() == "keep"
+    assert not (tmp_path / "m.html").exists()
 
 
 def test_existing_html_refuses_before_request(tmp_path, seen, capsys):
     (tmp_path / "m.html").write_text("keep")
     assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 1
-    assert seen == [] and "requests made: 0" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert seen == [] and "requests made: 0" in err and "exists; pass --replace" in err
+    assert (tmp_path / "m.html").read_text() == "keep" and not (tmp_path / "m.json").exists()
 
 
 def test_same_response_and_output_refused(tmp_path, seen, capsys):
@@ -104,8 +108,9 @@ def test_replace_overwrites_and_custom_response_path(tmp_path, seen, capsys):
 def test_default_retrieved_at_is_utc_timestamp(tmp_path, seen):
     import re
 
-    cli.main(["address-map", "x", str(tmp_path / "m.html")])
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 0
     assert re.search(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", (tmp_path / "m.html").read_text())
+    assert len(seen) == 1
 
 
 def test_api_error_writes_no_page_and_hides_secrets(tmp_path, failing_401, capsys):
@@ -143,7 +148,9 @@ def test_missing_response_directory_refuses_before_request(tmp_path, seen, capsy
         str(tmp_path / "n/r.json"),
     ]
     assert cli.main(argv) == 1
-    assert seen == [] and "requests made: 0" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert seen == [] and "requests made: 0" in err and "directory does not exist" in err
+    assert not (tmp_path / "m.html").exists()
 
 
 def test_same_file_via_relative_spelling_refused(tmp_path, seen, capsys, monkeypatch):
@@ -173,8 +180,10 @@ def test_type_error_is_sanitized(tmp_path, seen, monkeypatch, capsys):
 
 
 def test_cli_saved_response_renders_like_mcp_body(tmp_path, seen):
-    cli.main(["address-map", "x", str(tmp_path / "m.html")])
-    assert regrid.offline.map.render(tmp_path / "m.json", tmp_path / "n.html")["features"] == 1
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 0
+    summary = regrid.offline.map.render(tmp_path / "m.json", tmp_path / "n.html")
+    assert summary["features"] == 1 and summary["warnings"] == []
+    assert (tmp_path / "n.html").exists()
 
 
 def test_transport_failure_counts_one(tmp_path, monkeypatch, capsys):
@@ -185,6 +194,7 @@ def test_transport_failure_counts_one(tmp_path, monkeypatch, capsys):
     assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 1
     err = capsys.readouterr().err
     assert len(seen) == 1 and "requests made: 1" in err and "secret" not in err
+    assert "private-address" not in err and not (tmp_path / "m.html").exists()
 
 
 def _two_stage(monkeypatch, subject_fields, neighbour_status=200):
@@ -272,7 +282,8 @@ def test_neighbours_file_ignored_without_flag(tmp_path, monkeypatch):
     seen = _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03})
     (tmp_path / "m.neighbours.json").write_text("keep")
     assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 0
-    assert len(seen) == 1
+    assert len(seen) == 1 and seen[0].url.path == "/api/v2/parcels/address"
+    assert (tmp_path / "m.neighbours.json").read_text() == "keep"
 
 
 def test_neighbours_path_colliding_with_response_refused(tmp_path, monkeypatch, capsys):
@@ -430,10 +441,12 @@ def _subject_variant(monkeypatch, mutate):
         {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1]]]},
     ],
 )
-def test_invalid_subject_geometry_skips_neighbours(tmp_path, monkeypatch, geometry):
+def test_invalid_subject_geometry_skips_neighbours(tmp_path, monkeypatch, capsys, geometry):
     seen = _subject_variant(monkeypatch, lambda f: f.update(geometry=geometry))
-    cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"])
-    assert len(seen) == 1
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 1
+    err = capsys.readouterr().err
+    assert len(seen) == 1 and "neighbours skipped: subject is not mappable" in err
+    assert not (tmp_path / "m.neighbours.json").exists() and not (tmp_path / "m.html").exists()
 
 
 def test_non_string_path_does_not_block_neighbours(tmp_path, monkeypatch):
@@ -444,7 +457,7 @@ def test_non_string_path_does_not_block_neighbours(tmp_path, monkeypatch):
 
     seen = _install(monkeypatch, handler)
     cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"])
-    assert len(seen) == 2
+    assert [r.url.path for r in seen] == ["/api/v2/parcels/address", "/api/v2/parcels/point"]
 
 
 def test_address_map_refuses_nfc_nfd_and_case_collisions(tmp_path, seen, capsys):
