@@ -78,3 +78,41 @@ def test_schema_failure_stops_before_billable_request(capsys):
         assert live.run(client, "address") == 1
     assert len(calls) == 1
     assert "sensitive" not in capsys.readouterr().out
+
+
+GEOMETRY_CASES = [
+    pytest.param(
+        {"type": "Polygon", "coordinates": [[[-75.0123, 39.9456], [-75.0124, 39.9457]]]},
+        "PASS geometry present",
+        id="polygon",
+    ),
+    pytest.param(None, "NOTE geometry null (no boundary on file)", id="null"),
+    pytest.param("absent", "NOTE geometry field absent (map would fail)", id="absent"),
+]
+
+
+@pytest.mark.parametrize(("geometry", "expected_line"), GEOMETRY_CASES)
+def test_live_run_reports_geometry_presence_without_coordinates(geometry, expected_line, capsys):
+    requests = []
+
+    def handle(request):
+        requests.append(request)
+        if request.url.path.endswith("/schemas/parcel"):
+            return httpx.Response(200, json={"schema": {"parcelnumb": {"type": "text"}}})
+        if request.url.path.endswith("/usage"):
+            return httpx.Response(200, json={"usage": {"cycle_usage": {"results": 0}}})
+        feature = {"properties": {"fields": {"parcelnumb": "00123"}}}
+        if geometry != "absent":
+            feature["geometry"] = geometry
+        return httpx.Response(
+            200, json={"parcels": {"type": "FeatureCollection", "features": [feature]}}
+        )
+
+    with RegridClient("private-token", transport=httpx.MockTransport(handle)) as client:
+        assert live.run(client, "private-address") == 0
+    assert len(requests) == 4
+    output = capsys.readouterr().out.splitlines()
+    assert expected_line in output
+    assert sum(line.startswith(("PASS geometry", "NOTE geometry")) for line in output) == 1
+    assert "75.0123" not in "\n".join(output)
+    assert "39.9456" not in "\n".join(output)
