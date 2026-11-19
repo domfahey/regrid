@@ -7,10 +7,13 @@ The generated page loads Leaflet and Esri imagery in the viewer's browser.
 from __future__ import annotations
 
 import argparse
+import csv
 import html
+import io
 import json
 import math
 import os
+import re
 import secrets
 import sys
 from collections.abc import Sequence
@@ -53,13 +56,13 @@ def _finite(value: object) -> float | None:
     if type(value) not in {int, float}:
         return None
     try:
-        number = float(value)
+        number = float(value)  # type: ignore[arg-type]
     except OverflowError:
         return None
     return number if math.isfinite(number) else None
 
 
-def _parse_finite(value: object) -> float | None:
+def parse_finite(value: object) -> float | None:
     """A finite number from a JSON number or numeric string; anything else is None."""
     if isinstance(value, str):
         try:
@@ -67,6 +70,9 @@ def _parse_finite(value: object) -> float | None:
         except ValueError:
             return None
     return _finite(value)
+
+
+_parse_finite = parse_finite
 
 
 def _in_us(lon: float, lat: float) -> bool:
@@ -208,12 +214,16 @@ def _text(value: object) -> str:
     return MISSING if value is None or value == "" else str(value)
 
 
-def _fallback_point(feature: dict) -> list[float] | None:
+def fallback_point(feature: dict) -> list[float] | None:
+    """The feature's numeric (lat, lon) fields when inside US bounds, else None."""
     fields = _fields(feature)
     lat, lon = _parse_finite(fields.get("lat")), _parse_finite(fields.get("lon"))
     if lat is None or lon is None or not _in_us(lon, lat):
         return None
     return [lat, lon]
+
+
+_fallback_point = fallback_point
 
 
 def _display_geometry(geometry: dict) -> dict:
@@ -265,6 +275,54 @@ def _feature_data(feature: dict, label: str | None, retrieved_at: str | None) ->
     }
 
 
+def _neighbour_data(feature: object) -> dict[str, Any]:
+    if not isinstance(feature, dict):
+        raise MapError("Neighbour is not a parcel feature")
+    properties = feature.get("properties")
+    properties = properties if isinstance(properties, dict) else {}
+    path = properties.get("path")
+    if isinstance(path, str) and not path.startswith("/us/"):
+        raise MapError(OUTSIDE_US)
+    geometry = feature.get("geometry")
+    if geometry is None:
+        raise MapError("Neighbour has no boundary")
+    validate_geometry(geometry)
+    fields = _fields(feature)
+    return {
+        "title": _text(properties.get("headline")),
+        "facts": [
+            ["Address", _text(properties.get("headline"))],
+            ["Owner", _text(fields.get("owner"))],
+            ["Parcel number", _text(fields.get("parcelnumb"))],
+        ],
+        "geometry": _display_geometry(geometry),
+    }
+
+
+def load_neighbours(path: Path, subject_ids: set[str]) -> tuple[list[dict[str, Any]], list[str]]:
+    """Drawable neighbour outlines and a warning for each skipped entry."""
+    try:
+        document = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (ValueError, RecursionError) as exc:
+        raise MapError("Neighbours file is not valid JSON") from exc
+    parcels = document.get("parcels") if isinstance(document, dict) else None
+    features = parcels.get("features") if isinstance(parcels, dict) else None
+    if not isinstance(features, list):
+        raise MapError("Expected a Regrid parcel response with parcels.features")
+    drawn: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    for number, feature in enumerate(features):
+        properties = feature.get("properties") if isinstance(feature, dict) else None
+        uuid = properties.get("ll_uuid") if isinstance(properties, dict) else None
+        if isinstance(uuid, str) and uuid in subject_ids:
+            continue
+        try:
+            drawn.append(_neighbour_data(feature))
+        except MapError as exc:
+            warnings.append(f"Neighbour {number} skipped: {exc}")
+    return drawn, warnings
+
+
 _PAGE = """<!doctype html>
 <html lang="en">
 <head>
@@ -297,6 +355,7 @@ __WARNINGS__<div id="banners"></div>
 </div>
 <footer>__FOOTER__</footer>
 <script src="__BASE__leaflet.js" integrity="__JS_SRI__" crossorigin=""></script>
+<script type="application/json" id="neighbour-data">__NEIGHBOURS__</script>
 <script type="application/json" id="parcel-data">__DATA__</script>
 <script>
 (function () {
@@ -307,6 +366,17 @@ __WARNINGS__<div id="banners"></div>
     maxZoom: 19,
     attribution: "__ATTRIBUTION__"
   }).addTo(map);
+  var neighbours = JSON.parse(document.getElementById("neighbour-data").textContent);
+  neighbours.forEach(function (item) {
+    var layer = L.geoJSON(item.geometry, {
+      style: { color: "#ffffff", weight: 1, fillOpacity: 0.05 }
+    });
+    var popup = document.createElement("div");
+    popup.appendChild(el("strong", item.title));
+    popup.appendChild(factList(item));
+    layer.bindPopup(popup);
+    layer.addTo(map);
+  });
   var group = L.featureGroup().addTo(map);
   var panel = document.getElementById("panel");
   var banners = document.getElementById("banners");
@@ -359,23 +429,30 @@ __WARNINGS__<div id="banners"></div>
 """
 
 
+def _json_for_script(value: object) -> str:
+    """JSON safe to embed in a script element: <, > and & never appear literally."""
+    return (
+        json.dumps(value, ensure_ascii=True)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
+
+
 def render_html(
     features: list[dict],
     *,
     candidates: bool,
     retrieved_at: str | None,
     warnings: Sequence[str] = (),
+    neighbours: Sequence[dict[str, Any]] = (),
 ) -> str:
     items = [
         _feature_data(feature, f"Candidate {number}" if candidates else None, retrieved_at)
         for number, feature in enumerate(features, 1)
     ]
-    data = (
-        json.dumps(items, ensure_ascii=True)
-        .replace("<", "\\u003c")
-        .replace(">", "\\u003e")
-        .replace("&", "\\u0026")
-    )
+    data = _json_for_script(items)
+    neighbour_data = _json_for_script(list(neighbours))
     banners = "".join(
         f'<div class="banner" role="alert">{html.escape(text)}</div>\n' for text in warnings
     )
@@ -388,6 +465,7 @@ def render_html(
         "__COLORS__": json.dumps(list(COLORS)),
         "__TILES__": TILE_URL,
         "__ATTRIBUTION__": ATTRIBUTION,
+        "__NEIGHBOURS__": neighbour_data,
         "__DATA__": data,
     }
     page = _PAGE
@@ -412,9 +490,12 @@ def _temp_file(directory: Path) -> tuple[int, Path]:
 
 
 def _write_atomic(path: Path, content: str, *, replace: bool) -> None:
+    _write_atomic_bytes(path, content.encode("utf-8"), replace=replace)
+
+
+def _write_atomic_bytes(path: Path, data: bytes, *, replace: bool) -> None:
     if not replace and os.path.lexists(path):
         raise MapError(EXISTS)
-    data = content.encode("utf-8")
     fd, temp = _temp_file(path.parent)
     try:
         with os.fdopen(fd, "wb") as handle:
@@ -444,7 +525,15 @@ def render(
     all_candidates: bool = False,
     retrieved_at: str | None = None,
     replace: bool = False,
+    neighbours_path: Path | None = None,
 ) -> dict[str, Any]:
+    if Path(output_path).resolve() == Path(response_path).resolve():
+        raise MapError("Output must not be the response file")
+    if (
+        neighbours_path is not None
+        and Path(output_path).resolve() == Path(neighbours_path).resolve()
+    ):
+        raise MapError("Output must not be the neighbours file")
     try:
         document = json.loads(Path(response_path).read_text(encoding="utf-8"))
     except (ValueError, RecursionError) as exc:
@@ -473,17 +562,168 @@ def render(
                 f"{name}: area mismatch: boundary area differs from the recorded parcel area "
                 f"({check['computed_sqft']:,.0f} vs {check['recorded_sqft']:,.0f} sq ft)"
             )
+    neighbours: list[dict[str, Any]] = []
+    if neighbours_path is not None:
+        subject_ids = set()
+        for feature in chosen:
+            props = feature.get("properties")
+            uuid = props.get("ll_uuid") if isinstance(props, dict) else None
+            if isinstance(uuid, str):
+                subject_ids.add(uuid)
+        try:
+            neighbours, skipped = load_neighbours(neighbours_path, subject_ids)
+            warnings.extend(skipped)
+        except MapError as exc:
+            warnings.append(f"Neighbours skipped: {' '.join(str(exc).split())}")
+        except OSError as exc:
+            reason = " ".join(str(exc.strerror or "unreadable").split())
+            warnings.append(f"Neighbours skipped: Neighbours file could not be read ({reason})")
     # Raises before anything is written when a parcel has neither a boundary nor a point.
     page = render_html(
-        chosen, candidates=all_candidates, retrieved_at=retrieved_at, warnings=warnings
+        chosen,
+        candidates=all_candidates,
+        retrieved_at=retrieved_at,
+        warnings=warnings,
+        neighbours=neighbours,
     )
     output = Path(output_path)
     _write_atomic(output, page, replace=replace)
     return {
         "output": str(output),
         "features": len(chosen),
+        "neighbours": len(neighbours),
         "area_checks": checks,
         "warnings": warnings,
+    }
+
+
+CORE_COLUMNS = (
+    "headline",
+    "path",
+    "ll_uuid",
+    "owner",
+    "parcelnumb",
+    "ll_last_refresh",
+    "ll_gisacre",
+    "ll_gissqft",
+    "lat",
+    "lon",
+)
+_PROPERTY_COLUMNS = frozenset({"headline", "path", "ll_uuid"})
+NO_OUTPUT = "Choose --csv and/or --geojson"
+
+
+_PLAIN_NUMBER = re.compile(r"[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?")
+
+
+def _csv_cell(value: object) -> str:
+    """A CSV cell: missing is empty, and spreadsheet formula prefixes are neutralised."""
+    if value is None:
+        return ""
+    if isinstance(value, (dict, list)):
+        text = json.dumps(value, ensure_ascii=False)
+    else:
+        text = str(value)
+    if text[:1] not in {"=", "+", "-", "@", "\t", "\r"}:
+        return text
+    if _PLAIN_NUMBER.fullmatch(text) and math.isfinite(float(text)):
+        return text
+    return "'" + text
+
+
+def _core_value(feature: dict, name: str) -> Any:
+    properties = feature.get("properties")
+    source = properties if name in _PROPERTY_COLUMNS and isinstance(properties, dict) else None
+    return (source if source is not None else _fields(feature)).get(name)
+
+
+def export(
+    response_path: Path,
+    *,
+    csv_path: Path | None = None,
+    geojson_path: Path | None = None,
+    all_fields: bool = False,
+    replace: bool = False,
+) -> dict[str, Any]:
+    """Write a saved parcel response as CSV and/or GeoJSON; makes no requests."""
+    if csv_path is None and geojson_path is None:
+        raise MapError(NO_OUTPUT)
+    targets = [Path(p) for p in (csv_path, geojson_path) if p is not None]
+    if len(targets) == 2 and (
+        targets[0] == targets[1]
+        or os.path.abspath(targets[0]) == os.path.abspath(targets[1])
+        or targets[0].resolve() == targets[1].resolve()
+    ):
+        raise MapError("CSV and GeoJSON outputs must be different files")
+    for target in targets:
+        if not target.parent.is_dir():
+            raise MapError("Output directory does not exist")
+        if target.resolve() == Path(response_path).resolve():
+            raise MapError("Output must not be the response file")
+    try:
+        document = json.loads(Path(response_path).read_text(encoding="utf-8"))
+    except (ValueError, RecursionError) as exc:
+        raise MapError("Response file is not valid JSON") from exc
+    features = load_features(document)
+    for number, feature in enumerate(features):
+        if not isinstance(feature, dict):
+            raise MapError("Expected a Regrid parcel response with parcels.features")
+        name = f"Feature {number}"
+        properties = feature.get("properties")
+        path = properties.get("path") if isinstance(properties, dict) else None
+        if isinstance(path, str) and not path.startswith("/us/"):
+            raise MapError(f"{name}: {OUTSIDE_US}")
+        if geojson_path is not None and "geometry" not in feature:
+            raise MapError(f"{name}: response omits geometry; it was requested without boundaries")
+        if feature.get("geometry") is not None:
+            validate_geometry(feature["geometry"])
+    if not replace:
+        for target in targets:
+            if os.path.lexists(target):
+                raise MapError(EXISTS)
+    columns = list(CORE_COLUMNS)
+    if all_fields:
+        extras = {key for feature in features for key in _fields(feature)}
+        columns += sorted(extras - set(CORE_COLUMNS))
+    csv_data = geojson_data = None
+    if csv_path is not None:
+        buffer = io.StringIO(newline="")
+        writer = csv.writer(buffer, lineterminator="\r\n")
+        writer.writerow(_csv_cell(name) for name in columns)
+        for feature in features:
+            writer.writerow(
+                _csv_cell(
+                    _core_value(feature, name)
+                    if name in CORE_COLUMNS
+                    else _fields(feature).get(name)
+                )
+                for name in columns
+            )
+        csv_data = buffer.getvalue().encode("utf-8-sig")
+    if geojson_path is not None:
+        collection = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": feature["geometry"],
+                    "properties": {name: _core_value(feature, name) for name in CORE_COLUMNS},
+                }
+                for feature in features
+            ],
+        }
+        geojson_data = (json.dumps(collection, ensure_ascii=False, allow_nan=False) + "\n").encode(
+            "utf-8"
+        )
+    if csv_path is not None and csv_data is not None:
+        _write_atomic_bytes(Path(csv_path), csv_data, replace=replace)
+    if geojson_path is not None and geojson_data is not None:
+        _write_atomic_bytes(Path(geojson_path), geojson_data, replace=replace)
+    return {
+        "features": len(features),
+        "csv": None if csv_path is None else str(csv_path),
+        "geojson": None if geojson_path is None else str(geojson_path),
+        "columns": columns,
     }
 
 
@@ -497,17 +737,34 @@ def main(argv: Sequence[str] | None = None) -> int:
     cmd.add_argument("--all-candidates", action="store_true")
     cmd.add_argument("--retrieved-at", metavar="ISO")
     cmd.add_argument("--replace", action="store_true")
+    cmd.add_argument("--neighbours", type=Path, metavar="FILE", help="neighbouring parcels")
+    exp = commands.add_parser("export", help="export a saved parcel response to CSV and/or GeoJSON")
+    exp.add_argument("response", type=Path)
+    exp.add_argument("--csv", type=Path, metavar="FILE")
+    exp.add_argument("--geojson", type=Path, metavar="FILE")
+    exp.add_argument("--all-fields", action="store_true")
+    exp.add_argument("--replace", action="store_true")
     args = parser.parse_args(argv)
     try:
-        summary = render(
-            args.response,
-            args.output,
-            index=args.feature,
-            all_candidates=args.all_candidates,
-            retrieved_at=args.retrieved_at,
-            replace=args.replace,
-        )
-    except (MapError, OSError) as exc:
+        if args.command == "export":
+            summary = export(
+                args.response,
+                csv_path=args.csv,
+                geojson_path=args.geojson,
+                all_fields=args.all_fields,
+                replace=args.replace,
+            )
+        else:
+            summary = render(
+                args.response,
+                args.output,
+                index=args.feature,
+                all_candidates=args.all_candidates,
+                retrieved_at=args.retrieved_at,
+                replace=args.replace,
+                neighbours_path=args.neighbours,
+            )
+    except (MapError, OSError, ValueError) as exc:
         message = " ".join(str(exc).split())
         print(f"error: {message}", file=sys.stderr)
         return 1

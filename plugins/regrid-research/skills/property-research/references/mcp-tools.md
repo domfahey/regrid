@@ -50,6 +50,7 @@ and `list-endpoints` still accepted the earlier unsuffixed title
 ## Choosing the endpoint
 
 All paths are under `https://app.regrid.com/api/v2`. Use `GET` only.
+Premium `return_*` flags need user authorization; see [premium datasets](premium.md).
 
 | Request | Path | Required | Scope parameters |
 | --- | --- | --- | --- |
@@ -60,7 +61,22 @@ All paths are under `https://app.regrid.com/api/v2`. Use `GET` only.
 | Area | `/parcels/area` | `geojson` | `radius` |
 | Field filter | `/parcels/query` | at least one `fields[<field>][<op>]` | `path`, `geojson` |
 | Regrid ID | `/parcels/{ll_uuid}` | UUID in the URL path | none |
+| Regrid path (refresh) | `/parcels/path` | `path` | none; one request, one record |
+| Address suggestions | `/parcels/typeahead` | `query` | Enterprise only; trial tokens cover 7 counties |
+| County pull dates | `/verse` | none | `return_geometry`; returns every US county and Puerto Rico per call |
+| Field definitions | `/schemas/parcel`, `/schemas/building`, `/schemas/address`, `/schemas/enhanced_ownership`, `/schemas/zoning` | none | `premium_only` (parcel only); no token, but counts as a request |
+| Detailed usage | `/usage/detailed` | none | date and token options |
 | Usage diagnostic | `/usage` | none | none |
+
+Before an open-ended point, area or query search, an optional `return_count=true` call
+is one request and zero records: it reports how many parcels match, so the user can
+set the record budget. Page with `offset_id` only within that budget and one task.
+
+Schemas: use `scripts/fields.py explain FIELD` first (offline). Call `/schemas/*` only
+when `fields.py` lacks the field, one request each, reserved as a diagnostic.
+
+Detailed usage: `/usage/detailed` only for "how many lookups are left" questions;
+never per-token breakdowns (they can expose token fragments). `/usage` serves setup checks.
 
 Filter operators seen in spec examples include `eq`, `ilike`, `between`
 (`[2000,2999]`), and `gte`, e.g. `fields[geoid][eq]=48113`.
@@ -68,6 +84,14 @@ Only point, area, and query list `return_count`, `return_geometry`, and
 `offset_id` pagination; address, APN, owner, and Regrid ID do not. For APNs,
 pass the value exactly as supplied even though the spec types `parcelnumb`
 as integer; HAR values are strings, so leading zeros and punctuation survive.
+
+## Address suggestions
+
+For an ambiguous or mistyped address, call `/parcels/typeahead` with `query`, show
+the suggestions, then fetch the chosen one with `/parcels/path`. Each is one request;
+reserve each in the ledger first ([batch](batch.md#cli-and-suggestion-requests)).
+Typeahead is Enterprise only: a permission or 403 error is recorded once and
+never retried (ask the user to clarify the address instead).
 
 Never call `/report` (a POST that files a data issue), `/client_token/typeahead`
 (issues a token), or any Batch spec operation during research.

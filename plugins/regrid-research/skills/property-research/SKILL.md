@@ -24,7 +24,15 @@ Load supporting resources only for the relevant task:
   load the [versioned result schema](references/result.schema.json). Consult the
   [synthetic result example](references/result-example.json) only if an example is needed.
 - Multiple inputs, shared budgets, or requested checkpoints: [batch and resume](references/batch.md).
-- Map or boundary requested: [map guide](references/map.md).
+- Map or boundary requested: [map guide](references/map.md). The
+  `/regrid-research:address-map` command runs this flow for one address.
+  Neighbouring parcels only when asked: same guide.
+- County data-pull dates, files, tiles, or lookups when MCP is unavailable (Claude Code
+  with the CLI): [CLI guide](references/cli.md).
+- Ambiguous or mistyped address: suggestions flow in the [tool guide](references/mcp-tools.md).
+- Field meaning: run `scripts/fields.py explain FIELD`; only fields it lacks justify a
+  `/schemas/*` request.
+- Zoning, enhanced ownership, matched buildings or addresses requested: [premium datasets](references/premium.md).
 - Offline validation or saving: run [workflow.py](scripts/workflow.py) as described in
   the batch reference; requires Python 3.10+ and only the standard library.
 - First live lookup: [MCP tool guide](references/mcp-tools.md) and relevant live tool
@@ -108,7 +116,10 @@ within authorized scope without renewed permission. For open-ended searches,
 establish geography and a finite total record budget first. Broader searches,
 extra candidates beyond the budget, and unrequested premium datasets require
 additional authorization; ambiguity resolution within an explicit candidate
-budget does not.
+budget does not. Before an open-ended search, an optional `return_count` call (one
+request, zero records) can size it. Page only within the agreed budget and one task.
+Spreadsheet or GeoJSON requested: `scripts/map.py export` from the saved response
+([map guide](references/map.md#export)), with no extra requests.
 
 For batches or handoffs, follow [batch and resume](references/batch.md). Carry one
 shared attempt ledger across stages, reserve possible records before dispatch,

@@ -46,10 +46,23 @@ def skill_files(root: Path, name: str) -> dict[str, bytes]:
                     continue
                 result[relative] = read_public_file(root, relative)
     if name == "property-research":
-        for helper in ("workflow.py", "map.py"):
+        for helper in ("workflow.py", "map.py", "fields.py", "freshness.py"):
             relative = f"{prefix}/scripts/{helper}"
             result[relative] = read_public_file(root, relative)
     return result
+
+
+def command_files(root: Path) -> dict[str, bytes]:
+    directory = root / "commands"
+    if directory.is_symlink():
+        raise ValueError("Symlink not allowed in package: commands")
+    if not directory.exists():
+        return {}
+    return {
+        f"commands/{path.name}": read_public_file(root, f"commands/{path.name}")
+        for path in sorted(directory.glob("*.md"))
+        if path.is_file() or path.is_symlink()
+    }
 
 
 def json_bytes(value: object) -> bytes:
@@ -78,8 +91,10 @@ def build(source: Path, output: Path) -> list[Path]:
     version = manifest["version"]
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise ValueError("Plugin version must be three numeric components")
+    skills_only = dict(common)
     for name in SKILLS:
-        common.update(skill_files(source, name))
+        skills_only.update(skill_files(source, name))
+    common = {**skills_only, **command_files(source)}
     local_config = json.loads(common[".mcp.json"])
     expected = {
         "mcpServers": {
@@ -102,7 +117,7 @@ def build(source: Path, output: Path) -> list[Path]:
     cowork[".mcp.json"] = json_bytes({"mcpServers": {"regrid": {"type": "http", "url": MCP_URL}}})
     standalone = {
         name.removeprefix("skills/"): data
-        for name, data in common.items()
+        for name, data in skills_only.items()
         if name.startswith("skills/property-research/")
     }
     output.mkdir(parents=True, exist_ok=True)

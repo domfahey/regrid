@@ -76,6 +76,10 @@ JSON configuration. Use one package variant per host; use the standalone skill
 when a Regrid connector is already configured. Cowork live authentication must be
 verified in the user's session, not inferred from package validation.
 
+In Claude Code, when the MCP connection is unavailable, the `regrid` CLI is an
+alternative path ([CLI guide](../property-research/references/cli.md)); it still needs
+`REGRID_TOKEN` in the environment, never read from `.env` by you.
+
 Before first data use, remind the user of Regrid's documented requirement to
 disable model training/data sharing in their AI account. Do not claim to have
 verified account settings you cannot inspect.

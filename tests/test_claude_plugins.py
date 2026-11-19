@@ -8,7 +8,11 @@ from zipfile import ZipFile
 
 import pytest
 
+import regrid
+
 ROOT = Path(__file__).resolve().parents[1]
+PLUGIN = ROOT / "plugins/regrid-research"
+SKILL_ROOT = ROOT / "plugins/regrid-research/skills/property-research"
 SPEC = importlib.util.spec_from_file_location(
     "build_claude_plugins", ROOT / "scripts" / "build_claude_plugins.py"
 )
@@ -135,3 +139,129 @@ def test_query_endpoint_notes_required_filter():
         ).read_text()
     )
     assert "fields[<field>][<op>]" in endpoints["endpoints"]["/parcels/query"]["skill_note"]
+
+
+def test_command_ships_in_plugin_archives_only(source, tmp_path):
+    cowork, code, standalone = map(archive_contents, builder.build(source, tmp_path / "out"))
+    assert "commands/address-map.md" in code and "commands/address-map.md" in cowork
+    assert not any(name.startswith("commands/") for name in standalone)
+
+
+def test_command_is_bounded_and_links_map_guide():
+    text = (PLUGIN / "commands/address-map.md").read_text()
+    assert text.startswith("---\n") and "argument-hint:" in text
+    assert "one request" in text and "references/map.md" in text
+    assert "neighbour" in text.lower() and "up to 25 records" in text
+    assert "limit=1" in text and "US" in text
+    assert "map the single returned parcel" in text and "token" in text
+    assert "--all-candidates" not in text
+
+
+def test_host_results_never_claim_unrun_checks():
+    data = json.loads((PLUGIN / "evals/results/map-hosts-0.7.0.json").read_text())
+    assert set(data["hosts"]) == {"claude_code", "claude_apps", "cowork"}
+    assert set(data["hosts"].values()) <= {"verified", "failed", "not_run"}
+
+
+def test_versions():
+    assert json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())["version"] == "0.8.0"
+    assert regrid.__version__ == "0.3.0"
+
+
+def test_premium_guide_covers_every_flag_and_requires_authorization():
+    skill = (SKILL_ROOT / "SKILL.md").read_text()
+    guide = (SKILL_ROOT / "references/premium.md").read_text()
+    assert "references/premium.md" in skill
+    for flag in (
+        "return_zoning",
+        "return_enhanced_ownership",
+        "return_matched_buildings",
+        "return_matched_addresses",
+    ):
+        assert flag in guide
+    assert guide.lower().count("authoriz") >= 4 and "beneficial" in guide
+    assert "`notes`" in guide
+    assert "Premium datasets are US-only" not in guide
+
+
+def test_fields_helper_and_catalog_are_shared_across_all_archives(source, tmp_path):
+    cowork, code, standalone = map(archive_contents, builder.build(source, tmp_path / "out"))
+    name = "skills/property-research/scripts/fields.py"
+    assert cowork[name] == code[name] == standalone["property-research/scripts/fields.py"]
+    catalog = "skills/property-research/references/fields.json"
+    assert catalog in code
+
+
+NEW_ENDPOINTS = [
+    "/parcels/path",
+    "/parcels/typeahead",
+    "/verse",
+    "/schemas/parcel",
+    "/schemas/building",
+    "/schemas/address",
+    "/schemas/enhanced_ownership",
+    "/schemas/zoning",
+    "/usage/detailed",
+]
+
+
+def test_new_endpoints_documented():
+    endpoints = json.loads((SKILL_ROOT / "references/endpoints.json").read_text())["endpoints"]
+    tools = (SKILL_ROOT / "references/mcp-tools.md").read_text()
+    for path in NEW_ENDPOINTS:
+        assert path in endpoints and f"`{path}" in tools
+    required = {p["name"] for p in endpoints["/parcels/path"]["parameters"] if p.get("required")}
+    assert required == {"path"}
+    assert "Enterprise" in endpoints["/parcels/typeahead"]["skill_note"]
+
+
+def test_refresh_rule_never_unscoped():
+    batch = (SKILL_ROOT / "references/batch.md").read_text()
+    assert "/parcels/path" in batch and "never fall back to an unscoped search" in batch
+
+
+def test_cli_freshness_neighbours_and_suggestions_guidance():
+    refs = SKILL_ROOT / "references"
+    cli = (refs / "cli.md").read_text()
+    assert "requests made" in cli and "record_limit" in cli and "ll_last_refresh" in cli
+    assert "cli.md" in (SKILL_ROOT / "SKILL.md").read_text()
+    map_guide = (refs / "map.md").read_text()
+    for text in ("radius=100", "limit=25", "up to 25 records", "--neighbours"):
+        assert text in map_guide
+    tools = (refs / "mcp-tools.md").read_text()
+    assert "/parcels/typeahead" in tools and "never retried" in tools
+    assert "requests made" in (refs / "batch.md").read_text()
+
+
+def test_neighbours_and_suggestions_are_ledger_accounted():
+    refs = SKILL_ROOT / "references"
+    for text in ((refs / "map.md").read_text(), (PLUGIN / "commands/address-map.md").read_text()):
+        assert "record_limit 25" in text and "uncertain" in text
+        assert "authorized_retry=True" in text and "no workflow ledger" in text
+    batch = (refs / "batch.md").read_text()
+    assert "## CLI and suggestion requests" in batch
+    assert "typeahead" in batch and "record_limit 1" in batch
+    for line in (refs / "mcp-tools.md").read_text().splitlines():
+        assert len(line) <= 100 or line.startswith("|")
+
+
+def test_cli_path_paging_schema_usage_and_export_guidance():
+    refs = SKILL_ROOT / "references"
+    tools = (refs / "mcp-tools.md").read_text()
+    cli = (refs / "cli.md").read_text()
+    rows = [
+        line for line in tools.split("## Choosing the endpoint")[1].splitlines() if "| `/" in line
+    ]
+    assert len(rows) >= 13
+    for row in rows:
+        path = row.split("`")[1]
+        assert f"`{path}`" in cli.split("## Command map")[1].split("\n## ")[0], path
+    assert "requests made" in cli and "never read `.env`" in cli
+    assert "CLI-only" in cli
+    assert "/usage/detailed" in tools and "never per-token" in tools
+    assert "fields.py" in tools and "one request each" in tools
+    assert "map.py export" in (refs / "map.md").read_text()
+    skill = (SKILL_ROOT / "SKILL.md").read_text()
+    assert "return_count" in skill and "map.py export" in skill
+    assert "not saved in checkpoints" in (refs / "batch.md").read_text()
+    assert "CLI" in (PLUGIN / "skills/setup/SKILL.md").read_text()

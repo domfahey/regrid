@@ -3,6 +3,7 @@
 ## Contents
 
 - [One allowance across stages](#one-allowance-across-stages)
+- [CLI and suggestion requests](#cli-and-suggestion-requests)
 - [Resume without duplicate retrieval](#resume-without-duplicate-retrieval)
 - [Optional offline helper](#optional-offline-helper)
 
@@ -78,6 +79,23 @@ the reservation with the proven count, preserves attempted-request consumption,
 and does not retry the request or silently change input results. Preserve an
 overshoot and stop if the proven count exceeds the allowance.
 
+## CLI and suggestion requests
+
+Every request needs a reserved attempt, including CLI and suggestion calls. The CLI is
+ledger-unaware: reserve before each command that can make a request, then complete from
+the stderr line `regrid: requests made: N`; an unreadable line leaves it uncertain.
+
+- `regrid freshness`: `kind="diagnostic"`, record_limit 0.
+- MCP `/parcels/typeahead`: returns no parcel records, so `kind="diagnostic"`,
+  record_limit 0.
+- `/parcels/path`: `kind="lookup"` for the input, record_limit 1.
+- Neighbours: `kind="lookup"` with `authorized_retry=True`, record_limit 25; see
+  [map guide](map.md).
+
+Paged searches: each page is one attempt with `record_limit` equal to the page limit
+(three pages, three attempts). Paging positions are not saved in checkpoints; a resumed
+open-ended search needs fresh authorization before it pages again.
+
 ## Resume without duplicate retrieval
 
 Persist a checkpoint only when the user requests saving/resuming or approves a
@@ -110,6 +128,10 @@ For an attempt already marked `uncertain`, skip `complete_attempt`; it accepts
 only pending attempts. Without a verified receipt, stop after recording uncertainty
 and retain the reservation. Do not transition a still-running request or infer
 zero consumption from a crash. These helper calls neither retry nor save a file.
+
+An explicit refresh of a saved result uses `/parcels/path` with the saved `path`:
+one request, one record. If the saved result has no `path`, stop and ask;
+never fall back to an unscoped search.
 
 Proceed only with genuinely `not_attempted` inputs not covered by unresolved
 attempts. A caller's explicit refresh/retry creates a new attempt and preserves

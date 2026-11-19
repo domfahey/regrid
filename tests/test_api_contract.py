@@ -522,7 +522,7 @@ def test_all_openapi_operations_through_cli(operation, monkeypatch, capsys):
         argv += ["--options", json.dumps(operation.options)]
     assert cli.main(argv) == 0
     captured = capsys.readouterr()
-    assert captured.err == ""
+    assert captured.err == "regrid: requests made: 1\n"
     assert json.loads(captured.out) == response
     assert len(seen) == 1
 

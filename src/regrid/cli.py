@@ -6,10 +6,15 @@ import argparse
 import json
 import os
 import sys
+from datetime import datetime, timezone
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
 from .client import RegridClient, RegridError
+from .offline import fields as parcel_fields
+from .offline import freshness as county_freshness
+from .offline import map as parcel_map
 
 
 def _object(value: str) -> dict[str, Any]:
@@ -29,6 +34,350 @@ def _object(value: str) -> dict[str, Any]:
     return result
 
 
+def _run_map(args: dict[str, Any]) -> None:
+    summary = parcel_map.render(
+        Path(args["response"]),
+        Path(args["output"]),
+        index=args["feature"],
+        all_candidates=args["all_candidates"],
+        retrieved_at=args["retrieved_at"],
+        replace=args["replace"],
+        neighbours_path=args["neighbours"],
+    )
+    print(json.dumps(summary, indent=2, ensure_ascii=False, allow_nan=False))
+
+
+def _run_export(args: dict[str, Any]) -> None:
+    summary = parcel_map.export(
+        Path(args["response"]),
+        csv_path=Path(args["csv"]) if args["csv"] else None,
+        geojson_path=Path(args["geojson"]) if args["geojson"] else None,
+        all_fields=args["all_fields"],
+        replace=args["replace"],
+    )
+    print(json.dumps(summary, indent=2, ensure_ascii=False, allow_nan=False))
+
+
+def _run_fields(args: dict[str, Any]) -> None:
+    catalog = parcel_fields.load_catalog(
+        Path(str(files("regrid").joinpath("data/parcel_fields.json")))
+    )
+    if args["action"] == "explain":
+        result: dict[str, Any] = parcel_fields.explain(catalog, args["names"])
+    else:
+        result = {"matches": parcel_fields.search(catalog, args["term"])}
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+
+
+def _subject_point(result: Any) -> list[float] | None:
+    """The first parcel's in-US (lat, lon), or None."""
+    try:
+        features = parcel_map.load_features(result)
+    except ValueError:
+        return None
+    return parcel_map.fallback_point(features[0]) if isinstance(features[0], dict) else None
+
+
+def _client(args: dict[str, Any]) -> RegridClient:
+    """Build the client from global options; the token comes only from REGRID_TOKEN."""
+    return RegridClient(
+        token=(os.environ.get("REGRID_TOKEN") or "").strip() or None,
+        timeout=args["timeout"],
+        base_url=args["base_url"],
+        tiles_base_url=args["tiles_base_url"],
+    )
+
+
+def _error_message(exc: Exception, *, os_error: str, type_error: str) -> str:
+    """One credential-free line: SDK messages verbatim, local errors fixed or whitespace-folded."""
+    if isinstance(exc, RegridError):
+        return str(exc)
+    if isinstance(exc, OSError):
+        return os_error
+    if isinstance(exc, TypeError):
+        return type_error
+    return " ".join(str(exc).split())
+
+
+def _address_map(
+    args: dict[str, Any], sent: list[int], saved: list[Path], notes: list[str]
+) -> None:
+    output = Path(args["output"])
+    response_path = Path(args["save_response"] or output.with_suffix(".json"))
+    neighbours_path = output.with_name(f"{output.stem}.neighbours.json")
+    replace = args["replace"]
+    targets = [response_path, output] + ([neighbours_path] if args["neighbours"] else [])
+    if len({target.resolve() for target in targets}) != len(targets):
+        raise ValueError("Saved response and map output must be different files")
+    for target in targets:
+        if not target.parent.is_dir():
+            raise ValueError("Output directory does not exist")
+    for target in targets:
+        if not replace and os.path.lexists(target):
+            raise ValueError(f"{target} exists; pass --replace to overwrite it")
+    options: dict[str, Any] = {
+        "limit": 1,
+        "return_parcels": True,
+        "return_stacked": False,
+        "return_zoning": False,
+        "return_matched_buildings": False,
+        "return_matched_addresses": False,
+        "return_enhanced_ownership": False,
+    }
+    if args["path"] is not None:
+        options["path"] = args["path"]
+    with _client(args) as client:
+        neighbours_file: Path | None = None
+        try:
+            result = client.address(args["address"], **options)
+            body = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+            with open(response_path, "w" if replace else "x", encoding="utf-8") as handle:
+                handle.write(body)
+            saved.append(response_path)
+            if args["neighbours"]:
+                point = _subject_point(result)
+                if point is None:
+                    if parcel_map.load_features(result):
+                        notes.append("neighbours skipped: subject has no coordinates")
+                else:
+                    try:
+                        around = client.point(
+                            lat=point[0],
+                            lon=point[1],
+                            radius=100,
+                            limit=25,
+                            return_geometry=True,
+                            return_parcels=True,
+                            return_stacked=False,
+                            return_zoning=False,
+                            return_matched_buildings=False,
+                            return_matched_addresses=False,
+                            return_enhanced_ownership=False,
+                        )
+                    except RegridError:
+                        notes.append("neighbours skipped: request failed")
+                    else:
+                        text = (
+                            json.dumps(around, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+                        )
+                        mode = "w" if replace else "x"
+                        with open(neighbours_path, mode, encoding="utf-8") as handle:
+                            handle.write(text)
+                        neighbours_file = neighbours_path
+                        saved.append(neighbours_path)
+        finally:
+            sent.append(client.request_count)
+    retrieved_at = args["retrieved_at"] or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    summary = parcel_map.render(
+        response_path,
+        output,
+        retrieved_at=retrieved_at,
+        replace=replace,
+        neighbours_path=neighbours_file,
+    )
+    print(
+        json.dumps(
+            {
+                "response": str(response_path),
+                **({"neighbours_response": str(neighbours_file)} if neighbours_file else {}),
+                **summary,
+            },
+            indent=2,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+    )
+
+
+def _run_address_map(args: dict[str, Any]) -> int:
+    sent: list[int] = []
+    saved: list[Path] = []
+    notes: list[str] = []
+    message = None
+    try:
+        _address_map(args, sent, saved, notes)
+    except (RegridError, ValueError, TypeError, OSError) as exc:  # MapError is a ValueError
+        message = _error_message(
+            exc, os_error="Could not write output file", type_error="Invalid input or output file"
+        )
+    print(f"regrid: requests made: {sent[0] if sent else 0}", file=sys.stderr)
+    for note in notes:
+        print(f"regrid: {note}", file=sys.stderr)
+    if message is not None and saved:
+        print(f"regrid: response saved to {saved[0]}", file=sys.stderr)
+        if len(saved) > 1:
+            print(f"regrid: neighbours saved to {saved[1]}", file=sys.stderr)
+    if message is not None:
+        print(f"regrid: {message}", file=sys.stderr)
+        return 1
+    return 0
+
+
+class _PagingError(ValueError):
+    """Fixed, credential-free paging usage message."""
+
+
+def _parse_page(result: Any) -> list[Any]:
+    """Return a page's features, or raise _PagingError when its shape is unusable."""
+    parcels = result.get("parcels") if isinstance(result, dict) else None
+    if isinstance(result, dict) and parcels is None:
+        return []
+    page = parcels.get("features") if isinstance(parcels, dict) else None
+    if page is None and isinstance(parcels, dict):
+        return []
+    if not isinstance(page, list):
+        raise _PagingError("paging stopped: malformed page in response")
+    try:
+        for feature in page:
+            if isinstance(feature, dict):
+                hash(feature.get("id"))
+    except TypeError:
+        raise _PagingError("paging stopped: malformed page in response") from None
+    return page
+
+
+def _feature_id(feature: Any) -> Any:
+    return feature.get("id") if isinstance(feature, dict) else None
+
+
+def _paged_search(
+    client: RegridClient,
+    command: str,
+    args: dict[str, Any],
+    options: dict[str, Any],
+    total: int,
+    progress: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Follow the last feature's id as offset_id until total records, a short page or no cursor."""
+    limit = options.get("limit")
+    if total < 1 or type(limit) is not int or limit < 1:
+        raise _PagingError(
+            "--max-records requires a positive count and an integer limit in --options"
+        )
+    if command == "point" and args.get("method") == "POST":
+        raise _PagingError("--max-records is not supported for POST point searches")
+    if "offset_id" in options:
+        raise _PagingError("--max-records conflicts with offset_id")
+    requests_cap = -(-total // limit)
+    print(f"regrid: up to {requests_cap} requests for {total} records", file=sys.stderr)
+    features: list[Any] = []
+    seen_ids: set[Any] = set()
+    merged: dict[str, Any] = {}
+    pages = 0
+    cursor: Any = None
+    complete = False
+    state = progress if progress is not None else {}
+    while pages < requests_cap and len(features) < total:
+        page_options = dict(options) if cursor is None else {**options, "offset_id": cursor}
+        result = getattr(client, command)(**args, **page_options)
+        page = _parse_page(result)
+        pages += 1
+        if pages == 1:
+            merged = {
+                key: list(value) if isinstance(value, list) and key != "parcels" else value
+                for key, value in result.items()
+            }
+        else:
+            for key, value in result.items():
+                if (
+                    key != "parcels"
+                    and isinstance(value, list)
+                    and isinstance(merged.get(key), list)
+                ):
+                    merged[key].extend(value)
+        new = [f for f in page if _feature_id(f) is None or _feature_id(f) not in seen_ids]
+        seen_ids.update(_feature_id(f) for f in new if _feature_id(f) is not None)
+        features.extend(new)
+        state.update(merged=merged, features=features[:total], pages=pages)
+        if len(page) < limit or len(features) >= total:
+            complete = True
+            break
+        if not new:
+            print("regrid: paging stopped: cursor did not advance", file=sys.stderr)
+            break
+        last = _feature_id(page[-1])
+        if last is None:
+            print("regrid: paging stopped: no cursor in response", file=sys.stderr)
+            break
+        if last == cursor:
+            print("regrid: paging stopped: cursor did not advance", file=sys.stderr)
+            break
+        cursor = last
+    return _paged_result(merged, features[:total], pages, complete or len(features) >= total)
+
+
+def _paged_result(
+    merged: dict[str, Any], features: list[Any], pages: int, complete: bool
+) -> dict[str, Any]:
+    """The first page's response with parcels.features replaced by the merged features."""
+    parcels = merged.get("parcels")
+    collection = {**(parcels if isinstance(parcels, dict) else {}), "features": features}
+    collection.setdefault("type", "FeatureCollection")
+    return {**merged, "parcels": collection, "pages": pages, "complete": complete}
+
+
+def _freshness(args: dict[str, Any], sent: list[int]) -> None:
+    county = county_freshness.county_path(args["path"])
+    cache_path = Path(args["cache"]) if args["cache"] else county_freshness.default_cache_path()
+    cached = None if args["refresh"] else county_freshness.read_cache(cache_path, args["base_url"])
+    max_age = args["max_age_days"]
+    if cached is not None and county_freshness.is_stale(cached[0], max_age):
+        print(f"regrid: cached verse is older than {max_age:g} days; refetching", file=sys.stderr)
+        cached = None
+    if cached is not None:
+        (retrieved_at, verse), state = cached, "hit"
+    else:
+        with _client(args) as client:
+            try:
+                verse = client.verse(return_geometry=False)
+            finally:
+                sent.append(client.request_count)
+        retrieved_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        state = "miss"
+        try:
+            county_freshness.write_cache(cache_path, retrieved_at, verse, args["base_url"])
+        except (OSError, ValueError):
+            print("regrid: warning: verse cache not saved", file=sys.stderr)
+    try:
+        dates = county_freshness.county_dates(verse, county)
+    except county_freshness.FreshnessError as exc:
+        if state == "hit":
+            raise ValueError(
+                "County not found in cached verse response; use --refresh to refetch"
+            ) from exc
+        raise
+    print(
+        json.dumps(
+            {**dates, "verse_retrieved_at": retrieved_at, "cache": state},
+            indent=2,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+    )
+
+
+def _run_freshness(args: dict[str, Any]) -> int:
+    sent: list[int] = []
+    message = None
+    try:
+        _freshness(args, sent)
+    except (RegridError, ValueError, TypeError, OSError) as exc:
+        message = _error_message(
+            exc,
+            os_error="Could not read or write the verse cache",
+            type_error="Invalid verse response",
+        )
+    print(f"regrid: requests made: {sent[0] if sent else 0}", file=sys.stderr)
+    if message is not None:
+        print(f"regrid: {message}", file=sys.stderr)
+        return 1
+    return 0
+
+
+# Commands that run locally: no token, no HTTP client.
+_OFFLINE = {"map": _run_map, "fields": _run_fields, "export": _run_export}
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Regrid API CLI. Authentication uses REGRID_TOKEN; schemas are public."
@@ -41,6 +390,76 @@ def _parser() -> argparse.ArgumentParser:
         "--tiles-base-url", default="https://tiles.regrid.com", help="HTTPS tiles base URL"
     )
     commands = parser.add_subparsers(dest="command", required=True)
+    offline = commands.add_parser(
+        "map",
+        help="Render a saved parcel response as an offline satellite map (no API call)",
+        description="Render a saved parcel response as a self-contained satellite map HTML file.",
+    )
+    offline.add_argument("response", help="Saved parcel response JSON file")
+    offline.add_argument("output", help="Destination HTML file")
+    offline.add_argument("--feature", type=int, metavar="N", help="Zero-based feature index")
+    offline.add_argument("--all-candidates", action="store_true", help="Map every feature")
+    offline.add_argument("--retrieved-at", metavar="ISO", help="Retrieval timestamp to display")
+    offline.add_argument(
+        "--neighbours", type=Path, metavar="FILE", help="Saved neighbouring parcels response"
+    )
+    offline.add_argument("--replace", action="store_true", help="Overwrite an existing output")
+    export = commands.add_parser(
+        "export",
+        help="Export a saved parcel response to CSV and/or GeoJSON (offline, no API call)",
+        description="Write core parcel columns as CSV and/or a GeoJSON FeatureCollection.",
+    )
+    export.add_argument("response", help="Saved parcel response JSON file")
+    export.add_argument("--csv", metavar="FILE", help="Destination CSV file")
+    export.add_argument("--geojson", metavar="FILE", help="Destination GeoJSON file")
+    export.add_argument("--all-fields", action="store_true", help="Append every other field")
+    export.add_argument("--replace", action="store_true", help="Overwrite existing outputs")
+    field_catalog = commands.add_parser(
+        "fields",
+        help="Explain or search US parcel field definitions (offline, no API call)",
+        description="Explain or search the packaged parcel field catalog without any API call.",
+    )
+    field_actions = field_catalog.add_subparsers(dest="action", required=True)
+    field_explain = field_actions.add_parser("explain", help="Show definitions of named fields")
+    field_explain.add_argument("names", nargs="+", metavar="NAME")
+    field_search = field_actions.add_parser(
+        "search", help="Find fields by name, description or category"
+    )
+    field_search.add_argument("term")
+    freshness = commands.add_parser(
+        "freshness",
+        help="Show a county's published data dates from /verse (cached)",
+        description="Report county data dates from a cached /verse response; dates only.",
+    )
+    freshness.add_argument("--path", required=True, help="Regrid path, e.g. /us/nj/camden")
+    freshness.add_argument("--cache", metavar="FILE", help="Verse cache file")
+    freshness.add_argument("--refresh", action="store_true", help="Ignore the cache and refetch")
+    freshness.add_argument(
+        "--max-age-days",
+        type=float,
+        default=30,
+        metavar="N",
+        help="Refetch a cache older than N days (default 30)",
+    )
+    address_map = commands.add_parser(
+        "address-map",
+        help=(
+            "Look up one address (one API request; two with --neighbours) "
+            "and render it as an offline satellite map"
+        ),
+        description="Make one address lookup, save the response, and render a satellite map.",
+    )
+    address_map.add_argument("address")
+    address_map.add_argument("output", help="Destination HTML file")
+    address_map.add_argument("--path", help="Regrid path scope, e.g. /us/nj/camden")
+    address_map.add_argument("--save-response", metavar="FILE", help="Response JSON destination")
+    address_map.add_argument("--retrieved-at", metavar="ISO", help="Retrieval timestamp to show")
+    address_map.add_argument(
+        "--neighbours",
+        action="store_true",
+        help="Also fetch neighbouring parcels (one extra request, up to 25 records)",
+    )
+    address_map.add_argument("--replace", action="store_true", help="Overwrite existing outputs")
     option_commands = {
         "point",
         "area",
@@ -102,6 +521,12 @@ def _parser() -> argparse.ArgumentParser:
                 "--geojson", required=name == "area", help="GeoJSON object as JSON string or @file"
             )
             sub.add_argument("--method", choices=["GET", "POST"], default="GET")
+        if name in {"point", "area", "query"}:
+            sub.add_argument(
+                "--max-records",
+                type=int,
+                help="Follow offset_id cursors for up to N records; requires limit in --options",
+            )
         if name == "point":
             sub.add_argument("--lat", type=float)
             sub.add_argument("--lon", type=float)
@@ -141,7 +566,9 @@ def _parser() -> argparse.ArgumentParser:
         if name == "client-token-typeahead":
             sub.add_argument("--exp", type=float, help="Token lifetime in seconds")
         if name == "usage":
-            sub.add_argument("--detailed", action="store_true")
+            sub.add_argument(
+                "--detailed", action="store_true", help="Include per-endpoint usage detail"
+            )
         if name == "report":
             for field in ("comment", "path", "ll-uuid"):
                 sub.add_argument("--" + field)
@@ -169,10 +596,25 @@ def main(argv: list[str] | None = None) -> int:
     except SystemExit as exc:
         return int(exc.code or 0)
     command = args.pop("command").replace("-", "_")
+    offline_handler = _OFFLINE.get(command)
+    if offline_handler is not None:
+        try:
+            offline_handler(args)
+        except (ValueError, OSError) as exc:  # MapError is a ValueError
+            print(f"regrid: {' '.join(str(exc).split())}", file=sys.stderr)
+            return 1
+        return 0
+    if command == "freshness":
+        return _run_freshness(args)
+    if command == "address_map":
+        return _run_address_map(args)
     timeout = args.pop("timeout")
     base_url = args.pop("base_url")
     tiles_base_url = args.pop("tiles_base_url")
     output = args.pop("output", None)
+    max_records = args.pop("max_records", None)
+    count = 0
+    progress: dict[str, Any] = {}
     try:
         options = _object(args.pop("options", "{}"))
         for name in ("geojson", "fields", "details", "metadata"):
@@ -183,20 +625,34 @@ def main(argv: list[str] | None = None) -> int:
             args["details"] = details_text
         if options.keys() & args.keys():
             raise ValueError("--options conflicts with an explicit command argument")
-        with RegridClient(
-            token=(os.environ.get("REGRID_TOKEN") or "").strip() or None,
-            timeout=timeout,
-            base_url=base_url,
-            tiles_base_url=tiles_base_url,
+        with _client(
+            {"timeout": timeout, "base_url": base_url, "tiles_base_url": tiles_base_url}
         ) as client:
-            result = getattr(client, command)(**args, **options)
+            try:
+                if max_records is None:
+                    result = getattr(client, command)(**args, **options)
+                else:
+                    result = _paged_search(client, command, args, options, max_records, progress)
+            finally:
+                count = client.request_count
         if output is not None:
             Path(output).write_bytes(result)
         else:
             print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
     except (RegridError, ValueError, TypeError, OSError) as exc:
         # SDK messages are sanitized; local messages may contain supplied option names/paths.
-        message = str(exc) if isinstance(exc, RegridError) else "Invalid input or output file"
+        generic = "Invalid input or output file"
+        if isinstance(exc, (RegridError, _PagingError)):
+            message = _error_message(exc, os_error=generic, type_error=generic)
+        else:
+            message = generic
+        if isinstance(exc, (RegridError, _PagingError)) and progress.get("pages"):
+            partial = _paged_result(
+                progress["merged"], progress["features"], progress["pages"], False
+            )
+            print(json.dumps(partial, indent=2, ensure_ascii=False, allow_nan=False))
         print(f"regrid: {message}", file=sys.stderr)
+        print(f"regrid: requests made: {count}", file=sys.stderr)
         return 1
+    print(f"regrid: requests made: {count}", file=sys.stderr)
     return 0

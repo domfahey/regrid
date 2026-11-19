@@ -1,0 +1,1189 @@
+{
+ "version": "2026-07-09",
+ "country": "us",
+ "fields": [
+  {
+   "name": "account_number",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Identification",
+   "description": "Assessor or tax collector account identifier"
+  },
+  {
+   "name": "address",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel situs or site address; may be absent"
+  },
+  {
+   "name": "address2",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel address second line"
+  },
+  {
+   "name": "address_source",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Primary address source; county is the default when none is listed"
+  },
+  {
+   "name": "agval",
+   "datatype": "double precision",
+   "tier": "standard",
+   "category": "Assessment & Tax",
+   "description": "Agricultural value"
+  },
+  {
+   "name": "alt_parcelnumb1",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Identification",
+   "description": "First alternative assessor-provided parcel identifier"
+  },
+  {
+   "name": "alt_parcelnumb2",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Identification",
+   "description": "Second alternative assessor-provided parcel identifier"
+  },
+  {
+   "name": "alt_parcelnumb3",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Identification",
+   "description": "Third alternative assessor-provided parcel identifier"
+  },
+  {
+   "name": "area_building",
+   "datatype": "integer",
+   "tier": "standard",
+   "category": "Buildings & Structures",
+   "description": "Assessor-defined total structure area in square feet, potentially including common areas"
+  },
+  {
+   "name": "area_building_definition",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Buildings & Structures",
+   "description": "Definition of the area reported by area_building"
+  },
+  {
+   "name": "block",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Block"
+  },
+  {
+   "name": "book",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Recorded book or liber"
+  },
+  {
+   "name": "careof",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Mailing address care of"
+  },
+  {
+   "name": "cass_errorno",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "CASS error codes"
+  },
+  {
+   "name": "cdl_date",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "Year of the Cropland Data Layer dataset"
+  },
+  {
+   "name": "cdl_majority_category",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "Human-readable land-cover category most common on the parcel"
+  },
+  {
+   "name": "cdl_majority_percent",
+   "datatype": "double precision",
+   "tier": "premium",
+   "category": null,
+   "description": "Percentage of pixels in the majority cropland category"
+  },
+  {
+   "name": "cdl_raw",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "Cropland pixel-class value and percentage pairs encoded as text"
+  },
+  {
+   "name": "census_block",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Census 2020 block"
+  },
+  {
+   "name": "census_blockgroup",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Census 2020 blockgroup"
+  },
+  {
+   "name": "census_elementary_school_district",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "Census-provided elementary school district"
+  },
+  {
+   "name": "census_secondary_school_district",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "Census-provided secondary school district"
+  },
+  {
+   "name": "census_tract",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Census 2020 tract"
+  },
+  {
+   "name": "census_unified_school_district",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "Census-provided unified school district"
+  },
+  {
+   "name": "census_zcta",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Census ZIP Code Tabulation Area containing the parcel center"
+  },
+  {
+   "name": "city",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "US Census county subdivision; use scity for the site address city"
+  },
+  {
+   "name": "county",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel address county"
+  },
+  {
+   "name": "deeded_acres",
+   "datatype": "double precision",
+   "tier": "standard",
+   "category": "Parcel Geometry & Area",
+   "description": "Deeded acres"
+  },
+  {
+   "name": "dpv_codes",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "Delivery point validation codes"
+  },
+  {
+   "name": "dpv_notes",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "Delivery point validation notes"
+  },
+  {
+   "name": "dpv_status",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "USPS delivery point validation status"
+  },
+  {
+   "name": "dpv_type",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "Delivery point match type"
+  },
+  {
+   "name": "fema_flood_zone",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "FEMA flood zone"
+  },
+  {
+   "name": "fema_flood_zone_data_date",
+   "datatype": "date",
+   "tier": "premium",
+   "category": null,
+   "description": "FEMA flood zone data date"
+  },
+  {
+   "name": "fema_flood_zone_raw",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "FEMA flood zone raw data"
+  },
+  {
+   "name": "fema_flood_zone_subtype",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "FEMA flood zone subtype"
+  },
+  {
+   "name": "fema_nri_risk_rating",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "FEMA National Risk Index relative natural-hazard risk rating at Census tract level"
+  },
+  {
+   "name": "geoid",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "State and county FIPS code"
+  },
+  {
+   "name": "gisacre",
+   "datatype": "double precision",
+   "tier": "standard",
+   "category": "Parcel Geometry & Area",
+   "description": "County-provided parcel acres"
+  },
+  {
+   "name": "highest_parcel_elevation",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": null,
+   "description": "Highest terrain elevation in meters intersecting the parcel"
+  },
+  {
+   "name": "homestead_exemption",
+   "datatype": "text",
+   "tier": "premium",
+   "category": "Assessment & Tax",
+   "description": "Assessor-provided homestead tax exemption status"
+  },
+  {
+   "name": "household_income_growth_next_5_years",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": null,
+   "description": "Blockgroup five-year median household income compound annual growth forecast"
+  },
+  {
+   "name": "housing_affordability_index",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": null,
+   "description": "Blockgroup housing affordability index; 100 denotes median-income affordability threshold"
+  },
+  {
+   "name": "housing_growth_next_5_years",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": null,
+   "description": "Blockgroup five-year housing-unit compound annual growth forecast"
+  },
+  {
+   "name": "housing_growth_past_5_years",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": null,
+   "description": "Blockgroup housing-unit compound annual growth over the previous five years"
+  },
+  {
+   "name": "improvval",
+   "datatype": "double precision",
+   "tier": "standard",
+   "category": "Assessment & Tax",
+   "description": "Improvement value"
+  },
+  {
+   "name": "insite_score",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "NatureServe InSite integrated biodiversity score"
+  },
+  {
+   "name": "landval",
+   "datatype": "double precision",
+   "tier": "standard",
+   "category": "Assessment & Tax",
+   "description": "Land value"
+  },
+  {
+   "name": "last_ownership_transfer_date",
+   "datatype": "date",
+   "tier": "standard",
+   "category": null,
+   "description": "Most recent ownership transfer date, potentially after an arms-length sale"
+  },
+  {
+   "name": "lat",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Parcel Geometry & Area",
+   "description": "On-parcel centroid latitude in decimal coordinates"
+  },
+  {
+   "name": "lbcs_activity",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": "Land Use & Zoning",
+   "description": "LBCS actual land activity code"
+  },
+  {
+   "name": "lbcs_activity_desc",
+   "datatype": "text",
+   "tier": "premium",
+   "category": "Land Use & Zoning",
+   "description": "Description of the LBCS activity code"
+  },
+  {
+   "name": "lbcs_function",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": "Land Use & Zoning",
+   "description": "LBCS economic function or establishment type code"
+  },
+  {
+   "name": "lbcs_function_desc",
+   "datatype": "text",
+   "tier": "premium",
+   "category": "Land Use & Zoning",
+   "description": "Description of the LBCS economic function code"
+  },
+  {
+   "name": "lbcs_ownership",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": "Ownership",
+   "description": "LBCS ownership structure code"
+  },
+  {
+   "name": "lbcs_ownership_desc",
+   "datatype": "text",
+   "tier": "premium",
+   "category": "Ownership",
+   "description": "Description of the LBCS ownership structure code"
+  },
+  {
+   "name": "lbcs_site",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": "Land Use & Zoning",
+   "description": "LBCS site code describing what is on the land"
+  },
+  {
+   "name": "lbcs_site_desc",
+   "datatype": "text",
+   "tier": "premium",
+   "category": "Land Use & Zoning",
+   "description": "Description of the LBCS site code"
+  },
+  {
+   "name": "lbcs_structure",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": "Land Use & Zoning",
+   "description": "LBCS structure or building type code"
+  },
+  {
+   "name": "lbcs_structure_desc",
+   "datatype": "text",
+   "tier": "premium",
+   "category": "Land Use & Zoning",
+   "description": "Description of the LBCS structure code"
+  },
+  {
+   "name": "legaldesc",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Legal description"
+  },
+  {
+   "name": "ll_address_count",
+   "datatype": "integer",
+   "tier": "premium",
+   "category": null,
+   "description": "Regrid-calculated total primary and secondary addresses on the parcel"
+  },
+  {
+   "name": "ll_bldg_count",
+   "datatype": "integer",
+   "tier": "premium",
+   "category": "Buildings & Structures",
+   "description": "Regrid-calculated number of buildings"
+  },
+  {
+   "name": "ll_bldg_footprint_sqft",
+   "datatype": "integer",
+   "tier": "premium",
+   "category": "Buildings & Structures",
+   "description": "Regrid-calculated total building footprint square feet"
+  },
+  {
+   "name": "ll_gisacre",
+   "datatype": "double precision",
+   "tier": "standard",
+   "category": "Parcel Geometry & Area",
+   "description": "Regrid-calculated parcel acres from geometry"
+  },
+  {
+   "name": "ll_gissqft",
+   "datatype": "bigint",
+   "tier": "standard",
+   "category": "Parcel Geometry & Area",
+   "description": "Regrid-calculated parcel square feet"
+  },
+  {
+   "name": "ll_last_refresh",
+   "datatype": "date",
+   "tier": "standard",
+   "category": "Source & Lineage",
+   "description": "Last date Regrid refreshed county data"
+  },
+  {
+   "name": "ll_row_parcel",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "Trait indicating a likely right-of-way parcel"
+  },
+  {
+   "name": "ll_stable_id",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Refresh matching status; nonempty values indicate a parcel matched to prior data"
+  },
+  {
+   "name": "ll_stack_uuid",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Arbitrary member UUID identifying a group of identical parcel geometries"
+  },
+  {
+   "name": "ll_updated_at",
+   "datatype": "timestamp with time zone",
+   "tier": "standard",
+   "category": "Source & Lineage",
+   "description": "Timestamp of the last row modification"
+  },
+  {
+   "name": "ll_uuid",
+   "datatype": "uuid",
+   "tier": "standard",
+   "category": "Identification",
+   "description": "Stable v4 UUID identifying a parcel across county refreshes"
+  },
+  {
+   "name": "location_name",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Name commonly associated with the parcel"
+  },
+  {
+   "name": "lon",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Parcel Geometry & Area",
+   "description": "On-parcel centroid longitude in decimal coordinates"
+  },
+  {
+   "name": "lot",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Lot"
+  },
+  {
+   "name": "lowest_parcel_elevation",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": null,
+   "description": "Lowest terrain elevation in meters intersecting the parcel"
+  },
+  {
+   "name": "mail_addno",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Mailing address street number"
+  },
+  {
+   "name": "mail_addpref",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Mailing address street prefix"
+  },
+  {
+   "name": "mail_address2",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Mailing address second line"
+  },
+  {
+   "name": "mail_addstr",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Mailing address street name"
+  },
+  {
+   "name": "mail_addstsuf",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Mailing address street suffix"
+  },
+  {
+   "name": "mail_addsttyp",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Mailing address street type"
+  },
+  {
+   "name": "mail_city",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Mailing address city"
+  },
+  {
+   "name": "mail_country",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Mailing address country"
+  },
+  {
+   "name": "mail_state2",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Mailing address state two-letter abbreviation"
+  },
+  {
+   "name": "mail_unit",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Mailing address unit number"
+  },
+  {
+   "name": "mail_urbanization",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Mailing address urbanizacion for Puerto Rico"
+  },
+  {
+   "name": "mail_zip",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Mailing address ZIP code"
+  },
+  {
+   "name": "mailadd",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Address receiving tax and assessor communications; may differ from parcel address"
+  },
+  {
+   "name": "median_household_income",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": null,
+   "description": "Blockgroup median household income estimate; upper interval represented by 200001"
+  },
+  {
+   "name": "neighborhood",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Neighborhood"
+  },
+  {
+   "name": "neighborhood_code",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Neighborhood code"
+  },
+  {
+   "name": "num_bath",
+   "datatype": "double precision",
+   "tier": "standard",
+   "category": null,
+   "description": "Total bathrooms, including partial bathrooms"
+  },
+  {
+   "name": "num_bath_partial",
+   "datatype": "double precision",
+   "tier": "standard",
+   "category": null,
+   "description": "Number of partial bathrooms"
+  },
+  {
+   "name": "num_bedrooms",
+   "datatype": "integer",
+   "tier": "standard",
+   "category": null,
+   "description": "Number of bedrooms"
+  },
+  {
+   "name": "numrooms",
+   "datatype": "double precision",
+   "tier": "standard",
+   "category": null,
+   "description": "County-recorded room count for the primary structure"
+  },
+  {
+   "name": "numstories",
+   "datatype": "double precision",
+   "tier": "standard",
+   "category": null,
+   "description": "Number of stories"
+  },
+  {
+   "name": "numunits",
+   "datatype": "integer",
+   "tier": "standard",
+   "category": null,
+   "description": "Number of individual living units, apartments, or condominiums"
+  },
+  {
+   "name": "ogc_fid",
+   "datatype": "serial primary key",
+   "tier": "standard",
+   "category": "Identification",
+   "description": "Object ID"
+  },
+  {
+   "name": "original_address",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "County parcel address fields as a JSON string or legacy semicolon-separated text"
+  },
+  {
+   "name": "original_mailing_address",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "County mailing address fields as a JSON string or legacy semicolon-separated text"
+  },
+  {
+   "name": "owner",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Ownership",
+   "description": "Owner name"
+  },
+  {
+   "name": "owner2",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Second owner name"
+  },
+  {
+   "name": "owner3",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Third owner name"
+  },
+  {
+   "name": "owner4",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Fourth owner name"
+  },
+  {
+   "name": "ownfrst",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Owner first name"
+  },
+  {
+   "name": "ownlast",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Owner last name"
+  },
+  {
+   "name": "owntype",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Ownership",
+   "description": "Owner type"
+  },
+  {
+   "name": "padus_public_access",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "USGS Protected Areas Database public access designation"
+  },
+  {
+   "name": "page",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Recorded page or folio"
+  },
+  {
+   "name": "parcelnumb",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Identification",
+   "description": "Assessor's primary parcel identification number or code"
+  },
+  {
+   "name": "parcelnumb_no_formatting",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Identification",
+   "description": "Primary parcel ID with spaces and formatting characters removed"
+  },
+  {
+   "name": "parval",
+   "datatype": "double precision",
+   "tier": "standard",
+   "category": "Assessment & Tax",
+   "description": "Total parcel value"
+  },
+  {
+   "name": "parvaltype",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Assessment & Tax",
+   "description": "Type of value reported in parcel value fields"
+  },
+  {
+   "name": "path",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Identification",
+   "description": "Human-readable parcel identifier; not guaranteed stable between updates"
+  },
+  {
+   "name": "placekey",
+   "datatype": "text",
+   "tier": "premium",
+   "category": "Identification",
+   "description": "Placekey location identifier"
+  },
+  {
+   "name": "plat",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Recorded plat number"
+  },
+  {
+   "name": "plss_range",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Parcel Geometry & Area",
+   "description": "Public Land Survey System range reference"
+  },
+  {
+   "name": "plss_section",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Parcel Geometry & Area",
+   "description": "Public Land Survey System section reference"
+  },
+  {
+   "name": "plss_township",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Parcel Geometry & Area",
+   "description": "Public Land Survey System township reference"
+  },
+  {
+   "name": "population_density",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": null,
+   "description": "Blockgroup estimated population per square mile"
+  },
+  {
+   "name": "population_growth_next_5_years",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": null,
+   "description": "Blockgroup five-year population compound annual growth forecast"
+  },
+  {
+   "name": "population_growth_past_5_years",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": null,
+   "description": "Blockgroup population compound annual growth over the previous five years"
+  },
+  {
+   "name": "precisely_id",
+   "datatype": "text",
+   "tier": "premium",
+   "category": "Identification",
+   "description": "Precisely point-addressable-location identifier shared by alias addresses"
+  },
+  {
+   "name": "previous_owner",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Previous owner or grantor"
+  },
+  {
+   "name": "qoz",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Federal Qualified Opportunity Zone status"
+  },
+  {
+   "name": "qoz_tract",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Qualified Opportunity Zone tract number using December 2018 tract definitions"
+  },
+  {
+   "name": "rdi",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "Residential delivery indicator"
+  },
+  {
+   "name": "recrdareano",
+   "datatype": "integer",
+   "tier": "standard",
+   "category": "Buildings & Structures",
+   "description": "Assessor-provided habitable or taxable structure area in square feet"
+  },
+  {
+   "name": "recrdareatx",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Buildings & Structures",
+   "description": "Recorded area as text"
+  },
+  {
+   "name": "reviseddate",
+   "datatype": "date",
+   "tier": "standard",
+   "category": "Source & Lineage",
+   "description": "County assessor's last revision date"
+  },
+  {
+   "name": "roughness_rating",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": null,
+   "description": "Parcel elevation variability calculated from a digital elevation model"
+  },
+  {
+   "name": "saddno",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel address number"
+  },
+  {
+   "name": "saddpref",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel address prefix"
+  },
+  {
+   "name": "saddstr",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel address street name"
+  },
+  {
+   "name": "saddstsuf",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel address street suffix"
+  },
+  {
+   "name": "saddsttyp",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel address street type"
+  },
+  {
+   "name": "saledate",
+   "datatype": "date",
+   "tier": "standard",
+   "category": null,
+   "description": "Last sale date"
+  },
+  {
+   "name": "saleprice",
+   "datatype": "double precision",
+   "tier": "standard",
+   "category": null,
+   "description": "Last sale price"
+  },
+  {
+   "name": "scity",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel address city"
+  },
+  {
+   "name": "sourceurl",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Source & Lineage",
+   "description": "County-provided link to the parcel record"
+  },
+  {
+   "name": "sqft",
+   "datatype": "double precision",
+   "tier": "standard",
+   "category": "Parcel Geometry & Area",
+   "description": "County-provided parcel square feet"
+  },
+  {
+   "name": "state2",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel address state"
+  },
+  {
+   "name": "state_parcelnumb",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Identification",
+   "description": "State-provided statewide parcel identifier"
+  },
+  {
+   "name": "struct",
+   "datatype": "boolean",
+   "tier": "standard",
+   "category": "Buildings & Structures",
+   "description": "Structure on parcel"
+  },
+  {
+   "name": "structno",
+   "datatype": "integer",
+   "tier": "standard",
+   "category": "Buildings & Structures",
+   "description": "Number of structures on parcel"
+  },
+  {
+   "name": "structstyle",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Buildings & Structures",
+   "description": "Structure style"
+  },
+  {
+   "name": "subdivision",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Subdivision"
+  },
+  {
+   "name": "sunit",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel address unit"
+  },
+  {
+   "name": "szip",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel address ZIP code"
+  },
+  {
+   "name": "szip5",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Five-digit parcel ZIP code"
+  },
+  {
+   "name": "tax_id",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Identification",
+   "description": "Assessor or tax collector tax identifier"
+  },
+  {
+   "name": "taxamt",
+   "datatype": "double precision",
+   "tier": "standard",
+   "category": "Assessment & Tax",
+   "description": "Annual tax bill"
+  },
+  {
+   "name": "taxyear",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Assessment & Tax",
+   "description": "Tax year to which assessor data applies"
+  },
+  {
+   "name": "transmission_line_distance",
+   "datatype": "numeric",
+   "tier": "premium",
+   "category": null,
+   "description": "Distance from parcel boundary to nearest HIFLD high-voltage transmission line"
+  },
+  {
+   "name": "unmodified_owner",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Owner name before standardization or other modifications"
+  },
+  {
+   "name": "urbanization",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel urbanizacion postal field commonly used in Puerto Rico"
+  },
+  {
+   "name": "usecode",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel use code; varies by governing municipality"
+  },
+  {
+   "name": "usedesc",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Parcel use description; varies by governing municipality"
+  },
+  {
+   "name": "usps_vacancy",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "USPS vacancy indicator"
+  },
+  {
+   "name": "usps_vacancy_date",
+   "datatype": "date",
+   "tier": "premium",
+   "category": null,
+   "description": "Date the USPS vacancy indicator was collected"
+  },
+  {
+   "name": "year_built_effective_date",
+   "datatype": "integer",
+   "tier": "standard",
+   "category": null,
+   "description": "Assessor-adjusted year built reflecting condition or major structural changes"
+  },
+  {
+   "name": "yearbuilt",
+   "datatype": "integer",
+   "tier": "standard",
+   "category": "Buildings & Structures",
+   "description": "Structure year built"
+  },
+  {
+   "name": "zoning",
+   "datatype": "text",
+   "tier": "standard",
+   "category": null,
+   "description": "Zoning code used by the governing municipality"
+  },
+  {
+   "name": "zoning_code_link",
+   "datatype": "text",
+   "tier": "premium",
+   "category": "Land Use & Zoning",
+   "description": "Link to the municipality's zoning code"
+  },
+  {
+   "name": "zoning_description",
+   "datatype": "text",
+   "tier": "standard",
+   "category": "Land Use & Zoning",
+   "description": "Municipality-defined human-readable zoning code name"
+  },
+  {
+   "name": "zoning_id",
+   "datatype": "integer",
+   "tier": "premium",
+   "category": "Land Use & Zoning",
+   "description": "Zoning area ID for matching to the Regrid zoning product"
+  },
+  {
+   "name": "zoning_subtype",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "Standardized zoning subtype"
+  },
+  {
+   "name": "zoning_type",
+   "datatype": "text",
+   "tier": "premium",
+   "category": null,
+   "description": "Standardized zoning type"
+  }
+ ]
+}

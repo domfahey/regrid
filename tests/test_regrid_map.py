@@ -1,8 +1,8 @@
 """Parcel geometry is validated offline and cross-checked against the recorded area."""
 
+import csv
 import importlib.util
 import json
-import math
 import os
 import re
 import stat
@@ -11,46 +11,16 @@ import sys
 from pathlib import Path
 
 import pytest
+from map_fixtures import expected_sqft, feature, good_feature, square, write_response
+
+from regrid.offline import map as parcel_map
 
 SCRIPT = (
     Path(__file__).resolve().parents[1]
     / "plugins/regrid-research/skills/property-research/scripts/map.py"
 )
-SPEC = importlib.util.spec_from_file_location("regrid_map", SCRIPT)
-assert SPEC and SPEC.loader
-parcel_map = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(parcel_map)
 
 MapError = parcel_map.MapError
-
-
-def square(lon=-75.03, lat=39.9, size=0.001):
-    ring = [[lon, lat], [lon + size, lat], [lon + size, lat + size], [lon, lat + size], [lon, lat]]
-    return {"type": "Polygon", "coordinates": [ring]}
-
-
-def expected_sqft(lon=-75.03, lat=39.9, size=0.001):
-    r = 6378137.0
-    m2 = (
-        r
-        * r
-        * math.radians(size)
-        * (math.sin(math.radians(lat + size)) - math.sin(math.radians(lat)))
-    )
-    return m2 * 10.763910416709722
-
-
-def feature(geometry, **fields):
-    return {
-        "type": "Feature",
-        "geometry": geometry,
-        "properties": {
-            "headline": "12 Example Ave",
-            "path": "/us/nj/camden/haddonfield/1",
-            "ll_uuid": "00000000-0000-4000-8000-000000000001",
-            "fields": fields,
-        },
-    }
 
 
 @pytest.mark.parametrize("document", [{}, [], {"parcels": {}}])
@@ -177,16 +147,6 @@ def test_oversized_integer_recorded_area_is_unavailable():
     assert result["recorded_sqft"] is None
 
 
-def write_response(path, *features):
-    path.write_text(json.dumps({"parcels": {"features": list(features)}}), encoding="utf-8")
-    return path
-
-
-def good_feature(**fields):
-    fields.setdefault("ll_gissqft", expected_sqft())
-    return feature(square(), **fields)
-
-
 def test_render_writes_page_and_summary(tmp_path):
     response = write_response(tmp_path / "r.json", good_feature(owner="Example LLC"))
     output = tmp_path / "map.html"
@@ -250,7 +210,7 @@ def test_null_geometry_with_point_and_without(tmp_path):
 
 
 def test_invalid_geometry_is_rejected_before_rendering(tmp_path):
-    bad = feature({"type": "Point", "coordinates": [-75.03, 39.9]})
+    bad = _other({"type": "Point", "coordinates": [-75.03, 39.9]})
     with pytest.raises(MapError, match="Unsupported geometry"):
         parcel_map.render(write_response(tmp_path / "r.json", bad), tmp_path / "m.html")
 
@@ -325,6 +285,7 @@ def test_index_and_all_candidates_conflict(tmp_path):
         parcel_map.render(response, tmp_path / "m.html", index=0, all_candidates=True)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permissions")
 def test_output_respects_umask(tmp_path):
     response = write_response(tmp_path / "r.json", good_feature())
     old = os.umask(0o022)
@@ -336,7 +297,6 @@ def test_output_respects_umask(tmp_path):
 
 
 def test_extracted_map_helper_renders(tmp_path):
-    import importlib.util
     from zipfile import ZipFile
 
     build_path = SCRIPT.parents[5] / "scripts/build_claude_plugins.py"
@@ -476,3 +436,423 @@ def test_no_replace_never_overwrites_a_file_created_after_the_check(tmp_path, mo
         parcel_map.render(write_response(tmp_path / "r.json", good_feature()), output)
     assert output.read_text(encoding="utf-8") == "keep"
     assert [p.name for p in tmp_path.iterdir() if p.name.startswith(".map-")] == []
+
+
+def test_main_prints_summary_json(tmp_path, capsys):
+    response = write_response(tmp_path / "r.json", good_feature())
+    assert parcel_map.main(["render", str(response), str(tmp_path / "m.html")]) == 0
+    assert json.loads(capsys.readouterr().out)["features"] == 1
+
+
+def test_main_reports_map_error_on_one_line(tmp_path, capsys):
+    response = write_response(tmp_path / "r.json", good_feature(), good_feature())
+    assert parcel_map.main(["render", str(response), str(tmp_path / "m.html")]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("error: ") and err.count("\n") == 1
+
+
+def test_main_reports_os_error(tmp_path, capsys):
+    assert (
+        parcel_map.main(["render", str(tmp_path / "missing.json"), str(tmp_path / "m.html")]) == 1
+    )
+    assert capsys.readouterr().err.startswith("error: ")
+
+
+def _render_doc(tmp_path, document):
+    response = tmp_path / "r.json"
+    response.write_text(
+        document if isinstance(document, str) else json.dumps(document), encoding="utf-8"
+    )
+    return parcel_map.render(response, tmp_path / "m.html")
+
+
+def test_render_rejects_invalid_json_and_non_object_features(tmp_path):
+    with pytest.raises(MapError, match="not valid JSON"):
+        _render_doc(tmp_path, "{nope")
+    with pytest.raises(MapError, match="Expected a Regrid parcel response"):
+        _render_doc(tmp_path, {"parcels": {"features": [1]}})
+
+
+@pytest.mark.parametrize(
+    "geometry",
+    [
+        "x",
+        {"type": "MultiPolygon", "coordinates": []},
+        {"type": "Polygon", "coordinates": [[[1], [2, 3], [4, 5], [1]]]},
+        {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [float("nan"), 1], [0, 0]]]},
+    ],
+)
+def test_render_rejects_bad_geometry(tmp_path, geometry):
+    with pytest.raises(MapError):
+        _render_doc(tmp_path, {"parcels": {"features": [feature(geometry)]}})
+
+
+def test_render_accepts_numeric_string_area(tmp_path):
+    doc = {"parcels": {"features": [good_feature(ll_gissqft=str(expected_sqft()))]}}
+    assert _render_doc(tmp_path, doc)["area_checks"][0]["status"] == "ok"
+    assert parcel_map._parse_finite("abc") is None
+
+
+def test_write_falls_back_without_hard_links(tmp_path, monkeypatch):
+    def no_link(*args, **kwargs):
+        raise OSError("links unsupported")
+
+    monkeypatch.setattr(os, "link", no_link)
+    response = write_response(tmp_path / "r.json", good_feature())
+    parcel_map.render(response, tmp_path / "m.html")
+    assert (tmp_path / "m.html").exists()
+    with pytest.raises(MapError, match="exists"):
+        parcel_map.render(response, tmp_path / "m.html")
+
+
+def test_temp_name_collision_is_retried(tmp_path, monkeypatch):
+    names = iter(["aa", "aa", "bb"])
+    monkeypatch.setattr(parcel_map.secrets, "token_hex", lambda n: next(names))
+    (tmp_path / ".map-aa.tmp").write_bytes(b"")
+    response = write_response(tmp_path / "r.json", good_feature())
+    parcel_map.render(response, tmp_path / "m.html")
+    assert (tmp_path / "m.html").exists()
+
+
+def test_module_runs_as_script(tmp_path):
+    import subprocess
+
+    response = write_response(tmp_path / "r.json", good_feature())
+    proc = subprocess.run(
+        [sys.executable, "-W", "error", "-m", "regrid.offline.map", "render", str(response)]
+        + [str(tmp_path / "m.html")],
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert (tmp_path / "m.html").exists()
+
+
+def _other(geometry, n=2, **fields):
+    """A neighbour: the fixture feature with a different ll_uuid than the subject."""
+    item = feature(geometry, **fields)
+    item["properties"]["ll_uuid"] = f"00000000-0000-4000-8000-00000000000{n}"
+    return item
+
+
+def _page_blocks(page_path):
+    page = page_path.read_text(encoding="utf-8")
+    blocks = {}
+    for name in ("parcel-data", "neighbour-data"):
+        match = re.search(rf'<script type="application/json" id="{name}">(.*?)</script>', page)
+        blocks[name] = None if match is None else match.group(1)
+    return page, blocks
+
+
+def test_neighbours_drawn_and_subject_excluded(tmp_path):
+    subject = good_feature()
+    others = [_other(square(lon=-75.0289, lat=39.9)), subject]
+    response = write_response(tmp_path / "r.json", subject)
+    near = write_response(tmp_path / "n.json", *others)
+    summary = parcel_map.render(response, tmp_path / "m.html", neighbours_path=near)
+    assert summary["neighbours"] == 1 and summary["features"] == 1
+    assert len(summary["area_checks"]) == 1
+    _, blocks = _page_blocks(tmp_path / "m.html")
+    assert len(json.loads(blocks["neighbour-data"])) == 1
+
+
+def test_bad_neighbour_is_skipped_with_warning(tmp_path):
+    bad = _other({"type": "Point", "coordinates": [-75.03, 39.9]})
+    response = write_response(tmp_path / "r.json", good_feature())
+    near = write_response(tmp_path / "n.json", bad)
+    summary = parcel_map.render(response, tmp_path / "m.html", neighbours_path=near)
+    assert summary["neighbours"] == 0 and summary["warnings"][0].startswith("Neighbour 0 skipped")
+
+
+def test_neighbour_data_is_escaped_and_styled(tmp_path):
+    hostile = _other(square(lon=-75.0289), owner="</script><b>&x")
+    response = write_response(tmp_path / "r.json", good_feature())
+    near = write_response(tmp_path / "n.json", hostile)
+    parcel_map.render(response, tmp_path / "m.html", neighbours_path=near)
+    page, blocks = _page_blocks(tmp_path / "m.html")
+    raw = blocks["neighbour-data"]
+    assert "<" not in raw and ">" not in raw and "&" not in raw
+    assert '"#ffffff"' in page and "fillOpacity: 0.05" in page
+
+
+def test_no_neighbours_keeps_summary_and_page_compatible(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    summary = parcel_map.render(response, tmp_path / "m.html")
+    assert summary["neighbours"] == 0
+    _, blocks = _page_blocks(tmp_path / "m.html")
+    assert json.loads(blocks["neighbour-data"]) == []
+
+
+def test_non_feature_neighbour_entries_and_bad_file(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    near = tmp_path / "n.json"
+    near.write_text(json.dumps({"parcels": {"features": ["x", None]}}), encoding="utf-8")
+    summary = parcel_map.render(response, tmp_path / "m.html", neighbours_path=near)
+    assert summary["neighbours"] == 0 and len(summary["warnings"]) == 2
+    near.write_text("not json", encoding="utf-8")
+    summary = parcel_map.render(response, tmp_path / "m2.html", neighbours_path=near)
+    assert summary["features"] == 1 and summary["neighbours"] == 0
+    assert summary["warnings"] == ["Neighbours skipped: Neighbours file is not valid JSON"]
+    assert (tmp_path / "m2.html").exists()
+    near.write_text("{}", encoding="utf-8")
+    summary = parcel_map.render(response, tmp_path / "m3.html", neighbours_path=near)
+    assert summary["warnings"][0].startswith("Neighbours skipped: Expected a Regrid")
+
+
+def test_missing_neighbours_file_keeps_subject_map(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    summary = parcel_map.render(
+        response, tmp_path / "m.html", neighbours_path=tmp_path / "absent.json"
+    )
+    assert summary["features"] == 1 and summary["neighbours"] == 0
+    assert len(summary["warnings"]) == 1
+    assert summary["warnings"][0].startswith("Neighbours skipped: ")
+    assert "\n" not in summary["warnings"][0]
+
+
+def test_neighbours_cli_flag_from_extracted_skill(tmp_path):
+    from zipfile import ZipFile
+
+    build_path = SCRIPT.parents[5] / "scripts/build_claude_plugins.py"
+    spec = importlib.util.spec_from_file_location("map_test_builder_nb", build_path)
+    assert spec and spec.loader
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    archives = builder.build(SCRIPT.parents[3], tmp_path / "archives")
+    with ZipFile(archives[-1]) as archive:
+        archive.extractall(tmp_path / "extracted")
+    helper = tmp_path / "extracted/property-research/scripts/map.py"
+    response = write_response(tmp_path / "r.json", good_feature())
+    near = write_response(tmp_path / "n.json", _other(square(lon=-75.0289)))
+    output = tmp_path / "map.html"
+    result = subprocess.run(
+        [sys.executable, "-I", str(helper), "render", str(response), str(output)]
+        + ["--neighbours", str(near)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["neighbours"] == 1
+
+
+CORE_COLUMNS = [
+    "headline",
+    "path",
+    "ll_uuid",
+    "owner",
+    "parcelnumb",
+    "ll_last_refresh",
+    "ll_gisacre",
+    "ll_gissqft",
+    "lat",
+    "lon",
+]
+
+
+def _rows(path):
+    with path.open(encoding="utf-8", newline="") as handle:
+        return list(csv.reader(handle))
+
+
+def test_csv_core_columns_and_formula_guard(tmp_path):
+    f = good_feature(owner='=HYPERLINK("x")', parcelnumb='1,2 "q"\nz', lat="39.9", lon="-75.03")
+    summary = parcel_map.export(write_response(tmp_path / "r.json", f), csv_path=tmp_path / "o.csv")
+    raw = (tmp_path / "o.csv").read_bytes()
+    assert raw.startswith(b"\xef\xbb\xbf") and b"\r\n" in raw
+    rows = _rows(tmp_path / "o.csv")
+    rows[0][0] = rows[0][0].lstrip("\ufeff")
+    assert rows[0] == CORE_COLUMNS
+    assert rows[1][3] == '\'=HYPERLINK("x")' and rows[1][4] == '1,2 "q"\nz'
+    assert rows[1][5] == "" and rows[1][9] == "-75.03"
+    assert summary == {
+        "features": 1,
+        "csv": str(tmp_path / "o.csv"),
+        "geojson": None,
+        "columns": CORE_COLUMNS,
+    }
+
+
+def test_all_fields_appends_sorted(tmp_path):
+    f = good_feature(zeta="z", alpha={"a": 1}, owner="O", flag=True, nothing=None)
+    summary = parcel_map.export(
+        write_response(tmp_path / "r.json", f), csv_path=tmp_path / "o.csv", all_fields=True
+    )
+    rows = _rows(tmp_path / "o.csv")
+    extras = ["alpha", "flag", "ll_gissqft", "nothing", "zeta"]
+    extras = [name for name in extras if name not in CORE_COLUMNS]
+    assert summary["columns"] == CORE_COLUMNS + extras
+    assert rows[0][1:] == (CORE_COLUMNS + extras)[1:]
+    record = dict(zip(summary["columns"], rows[1]))
+    assert record["alpha"] == '{"a": 1}' and record["flag"] == "True" and record["nothing"] == ""
+
+
+def test_geojson_keeps_geometry_verbatim(tmp_path):
+    f = good_feature(owner="=X")
+    parcel_map.export(write_response(tmp_path / "r.json", f), geojson_path=tmp_path / "o.geojson")
+    out = json.loads((tmp_path / "o.geojson").read_text())
+    assert out["type"] == "FeatureCollection" and out["features"][0]["geometry"] == f["geometry"]
+    props = out["features"][0]["properties"]
+    assert (
+        list(props) == CORE_COLUMNS and props["owner"] == "=X" and props["ll_last_refresh"] is None
+    )
+
+
+def test_export_requires_an_output(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    with pytest.raises(MapError, match="Choose --csv and/or --geojson"):
+        parcel_map.export(response)
+
+
+def test_export_refuses_overwrite_and_invalid_before_writing(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    existing = tmp_path / "o.csv"
+    existing.write_text("keep")
+    with pytest.raises(MapError, match="--replace"):
+        parcel_map.export(response, csv_path=existing, geojson_path=tmp_path / "o.geojson")
+    assert existing.read_text() == "keep" and not (tmp_path / "o.geojson").exists()
+    parcel_map.export(response, csv_path=existing, replace=True)
+    assert existing.read_bytes().startswith(b"\xef\xbb\xbf")
+
+    same = tmp_path / "same"
+    with pytest.raises(MapError, match="different files"):
+        parcel_map.export(response, csv_path=same, geojson_path=same)
+
+    bad = good_feature()
+    bad["properties"]["path"] = "/ca/on/x"
+    outside = good_feature()
+    outside["geometry"] = square(lon=-100.0, lat=60.0)  # not in any US box
+    broken = good_feature()
+    broken["geometry"] = {"type": "Point", "coordinates": [-75, 39.9]}
+    for number, invalid in enumerate((bad, outside, broken)):
+        r = write_response(tmp_path / f"bad{number}.json", good_feature(), invalid)
+        with pytest.raises(MapError):
+            parcel_map.export(
+                r, csv_path=tmp_path / f"b{number}.csv", geojson_path=tmp_path / f"b{number}.gj"
+            )
+        assert not (tmp_path / f"b{number}.csv").exists()
+        assert not (tmp_path / f"b{number}.gj").exists()
+
+
+def test_export_geometry_requirements(tmp_path):
+    null_geo = good_feature()
+    null_geo["geometry"] = None
+    r = write_response(tmp_path / "n.json", null_geo)
+    parcel_map.export(r, csv_path=tmp_path / "n.csv")  # CSV needs no boundary
+    parcel_map.export(r, geojson_path=tmp_path / "n.geojson")
+    assert json.loads((tmp_path / "n.geojson").read_text())["features"][0]["geometry"] is None
+    omitted = good_feature()
+    del omitted["geometry"]
+    r = write_response(tmp_path / "o.json", omitted)
+    parcel_map.export(r, csv_path=tmp_path / "o.csv")
+    with pytest.raises(MapError, match="omits geometry"):
+        parcel_map.export(r, geojson_path=tmp_path / "o.geojson")
+    r = write_response(tmp_path / "x.json", "not a feature")
+    with pytest.raises(MapError, match="Expected a Regrid parcel response"):
+        parcel_map.export(r, csv_path=tmp_path / "x.csv")
+    (tmp_path / "junk.json").write_text("{")
+    with pytest.raises(MapError, match="not valid JSON"):
+        parcel_map.export(tmp_path / "junk.json", csv_path=tmp_path / "j.csv")
+
+
+def test_export_main_subcommand(tmp_path, capsys):
+    response = write_response(tmp_path / "r.json", good_feature())
+    args = ["export", str(response), "--csv", str(tmp_path / "o.csv"), "--all-fields"]
+    assert parcel_map.main(args) == 0
+    assert json.loads(capsys.readouterr().out)["features"] == 1
+    assert parcel_map.main(["export", str(response)]) == 1
+    assert "Choose --csv and/or --geojson" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("-75.03", "-75.03"),
+        ("-1e3", "-1e3"),
+        (-75.03, "-75.03"),
+        ("+.5", "+.5"),
+        ("-SUM(A1)", "'-SUM(A1)"),
+        ("+1-2", "'+1-2"),
+        ("\t=x", "'\t=x"),
+        ("\r=x", "'\r=x"),
+        ("=1", "'=1"),
+        ("@a", "'@a"),
+        ("-nan", "'-nan"),
+        ("-1e999", "'-1e999"),
+    ],
+)
+def test_csv_cell_numbers_unprefixed(value, expected):
+    assert parcel_map._csv_cell(value) == expected
+
+
+def test_export_precheck_leaves_no_partial_csv(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    csv_target = tmp_path / "o.csv"
+    with pytest.raises(MapError, match="directory"):
+        parcel_map.export(
+            response, csv_path=csv_target, geojson_path=tmp_path / "missing" / "o.geojson"
+        )
+    assert not csv_target.exists()
+    with pytest.raises(MapError, match="different files"):
+        parcel_map.export(
+            response, csv_path=tmp_path / "x.csv", geojson_path=tmp_path / "sub" / ".." / "x.csv"
+        )
+    assert not (tmp_path / "x.csv").exists()
+
+
+def test_export_all_fields_header_is_formula_guarded(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature(**{"=cmd": "x", "plain": "y"}))
+    out = tmp_path / "o.csv"
+    parcel_map.export(response, csv_path=out, all_fields=True)
+    header = next(csv.reader(out.read_text(encoding="utf-8-sig").splitlines()))
+    assert "'=cmd" in header and "=cmd" not in header and "plain" in header
+
+
+def test_export_non_finite_reports_one_line_and_writes_nothing(tmp_path, capsys):
+    response = tmp_path / "r.json"
+    response.write_text(
+        '{"parcels":{"features":[{"type":"Feature","geometry":null,'
+        '"properties":{"path":"/us/nj/x","headline":NaN,"fields":{}}}]}}',
+        encoding="utf-8",
+    )
+    gj = tmp_path / "o.geojson"
+    csv_out = tmp_path / "o.csv"
+    assert (
+        parcel_map.main(["export", str(response), "--csv", str(csv_out), "--geojson", str(gj)]) == 1
+    )
+    err = capsys.readouterr().err
+    assert err.startswith("error: ") and err.count("\n") == 1 and "Traceback" not in err
+    assert not gj.exists() and not csv_out.exists()
+
+
+@pytest.mark.parametrize("replace", [False, True])
+def test_export_refuses_output_equal_to_response(tmp_path, replace):
+    response = write_response(tmp_path / "r.json", good_feature())
+    before = response.read_text()
+    alias = tmp_path / "sub" / ".." / "r.json"
+    (tmp_path / "sub").mkdir()
+    with pytest.raises(MapError, match="response"):
+        parcel_map.export(response, csv_path=alias, replace=replace)
+    with pytest.raises(MapError, match="response"):
+        parcel_map.export(response, geojson_path=response, replace=replace)
+    assert response.read_text() == before
+
+
+@pytest.mark.parametrize("replace", [False, True])
+def test_render_refuses_output_equal_to_response_or_neighbours(tmp_path, replace):
+    response = write_response(tmp_path / "r.json", good_feature())
+    neighbours = write_response(tmp_path / "n.json", good_feature())
+    before = (response.read_text(), neighbours.read_text())
+    alias = tmp_path / "sub" / ".." / "r.json"
+    (tmp_path / "sub").mkdir()
+    with pytest.raises(MapError, match="response"):
+        parcel_map.render(response, alias, replace=replace)
+    with pytest.raises(MapError, match="neighbours"):
+        parcel_map.render(response, neighbours, replace=replace, neighbours_path=neighbours)
+    assert (response.read_text(), neighbours.read_text()) == before
+
+
+def test_public_point_helpers():
+    assert parcel_map.parse_finite(" 1.5 ") == 1.5 and parcel_map.parse_finite("x") is None
+    inside = good_feature(lat=39.9, lon=-75.03)
+    assert parcel_map.fallback_point(inside) == [39.9, -75.03]
+    assert parcel_map.fallback_point(good_feature(lat=0, lon=0)) is None

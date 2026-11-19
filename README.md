@@ -92,11 +92,25 @@ Coverage includes every SDK and CLI module; XML output is written to ignored `co
 .venv/bin/regrid point --lat 32.7767 --lon -96.7970 --options '{"radius":10,"limit":5}'
 .venv/bin/regrid query --validate-fields --fields '{"geoid":{"eq":"48113"}}' --options '{"limit":5}'
 .venv/bin/regrid area --method POST --geojson @area.geojson --options '{"limit":5}'
+.venv/bin/regrid parcel-path /us/nj/camden/haddonfield/123 --options '{"return_parcels":true}'   # refresh a saved result by path
 .venv/bin/regrid usage --detailed
 .venv/bin/regrid tilejson --format mvt
 .venv/bin/regrid grid 15 8828 12121
 .venv/bin/regrid tile 15 8828 12121 --format png --retina --output parcel.png
+.venv/bin/regrid map response.json parcel.html          # offline satellite map of a saved response
+.venv/bin/regrid address-map "123 Main St, Dallas, TX" parcel.html   # one request, saves parcel.json
+.venv/bin/regrid address-map "123 Main St, Dallas, TX" parcel.html --neighbours   # opt-in: one extra request, up to 25 records
+.venv/bin/regrid point --lat 32.7767 --lon -96.7970 --options '{"limit":100}' --max-records 300   # bounded paging
+.venv/bin/regrid point --lat 32.7767 --lon -96.7970 --options '{"return_count":true}'   # count matches before pulling
+.venv/bin/regrid fields search owner          # offline field catalog, no request
+.venv/bin/regrid fields explain usedesc
+.venv/bin/regrid freshness --path /us/nj/camden   # county data dates from a cached /verse response (refetched after 30 days; --max-age-days N)
+.venv/bin/regrid export parcel.json --csv parcel.csv --geojson parcel.geojson   # offline export
 ```
+
+Every API command prints `regrid: requests made: N` to stderr (JSON on stdout is unchanged); SDK users can read `RegridClient.request_count`. `--max-records N` on `point`, `area` and `query` follows `offset_id` cursors for up to N records and requires `limit` in `--options`; the cursor field has not been verified against the live API. Output is the first page's response with `parcels.features` replaced by the merged, de-duplicated features (other list-valued keys are concatenated), plus `pages` and `complete`. `complete` is true only when results ended (a short page) or N records were reached; it is false if paging stops for any other reason. If a later page fails or is malformed, the partial result is printed with `"complete": false` and the command exits 1. Paging also stops, with `regrid: paging stopped: cursor did not advance`, when a page adds no new features. `address-map --neighbours` draws neighbouring outlines within 100 m, capped at 25 records. `regrid export RESPONSE` writes core columns (`--all-fields` appends the rest) and never overwrites without `--replace`.
+
+`regrid map RESPONSE OUTPUT [--feature N] [--all-candidates] [--retrieved-at ISO] [--neighbours FILE] [--replace]` renders offline with no request (the output may not be the response or neighbours file). `regrid freshness` reuses its `/verse` cache for 30 days (`--max-age-days N`) and only for the same `--base-url`; an older cache is refetched with one request and a stderr note. `regrid address-map ADDRESS OUTPUT [--path SCOPE] [--save-response FILE] [--retrieved-at ISO] [--replace]` makes one address request, prints `regrid: requests made: N` to stderr, and saves the response next to the page unless `--save-response` is given. Pages load Leaflet and Esri imagery in the viewer's browser.
 
 Every SDK method has a CLI command: `point`, `area`, `address`, `apn`, `owner`, `query`, `parcel`, `parcel-path`, `typeahead`, `client-token-typeahead`, `schema`, `verse`, `usage`, `report`, `tilejson`, `tile`, and `grid`. Use `<command> --help` for arguments. `python -m regrid` is equivalent to the installed command.
 
@@ -288,9 +302,9 @@ Output contains only status and aggregate counts, not credentials, addresses, ow
 The [Regrid Research guide](plugins/regrid-research/README.md) covers separate
 Cowork and Claude Code packages built from one canonical research skill:
 
-- `dist/regrid-research-cowork-0.6.0.zip`: remote connector declaration and skills.
-- `dist/regrid-research-claude-code-0.6.0.zip`: local bridge and skills.
-- `dist/regrid-property-research-skill-0.6.0.zip`: standalone skill with references.
+- `dist/regrid-research-cowork-0.8.0.zip`: remote connector declaration and skills.
+- `dist/regrid-research-claude-code-0.8.0.zip`: local bridge and skills.
+- `dist/regrid-property-research-skill-0.8.0.zip`: standalone skill with references.
 
 Build with `.venv/bin/python scripts/build_claude_plugins.py`. For Cowork,
 configure `x-regrid-token` privately in the custom web connector's Request headers

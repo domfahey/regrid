@@ -72,8 +72,9 @@ def test_cli_grid_runs_real_sdk_and_outputs_json(source, monkeypatch, capsys, tm
     assert cli.main(argv) == 0
     captured = capsys.readouterr()
     assert json.loads(captured.out) == PAYLOAD
-    assert captured.err == ""
-    assert len(seen) == (2 if source == "discovery" else 1)
+    expected_count = 2 if source == "discovery" else 1
+    assert captured.err == f"regrid: requests made: {expected_count}\n"
+    assert len(seen) == expected_count
     assert str(seen[-1].url) == "https://tiles.regrid.com/interactive/10/3/4?token=current"
 
 
@@ -103,4 +104,4 @@ def test_cli_grid_rejects_cross_origin_metadata_before_network(monkeypatch, caps
     assert seen == []
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert captured.err == "regrid: Invalid input or output file\n"
+    assert captured.err == "regrid: Invalid input or output file\nregrid: requests made: 0\n"

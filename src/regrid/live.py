@@ -60,6 +60,14 @@ def run(client: RegridClient, address: str) -> int:
                 status = 1
             else:
                 print("PASS one-record lookup and typed fields (same response)")
+                # Inspect the raw feature: the typed model does not retain geometry presence.
+                raw_feature = payload["parcels"]["features"][0]
+                if "geometry" not in raw_feature:
+                    print("NOTE geometry field absent (map would fail)")
+                elif raw_feature["geometry"] is None:
+                    print("NOTE geometry null (no boundary on file)")
+                else:
+                    print("PASS geometry present")
                 print("NOTE a returned result does not confirm the address is an exact match")
     except Exception:
         print("FAIL parcel lookup or typed validation")

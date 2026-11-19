@@ -340,3 +340,54 @@ def test_reconcile_unknown_attempt_and_bad_proof_use_validator_messages():
     with pytest.raises(workflow.ValidationError):
         workflow.reconcile_attempt(doc, "attempt-000001", None, evidence_verified=True)
     assert doc == before
+
+
+def test_cli_freshness_zero_record_attempt_keeps_ledger_valid():
+    doc = workflow.reserve_attempt(workflow.upgrade_workflow(legacy()), [], 0, kind="diagnostic")
+    workflow.validate(doc)
+    doc = workflow.complete_attempt(doc, "attempt-000001", "success", 0)
+    workflow.validate(doc)
+    assert doc["budget"]["attempted_requests"] == 1
+    assert doc["budget"]["returned_records"] == 0
+    assert doc["budget"]["uncertain_records"] == 0
+
+
+def test_cli_freshness_diagnostic_uncertain_validates():
+    doc = workflow.reserve_attempt(workflow.upgrade_workflow(legacy()), [], 0, kind="diagnostic")
+    doc = workflow.complete_attempt(doc, "attempt-000001", "uncertain", None)
+    workflow.validate(doc)
+    assert doc["budget"]["attempted_requests"] == 1
+    assert doc["budget"]["uncertain_records"] == 0
+
+
+def test_neighbours_reservation_after_subject_lookup_needs_authorized_retry_and_budget():
+    def settled(max_records):
+        doc = workflow.new_workflow(
+            "map", [{"address": "12 Example Ave", "parcel_id": None, "scope": None}], 3, max_records
+        )
+        doc = workflow.reserve_attempt(doc, ["input-000001"], 1)
+        return workflow.complete_attempt(doc, "attempt-000001", "success", 1)
+
+    doc = settled(30)
+    with pytest.raises(ValueError):
+        workflow.reserve_attempt(doc, ["input-000001"], 25)
+    doc = workflow.reserve_attempt(doc, ["input-000001"], 25, authorized_retry=True)
+    doc = workflow.complete_attempt(doc, "attempt-000002", "success", 12)
+    workflow.validate(doc)
+    assert doc["budget"]["returned_records"] == 13
+    with pytest.raises(ValueError, match="budget"):
+        workflow.reserve_attempt(settled(20), ["input-000001"], 25, authorized_retry=True)
+
+
+def test_paged_search_reserves_one_attempt_per_page_with_page_limit():
+    query = {"query_type": "area", "bbox": [-75.2, 39.8, -75.0, 40.0]}
+    doc = workflow.new_workflow("paged", [query], 3, 30, schema_version="1.1")
+    for page in range(1, 4):
+        doc = workflow.reserve_attempt(doc, ["input-000001"], 10, authorized_retry=page > 1)
+        assert doc["attempts"][-1]["record_limit"] == 10
+        workflow.validate(doc)
+        doc = workflow.complete_attempt(doc, f"attempt-{page:06}", "success", 10)
+        workflow.validate(doc)
+    assert len(doc["attempts"]) == 3
+    assert doc["budget"]["attempted_requests"] == 3
+    assert doc["budget"]["returned_records"] == 30
