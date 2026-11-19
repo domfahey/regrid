@@ -9,11 +9,14 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 ### Added
 
 - Tests: `tests/test_cli_docs.py` now fails unless `references/cli.md` shows every CLI subcommand as code (`regrid <cmd>` or a backtick before it) and every long option on one line that is word-bounded with that code subcommand (global options need only the flag). It checks presence, not accuracy.
+- Tests: `tests/test_cli_docs.py` also checks the per-command `--options` keys listed in `references/cli.md` against the keys the client accepts (exact sets for `verse`, `usage` and `schema`; `parcel` and `parcel-path` reject `limit`). New `tests/test_mcp_docs.py` checks that the endpoint table in `references/mcp-tools.md` matches `references/endpoints.json` and that every API path it names is known or explicitly forbidden.
 
 ### Changed
 
 - Docs: `references/cli.md` covers the remaining CLI flags (global `--timeout`, `--base-url`, `--tiles-base-url`, `--country`, `area --method`, `query --validate-fields` and `--allow-unknown-fields`, `address-map --path`, `--save-response` and `--retrieved-at`, tile `--format`, `--retina` and `--metadata`, `usage`/`schema --options`, `@file` values).
 - Docs: `references/mcp-tools.md` adds recipes for `/parcels/query` operators, `/parcels/area` geometry, `/parcels/{ll_uuid}`, `/usage/detailed` dates and `/schemas` `premium_only`; POST geometry search on `/parcels/point` and `/parcels/area` for geometry too large for a URL; and the `return_field_labels`, `return_custom`, `return_custom_id` and `return_stacked` response options.
+- CLI: `address`, `apn`, `owner`, `parcel`, `parcel-path`, `typeahead`, `client-token-typeahead`, `verse`, `usage` and `tilejson` now have descriptive `--help` text instead of their own name.
+- Skill: `SKILL.md` is reworded to about 900 words (from 949) with the same rules, leaving room under the 950-word limit. `references/mcp-tools.md` folds the duplicate query-operator sentence into the query recipe.
 
 ## [SDK 0.4.2][sdk-v0.4.2] and [Regrid Research 0.9.2][regrid-research-v0.9.2] - 2026-11-19
 
