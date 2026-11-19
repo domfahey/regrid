@@ -331,3 +331,10 @@ def test_query_paging_error_is_exported():
     assert regrid.QueryPagingError is QueryPagingError
     assert "QueryPagingError" in regrid.__all__
     assert issubclass(regrid.QueryPagingError, ValueError)
+
+
+def test_validate_query_paging_error_has_no_context(recording_client):
+    client, _ = recording_client
+    with pytest.raises(QueryPagingError) as excinfo:
+        client.validate_query({"yearbuilt": {"order": "ASC"}}, paging=True, validate_fields=True)
+    assert excinfo.value.__context__ is None and excinfo.value.__cause__ is None

@@ -23,6 +23,8 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ### Fixed
 
+- Paging and `address-map` edge cases: trimmed-parcel sibling removal also follows `ll_uuids` lists (a building linked to a kept parcel is retained), duplicates within one incoming page are skipped, `address-map --neighbours` skips the neighbours request when the subject outline is invalid or the path is a string outside `/us/` (a non-string path no longer blocks it), and `QueryPagingError` no longer carries the underlying exception as context.
+
 - `--max-records` paging:
   - Never requests more records than still needed.
   - Prints and enforces one honest worst-case request cap, including when the cursor repeats the previous page's last record.

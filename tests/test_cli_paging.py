@@ -515,6 +515,39 @@ def test_siblings_of_trimmed_parcels_are_dropped(monkeypatch, capsys):
     assert [f["id"] for f in data["buildings"]["features"]] == ["a", "b", "d"]
 
 
+def test_building_ll_uuids_list_links_siblings(monkeypatch, capsys):
+    def body(parcels, buildings):
+        return {
+            "parcels": {"type": "FeatureCollection", "features": parcels},
+            "buildings": {"type": "FeatureCollection", "features": buildings},
+        }
+
+    def building(bid, uuids):
+        return {"type": "Feature", "id": bid, "properties": {"ll_uuids": uuids}}
+
+    first = body([_uuid_feature(1, "u1"), _uuid_feature(2, "u2")], [building("a", ["u1"])])
+    second = body(
+        [_uuid_feature(3, "u3"), _uuid_feature(4, "u4")],
+        [
+            building("b", ["u3"]),
+            building("gone", ["u4"]),
+            building("straddle", ["u3", "u4"]),
+            building("empty", []),
+        ],
+    )
+    install_bodies(monkeypatch, [first, second])
+    assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":2}']) == 0
+    data = json.loads(capsys.readouterr().out)
+    ids = [f["id"] for f in data["buildings"]["features"]]
+    assert ids == ["a", "b", "straddle", "empty"]
+
+
+def test_extend_new_skips_duplicates_within_incoming_page():
+    current = [{"id": 1}]
+    cli._extend_new(current, [{"id": 1}, {"id": 2}, {"id": 2}, {"id": 3}])
+    assert current == [{"id": 1}, {"id": 2}, {"id": 3}]
+
+
 def test_return_count_false_is_allowed(monkeypatch, capsys):
     seen = install(monkeypatch, [feats(1, 2)])
     opts = '{"limit":2,"return_count":false}'
