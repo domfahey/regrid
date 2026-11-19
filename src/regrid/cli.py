@@ -310,8 +310,9 @@ def _paged_search(
     if "offset_id" in options:
         raise _PagingError("--max-records conflicts with offset_id")
     _validate_paging(command, args, options)
-    requests_cap = -(-total // limit)
-    max_requests = max(requests_cap, total)  # each extra request must add a new record
+    # Worst case under an inclusive cursor: later pages add at least limit - 1 new records.
+    first = min(limit, total)
+    requests_cap = 1 + -(-(total - first) // max(limit - 1, 1))
     print(f"regrid: up to {requests_cap} requests for {total} records", file=sys.stderr)
     features: list[Any] = []
     seen_ids: set[Any] = set()
@@ -320,7 +321,7 @@ def _paged_search(
     cursor: Any = None
     complete = False
     state = progress if progress is not None else {}
-    while pages < max_requests and len(features) < total:
+    while pages < requests_cap and len(features) < total:
         remaining = total - len(features)
         # An inclusive offset_id repeats the cursor feature, so later pages ask for one extra.
         page_options = {**options, "limit": min(limit, remaining + (1 if pages else 0))}
