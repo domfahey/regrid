@@ -6,6 +6,16 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
+### Fixed
+
+- SDK: typed parcel validation accepts `ll_updated_at` timestamps with a space before a numeric offset (`2025-03-14 09:26:53 -0400`), the shape the live API returns. Before this, `ParcelFields`, `TypedRegridClient` and `make live` rejected real parcel responses.
+- CLI: `--max-records` paging treats `offset_id` as exclusive, as verified live: later pages no longer request (and bill) one extra record, the printed worst case is `ceil(N / limit)` requests, and a page that adds no new records stops with `complete: false`.
+- Skill: `references/batch.md` budgets `--max-records` paging as K = ceil(N / limit) requests and N records (it reserved N + (K - 1) records for the old extra-record behaviour).
+
+### Verified
+
+- Live, 2026-11-19: a default `/parcels/address` lookup includes the parcel `geometry` (a Polygon), and `offset_id` paging uses the feature `id` as an exclusive cursor with ascending ids across pages.
+
 ### Added
 
 - Tests: `tests/test_cli_docs.py` now fails unless `references/cli.md` shows every CLI subcommand as code (`regrid <cmd>` or a backtick before it) and every long option on one line that is word-bounded with that code subcommand (global options need only the flag). It checks presence, not accuracy.

@@ -44,7 +44,7 @@ Suggested batches:
 
 ## Verification
 
-- [ ] **Live outline check** (**authorization**; code side done: `make live` reports geometry present/null/absent; awaiting user: not run): with one live address lookup,
+- [x] **Live outline check** (verified live 2026-11-19: a default `/parcels/address` lookup returned `geometry` as a Polygon): with one live address lookup,
   confirm the response includes the parcel outline (`geometry`) by default. This is
   the open risk from the satellite map design. If the outline is missing, revisit
   `references/map.md`.
@@ -87,7 +87,7 @@ Suggested batches:
 - [x] **Count before pulling (`return_count`)**: for open-ended owner, area, point and
   query searches, count matches first so a record budget can be agreed. The count
   call still counts against the request budget.
-- [x] **Paging (`offset_id`)** (implemented as `--max-records`; the cursor field is unverified live, awaiting user: not run): page through results within an agreed record budget,
+- [x] **Paging (`offset_id`)** (implemented as `--max-records`; verified live 2026-11-19: feature `id` is the cursor and `offset_id` is exclusive): page through results within an agreed record budget,
   Paging positions are NOT carried through checkpoints; a resumed open-ended search
   needs fresh authorization.
 - [x] **Detailed usage (`/usage/detailed`)**: consider it for setup or "how many

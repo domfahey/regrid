@@ -121,8 +121,8 @@ line leaves the attempt uncertain and is never retried. A cache hit reports 0.
 Paged searches: each page is one attempt with `record_limit` equal to that page's
 requested limit (three pages, three attempts; the CLI prints `regrid: up to K requests for N records`,
 so reserve K attempts). The first page reserves normally; every later page reuses the same
-input ID, so reserve it with `authorized_retry=True`. Later pages request the remaining
-count plus one, so the workflow needs at least K requests and N + (K - 1) records
+input ID, so reserve it with `authorized_retry=True`. Each page requests at most the
+remaining count, so the workflow needs K = ceil(N / limit) requests and N records
 remaining. If it cannot cover that, refuse to page and report the shortfall. Paging
 positions are not saved in checkpoints; a resumed open-ended search needs fresh
 authorization before it pages again.
