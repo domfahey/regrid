@@ -76,8 +76,16 @@ def test_unlisted_files_never_enter_archives(source, tmp_path):
         "skills/property-research/references/debug.log",
     ):
         (source / relative).write_text("DO_NOT_PACKAGE")
-    for path in builder.build(source, tmp_path / "output"):
-        assert all(b"DO_NOT_PACKAGE" not in data for data in archive_contents(path).values())
+    paths = builder.build(source, tmp_path / "output")
+    assert len(paths) == 3
+    for path in paths:
+        contents = archive_contents(path)
+        assert any(name.endswith("property-research/SKILL.md") for name in contents), path
+        assert all(b"DO_NOT_PACKAGE" not in data for data in contents.values())
+        assert not any(
+            name.rsplit("/", 1)[-1] in {".env", "credentials.json", "scratch.md", "debug.log"}
+            for name in contents
+        )
 
 
 @pytest.mark.parametrize("relative", ["README.md", "skills/property-research/references/linked.md"])
@@ -98,6 +106,7 @@ def test_embedded_token_is_rejected_without_echoing_it(source, tmp_path):
     (source / "README.md").write_text(token)
     with pytest.raises(ValueError) as caught:
         builder.build(source, tmp_path / "output")
+    assert str(caught.value) == "Possible credential in package file: README.md"
     assert token not in str(caught.value)
     assert not (tmp_path / "output").exists()
 
@@ -477,7 +486,9 @@ def test_token_pattern_ignores_identifiers_but_catches_tokens(tmp_path):
     root = tmp_path / "pk"
     root.mkdir()
     (root / "ok.md").write_text("org_default_value and my_rg_something_long\n")
-    assert builder.read_public_file(root, "ok.md")
+    assert (
+        builder.read_public_file(root, "ok.md") == b"org_default_value and my_rg_something_long\n"
+    )
     for text in ("key rg_abcdefgh12345", "(rg_abcdefgh12345)", "rg_abcdefgh12345"):
         (root / "bad.md").write_text(text)
         with pytest.raises(ValueError, match="credential"):

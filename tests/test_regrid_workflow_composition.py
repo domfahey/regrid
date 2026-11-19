@@ -57,29 +57,41 @@ def test_legacy_version_is_preserved_until_explicit_upgrade(tmp_path):
     assert upgraded == {**doc, "schema_version": "1.1", "reconciliations": []}
     assert doc["schema_version"] == "1.0"
     assert workflow.upgrade_workflow(upgraded) == upgraded
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Typed requested query requires schema 1.1"):
         workflow.new_workflow("old", [QUERIES[0]], 1, 1)
 
 
 @pytest.mark.parametrize(
-    "query",
+    ("query", "message"),
     [
-        {"query_type": "owner", "owner": "Example LLC", "scope": None},
-        {"query_type": "point", "lat": 91, "lon": 0, "radius": 1},
-        {"query_type": "point", "lat": True, "lon": 0, "radius": 1},
-        {"query_type": "point", "lat": 0, "lon": 0, "radius": 0},
-        {"query_type": "area", "bbox": [2, 1, 1, 3]},
-        {"query_type": "filter", "scope": "us/nj", "filters": []},
-        {
-            "query_type": "filter",
-            "scope": "us/nj",
-            "filters": [{"field": "owner", "operator": "sql", "value": "x"}],
-        },
+        ({"query_type": "owner", "owner": "Example LLC", "scope": None}, "Owner scope required"),
+        (
+            {"query_type": "point", "lat": 91, "lon": 0, "radius": 1},
+            "Invalid point coordinates or radius",
+        ),
+        (
+            {"query_type": "point", "lat": True, "lon": 0, "radius": 1},
+            "Invalid point coordinates or radius",
+        ),
+        (
+            {"query_type": "point", "lat": 0, "lon": 0, "radius": 0},
+            "Invalid point coordinates or radius",
+        ),
+        ({"query_type": "area", "bbox": [2, 1, 1, 3]}, "Invalid bounding box bounds"),
+        ({"query_type": "filter", "scope": "us/nj", "filters": []}, "Scoped filters required"),
+        (
+            {
+                "query_type": "filter",
+                "scope": "us/nj",
+                "filters": [{"field": "owner", "operator": "sql", "value": "x"}],
+            },
+            "Scoped filters required",
+        ),
     ],
 )
-def test_query_rejects_unbounded_or_invalid_input(query):
+def test_query_rejects_unbounded_or_invalid_input(query, message):
     before = deepcopy(query)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=message):
         workflow.new_workflow("invalid", [query], 1, 1, schema_version="1.1")
     assert query == before
 
@@ -111,11 +123,11 @@ def test_reconciliation_preserves_attempt_history_results_and_exact_counts(tmp_p
     assert reconciled["budget"] == {**doc["budget"], "returned_records": 1, "uncertain_records": 0}
     assert reconciled["reconciliations"] == [{"attempt_id": "attempt-000001", "proof": proof()}]
     assert workflow.pending_input_ids(reconciled) == []
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="already attempted or resolved"):
         workflow.reserve_attempt(reconciled, ["input-000001"], 1)
     workflow.save_checkpoint(reconciled, tmp_path / "receipt.json", requested=True)
     assert workflow.load_checkpoint(tmp_path / "receipt.json") == reconciled
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Unknown or already reconciled attempt"):
         workflow.reconcile_attempt(reconciled, "attempt-000001", proof(), evidence_verified=True)
     assert reconciled["reconciliations"] == [{"attempt_id": "attempt-000001", "proof": proof()}]
 
@@ -134,28 +146,40 @@ def test_reconciliation_retains_zero_and_provider_overshoot(count):
 
 
 @pytest.mark.parametrize(
-    "receipt,verified",
+    "receipt,verified,message",
     [
-        (proof(), False),
-        (None, True),
-        ({}, True),
-        ({**proof(), "attempt_id": "forged-other-attempt"}, True),
-        ({**proof(), "provider": " "}, True),
-        ({**proof(), "returned_records": -1}, True),
-        ({**proof(), "returned_records": True}, True),
+        (proof(), False, "Authoritative per-attempt proof must be verified"),
+        (None, True, "Invalid reconciliation proof"),
+        ({}, True, "Invalid reconciliation proof"),
+        (
+            {**proof(), "attempt_id": "forged-other-attempt"},
+            True,
+            "Reconciliation proof attempt or count mismatch",
+        ),
+        ({**proof(), "provider": " "}, True, "Missing reconciliation proof provenance"),
+        (
+            {**proof(), "returned_records": -1},
+            True,
+            "Reconciliation proof attempt or count mismatch",
+        ),
+        (
+            {**proof(), "returned_records": True},
+            True,
+            "Reconciliation proof attempt or count mismatch",
+        ),
     ],
 )
-def test_reconciliation_rejects_unverified_missing_and_mismatched_proof(receipt, verified):
+def test_reconciliation_rejects_unverified_missing_and_mismatched_proof(receipt, verified, message):
     doc = workflow.upgrade_workflow(uncertain())
     before = deepcopy(doc)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=message):
         workflow.reconcile_attempt(doc, "attempt-000001", receipt, evidence_verified=verified)
     assert doc == before
 
 
 def test_reconciliation_requires_explicit_upgrade_and_uncertain_attempt():
     old = uncertain()
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Reconciliation requires explicit schema upgrade"):
         workflow.reconcile_attempt(old, "attempt-000001", proof(), evidence_verified=True)
     doc = workflow.upgrade_workflow(legacy())
     doc = workflow.reserve_attempt(doc, ["input-000001"], 1)
@@ -165,7 +189,7 @@ def test_reconciliation_requires_explicit_upgrade_and_uncertain_attempt():
             if state == "pending"
             else workflow.complete_attempt(doc, "attempt-000001", state, 0)
         )
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Only uncertain attempts can be reconciled"):
             workflow.reconcile_attempt(settled, "attempt-000001", proof(), evidence_verified=True)
 
 
@@ -179,24 +203,39 @@ def test_diagnostic_attempt_is_charged_without_consuming_property_input():
     doc = workflow.reserve_attempt(doc, ["input-000001"], 1)
     assert doc["attempts"][1]["kind"] == "lookup"
     for inputs, count in [(["input-000001"], 0), ([], 1)]:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Diagnostic must have no property inputs or records"):
             workflow.reserve_attempt(
                 workflow.upgrade_workflow(legacy()), inputs, count, kind="diagnostic"
             )
 
 
 @pytest.mark.parametrize(
-    "mutate",
+    ("mutate", "message"),
     [
-        lambda d: d["reconciliations"].append(deepcopy(d["reconciliations"][0])),
-        lambda d: d["reconciliations"][0]["proof"].update(attempt_id="unknown"),
-        lambda d: d["reconciliations"][0]["proof"].update(returned_records=0),
-        lambda d: d["attempts"][0].update(state="success", returned_records=1),
-        lambda d: d["reconciliations"][0]["proof"].pop("evidence_id"),
-        lambda d: d["budget"].update(uncertain_records=2),
+        (
+            lambda d: d["reconciliations"].append(deepcopy(d["reconciliations"][0])),
+            "Unknown or already reconciled attempt",
+        ),
+        (
+            lambda d: d["reconciliations"][0]["proof"].update(attempt_id="unknown"),
+            "Reconciliation proof attempt or count mismatch",
+        ),
+        (
+            lambda d: d["reconciliations"][0]["proof"].update(returned_records=0),
+            "Budget does not match attempt ledger",
+        ),
+        (
+            lambda d: d["attempts"][0].update(state="success", returned_records=1),
+            "Only uncertain attempts can be reconciled",
+        ),
+        (
+            lambda d: d["reconciliations"][0]["proof"].pop("evidence_id"),
+            "Invalid reconciliation proof",
+        ),
+        (lambda d: d["budget"].update(uncertain_records=2), "Budget does not match attempt ledger"),
     ],
 )
-def test_checkpoint_rejects_forged_reconciliation_links_and_accounting(mutate, tmp_path):
+def test_checkpoint_rejects_forged_reconciliation_links_and_accounting(mutate, message, tmp_path):
     doc = workflow.reconcile_attempt(
         workflow.upgrade_workflow(uncertain()), "attempt-000001", proof(), evidence_verified=True
     )
@@ -204,7 +243,7 @@ def test_checkpoint_rejects_forged_reconciliation_links_and_accounting(mutate, t
     before = deepcopy(doc)
     path = tmp_path / "tampered.json"
     path.write_text(json.dumps(doc))
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=message):
         workflow.load_checkpoint(path)
     assert doc == before
 
@@ -259,13 +298,13 @@ def test_diagnostic_error_and_uncertainty_remain_charged_without_retry():
     reserved = workflow.reserve_attempt(doc, [], 0, kind="diagnostic")
     before = deepcopy(reserved)
     for state, count in [("success", 1), ("error", 1)]:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Diagnostic must have no property inputs or records"):
             workflow.complete_attempt(reserved, "attempt-000001", state, count)
         assert reserved == before
     for state, count in [("uncertain", None), ("error", 0)]:
         complete = workflow.complete_attempt(reserved, "attempt-000001", state, count)
         assert workflow.pending_input_ids(complete) == ["input-000001"]
-        with pytest.raises(ValueError, match="budget"):
+        with pytest.raises(ValueError, match="Request budget exhausted"):
             workflow.reserve_attempt(complete, ["input-000001"], 1)
 
 
@@ -369,13 +408,13 @@ def test_neighbours_reservation_after_subject_lookup_needs_authorized_retry_and_
         return workflow.complete_attempt(doc, "attempt-000001", "success", 1)
 
     doc = settled(30)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="already attempted or resolved"):
         workflow.reserve_attempt(doc, ["input-000001"], 25)
     doc = workflow.reserve_attempt(doc, ["input-000001"], 25, authorized_retry=True)
     doc = workflow.complete_attempt(doc, "attempt-000002", "success", 12)
     workflow.validate(doc)
     assert doc["budget"]["returned_records"] == 13
-    with pytest.raises(ValueError, match="budget"):
+    with pytest.raises(ValueError, match="Record budget exhausted"):
         workflow.reserve_attempt(settled(20), ["input-000001"], 25, authorized_retry=True)
 
 
