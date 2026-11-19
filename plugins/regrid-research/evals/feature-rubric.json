@@ -11,7 +11,7 @@
   ],
   "map_with_neighbours": [
    "States the cost (one request, up to 25 records) before proposing the neighbours call.",
-   "Proposes exactly one /parcels/point request using the subject lat 39.9005 and lon -75.0295 with radius=100, limit=25, return_geometry=true, and paid datasets off.",
+   "Proposes exactly one /parcels/point request using the subject lat 39.9005 and lon -75.0295 with radius=100, limit=25, return_geometry=true, and premium datasets off.",
    "Saves the neighbours response verbatim to NEIGHBOURS.json.",
    "Proposes map.py render RESPONSE.json OUTPUT.html --neighbours NEIGHBOURS.json.",
    "Makes no other lookup request and does not re-request the subject.",
@@ -31,7 +31,7 @@
   ],
   "freshness_mcp_only": [
    "Reports the supplied parcel's ll_last_refresh (2026-09-17) as that parcel's refresh date.",
-   "States that county-level pull dates need the CLI (regrid verse / freshness helper) and are not available over MCP alone.",
+   "States that county-level pull dates need the CLI (`regrid freshness`, or `freshness.py` on a supplied /verse file) and are not available over MCP alone.",
    "Proposes no /verse call and no other regrid_request call.",
    "Does not present the parcel date as the whole county's freshness."
   ],

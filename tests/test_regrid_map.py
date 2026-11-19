@@ -887,3 +887,27 @@ def test_csv_cell_non_ascii_digits_prefixed():
 def test_csv_cell_nan_in_container_is_error():
     with pytest.raises(MapError, match="not JSON"):
         parcel_map._csv_cell({"a": float("nan")})
+
+
+def test_check_mappable_matches_render_messages():
+    parcel_map.check_mappable(good_feature())
+    with pytest.raises(MapError, match="outside the United States"):
+        parcel_map.check_mappable({**good_feature(), "properties": {"path": "/ca/on/x"}})
+    no_geometry = {k: v for k, v in good_feature().items() if k != "geometry"}
+    with pytest.raises(MapError, match="omits geometry"):
+        parcel_map.check_mappable(no_geometry)
+    with pytest.raises(MapError, match="Unsupported geometry type"):
+        parcel_map.check_mappable({**good_feature(), "geometry": {"type": "Nope"}})
+    with pytest.raises(MapError, match="no boundary and no usable coordinates"):
+        parcel_map.check_mappable({**good_feature(), "geometry": None})
+    parcel_map.check_mappable(
+        {
+            **good_feature(),
+            "geometry": None,
+            "properties": {"fields": {"lat": "30", "lon": "-90"}},
+        }
+    )
+    with pytest.raises(MapError, match="Candidate 2: .*outside"):
+        parcel_map.check_mappable(
+            {"properties": {"path": "/ca/x"}, "geometry": None}, label="Candidate 2"
+        )

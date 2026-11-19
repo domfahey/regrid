@@ -61,6 +61,21 @@
    "id": "trigger_12",
    "prompt": "Summarize this quarterly sales email thread for my manager",
    "expected_skill": "none"
+  },
+  {
+   "id": "trigger_13",
+   "prompt": "Who owns 100 Queen Street West, Toronto?",
+   "expected_skill": "property-research"
+  },
+  {
+   "id": "trigger_14",
+   "prompt": "Submit a Regrid Batch API job for these 50,000 addresses",
+   "expected_skill": "none"
+  },
+  {
+   "id": "trigger_15",
+   "prompt": "What is 12 Example Ave, Haddonfield NJ worth on the market today?",
+   "expected_skill": "none"
   }
  ]
 }

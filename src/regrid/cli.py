@@ -119,11 +119,13 @@ def _subject_point(subject: Any) -> list[float] | None:
 
 
 def _subject_mappable(subject: Any) -> bool:
-    if not isinstance(subject, dict) or "geometry" not in subject:
+    if not isinstance(subject, dict):
         return False
-    properties = subject.get("properties")
-    path = properties.get("path") if isinstance(properties, dict) else None
-    return path is None or (isinstance(path, str) and path.startswith("/us/"))
+    try:
+        parcel_map.check_mappable(subject)
+    except parcel_map.MapError:
+        return False
+    return True
 
 
 def _address_map(
@@ -278,9 +280,24 @@ def _identity(item: Any) -> str:
 
 
 def _extend_new(current: list[Any], incoming: list[Any]) -> None:
-    """Append items not already merged; an inclusive cursor repeats the previous page's tail."""
-    known = {_identity(item) for item in current}
-    current.extend(item for item in incoming if _identity(item) not in known)
+    """Append items not already merged; an inclusive cursor repeats the previous page's tail.
+
+    Only dict items (features, objects) are de-duplicated; other items are always kept.
+    """
+    known = {_identity(item) for item in current if isinstance(item, dict)}
+    for item in incoming:
+        if isinstance(item, dict):
+            identity = _identity(item)
+            if identity in known:
+                continue
+            known.add(identity)
+        current.append(item)
+
+
+def _dedupe(items: list[Any]) -> list[Any]:
+    unique: list[Any] = []
+    _extend_new(unique, items)
+    return unique
 
 
 def _merge_page(merged: dict[str, Any], result: dict[str, Any], noted: set[str]) -> None:
@@ -291,14 +308,14 @@ def _merge_page(merged: dict[str, Any], result: dict[str, Any], noted: set[str])
         current = merged.get(key)
         if isinstance(value, list):
             if merged.get(key) is None:
-                merged[key] = list(value)
+                merged[key] = _dedupe(value)
             elif isinstance(current, list):
                 _extend_new(current, value)
             else:
                 _shape_note(key, noted)
         elif _is_collection(value):
             if merged.get(key) is None:
-                merged[key] = {**value, "features": list(value["features"])}
+                merged[key] = {**value, "features": _dedupe(value["features"])}
             elif isinstance(current, dict) and _is_collection(current):
                 _extend_new(current["features"], value["features"])
             else:
@@ -320,9 +337,9 @@ def _copy_first_page(result: dict[str, Any]) -> dict[str, Any]:
     merged: dict[str, Any] = {}
     for key, value in result.items():
         if key != "parcels" and isinstance(value, list):
-            merged[key] = list(value)
+            merged[key] = _dedupe(value)
         elif key != "parcels" and _is_collection(value):
-            merged[key] = {**value, "features": list(value["features"])}
+            merged[key] = {**value, "features": _dedupe(value["features"])}
         else:
             merged[key] = value
     return merged
@@ -360,17 +377,29 @@ def _drop_trimmed_siblings(merged: dict[str, Any], kept: list[Any], trimmed: lis
         found = set()
         for feature in features:
             properties = feature.get("properties") if isinstance(feature, dict) else None
-            uuid = properties.get("ll_uuid") if isinstance(properties, dict) else None
-            if isinstance(uuid, str):
-                found.add(uuid)
+            if not isinstance(properties, dict):
+                continue
+            single, many = properties.get("ll_uuid"), properties.get("ll_uuids")
+            if isinstance(single, str):
+                found.add(single)
+            if isinstance(many, list):
+                found.update(u for u in many if isinstance(u, str))
         return found
 
-    dropped = uuids(trimmed) - uuids(kept)
+    kept_uuids = uuids(kept)
+    dropped = uuids(trimmed) - kept_uuids
     if not dropped:
         return
     for key, value in merged.items():
         if key != "parcels" and _is_collection(value):
-            value["features"] = [f for f in value["features"] if not uuids([f]) & dropped]
+            value["features"] = [
+                f for f in value["features"] if not _only_dropped(uuids([f]), dropped, kept_uuids)
+            ]
+
+
+def _only_dropped(referenced: set[Any], dropped: set[Any], kept: set[Any]) -> bool:
+    """True when a feature references a dropped parcel and no kept one."""
+    return bool(referenced & dropped) and not referenced & kept
 
 
 def _feature_id(feature: Any) -> Any:

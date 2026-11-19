@@ -33,7 +33,7 @@ agent evaluation result.
 `--suite composition` uses six handoff scenarios from `composition-cases.json`:
 spreadsheet preservation, report reuse, interrupted-batch resumption, a shared
 budget across stages, conflicting source observations, and absent optional skills.
-`--suite all` combines both. The packet includes the current canonical skill and
+`--suite all` combines research, composition and feature. The packet includes the current canonical skill and
 its references, including the result schema and batch procedure, so the agent can
 produce a self-contained handoff. `--without-skill` omits those materials; a fair
 baseline requiring schema-valid output must supply the same schema separately.
@@ -254,10 +254,80 @@ Run per host (Claude Code, Claude apps, Cowork) with the 0.8.0 archive:
    credit all show.
 3. Check the browser console for blocked scripts or tile errors.
 4. Record `verified`, `failed` or `not_run` per host in
-   `results/map-hosts-0.7.0.json`, with notes. Leave `not_run` without evidence.
+   `results/map-hosts-0.8.0.json`, with notes. Leave `not_run` without evidence.
 
 `--suite feature` adds eight map, export, field-explanation, freshness, typo, and
 out-of-scope scenarios (`feature-cases.json`, grader-only `feature-rubric.json`);
-`--suite all` includes it. `trigger-cases.json` lists 12 prompts labelled with the
+`--suite all` includes it. `trigger-cases.json` lists 15 prompts (including exclusion cases such as Batch API, data-issue reports, and appraisals) labelled with the
 expected skill (`property-research`, `setup`, or `none`) for skill-discovery checks;
 validation checks structure only, not model behavior.
+
+## Historical verification
+
+Verification logs moved from the shipped plugin README. They describe
+earlier plugin versions and are not current status; the 0.8.0 status is in the
+plugin README's "Validation and acceptance" section.
+
+Historical 0.5.0 verification: `make check` passed 727 tests with no skips, including 64 workflow
+helper tests and JSON Schema compatibility. Ruff formatting/lint and mypy passed;
+SDK/CLI coverage remains 98.16%. The helper uses only the standard library;
+`jsonschema` is needed only for development checks. See the
+[0.5.0 regression report](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/results/composability-0.5.0-report.json)
+for red/green evidence and smaller-model offline decisions. Those model runs do
+not establish Claude/Cowork acceptance. Local HTTPS tests were unchanged and not
+rerun for this helper/docs update; publication CI results below are historical.
+
+Historical 0.4.0 verification: `make check` passed 692 tests, including 29 helper tests and 16
+discovery/runner tests. SDK coverage is 98.16% (it excludes bundled scripts).
+Both extracted plugins and the standalone skill pass strict Claude structural
+validation. The historical skill report excluded HTTPS E2E tests; the later
+[publication CI](https://github.com/domfahey/regrid/actions/runs/40680206321) passed
+`make check`, all four local HTTPS tests, plugin packaging, and package builds on
+Python 3.10 and 3.12. Local HTTPS tests also passed before publication.
+
+The [0.4.0 acceptance report](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/results/authoring-0.4.0-report.json) records
+the current external blockers: Claude CLI OAuth has expired and cannot refresh;
+Claude Desktop inspection failed with `cgWindowNotFound`. No new Claude model
+trial, baseline comparison, Cowork import, or authenticated Cowork lookup is
+claimed. After local `claude auth login`, use the discovery runner documented in
+the discovery runner section above, then grade each retained trace.
+
+Historical 0.3.0 verification: `make check` passed 671 tests, including 24 workflow-helper regressions
+and seven packaging tests. The SDK coverage gate remains 98.16%; that percentage
+covers `src/regrid`, not the bundled helper. Workflow tests exercise shared budgets,
+uncertain reservations, evidence consistency, caller IDs, explicit retries,
+checkpoint round trips, and the helper extracted from the standalone ZIP.
+Run all research, composition and feature fixtures with:
+
+```sh
+python3 plugins/regrid-research/evals/run.py validate --suite all
+python3 plugins/regrid-research/evals/run.py packet --suite all
+```
+
+Fixture validation checks the inputs, not model behavior. The separate blinded
+evaluation retains transcripts and semantic grading under `evals/results/`.
+The final 0.3.0 run passed all 19 scenarios and 63 criteria; see the repository's
+[final report](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/results/final-report.json). It validates five handoffs, one
+proposed checkpoint, and three proposed calls. An initial missing explanation
+about authorization after budget exhaustion was retained, corrected, and retested.
+These are offline simulated decisions, not live downstream app writes or Cowork
+acceptance tests, and no baseline comparison was run.
+
+Historical 0.2.0 verification (October 27, 2026): `make check` passed 646 tests with 98.16% combined
+line/branch coverage; both extracted plugin variants passed strict Claude
+validation. Direct MCP header authentication passed a usage-only request without
+retrieving parcels. The [blinded offline evaluation report](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/results/forward-report.json)
+records 13/13 scenarios and 40/40 criteria passed, with the evaluator transcript
+and content hashes retained. These evaluations use a synthetic tool double; the
+20-address case checks the first request and continuation plan, not a full live
+batch. No without-skill baseline was run. Evaluation files are repository-only
+and are not shipped in the plugin ZIPs; see `results/forward-report.json` and
+`results/final-report.json` for those reports. The packaged live tool reference distinguishes executed calls
+from the schema-checked address example.
+
+Version 0.4.0 adds metadata-first filesystem discovery trials, without-skill
+baselines, distractor skills, model/CLI identifiers, and read traces. See the
+discovery runner section above. Checkpoint diagnostics now
+identify structural paths without exposing values; `workflow.py save INPUT DEST`
+validates before writing and requires `--replace` to overwrite. Python 3.10+
+and the standard library are sufficient.

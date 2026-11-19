@@ -10,5 +10,9 @@
     "property",
     "parcels",
     "ownership"
-  ]
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/domfahey/regrid",
+  "homepage": "https://github.com/domfahey/regrid/tree/main/plugins/regrid-research",
+  "privacyPolicyUrl": "https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/PRIVACY.md"
 }

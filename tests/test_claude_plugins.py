@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import re
 import shutil
 from pathlib import Path
 from zipfile import ZipFile
@@ -43,16 +44,22 @@ def test_transports_share_complete_skill_and_build_reproducibly(source, tmp_path
     assert json.loads(cowork[".mcp.json"]) == {
         "mcpServers": {"regrid": {"type": "http", "url": "https://support.regrid.com/mcp"}}
     }
-    assert json.loads(code[".mcp.json"])["mcpServers"]["regrid"]["env"] == {
-        "REGRID_TOKEN": "${REGRID_TOKEN}"
+    server = json.loads(code[".mcp.json"])["mcpServers"]["regrid"]
+    assert server == {
+        "type": "http",
+        "url": "https://support.regrid.com/mcp",
+        "headers": {"x-regrid-token": "${REGRID_TOKEN}"},
     }
+    assert not {"command", "args", "env"} & set(server)
+    assert "npx" not in code[".mcp.json"].decode()
     assert set(cowork) == set(code)
     for name in cowork:
         if name != ".mcp.json":
             assert cowork[name] == code[name]
     for name, content in skill.items():
         assert name.startswith("property-research/")
-        assert content == code["skills/" + name]
+        if name != "property-research/LICENSE":
+            assert content == code["skills/" + name]
     assert "property-research/references/packaging-test.md" in skill
     second = builder.build(source, tmp_path / "second")
     assert [p.read_bytes() for p in paths] == [p.read_bytes() for p in second]
@@ -98,7 +105,7 @@ def test_embedded_token_is_rejected_without_echoing_it(source, tmp_path):
 def test_literal_header_secret_is_rejected(source, tmp_path):
     path = source / ".mcp.json"
     config = json.loads(path.read_text())
-    config["mcpServers"]["regrid"]["env"]["REGRID_TOKEN"] = "synthetic-secret"
+    config["mcpServers"]["regrid"]["headers"]["x-regrid-token"] = "synthetic-secret"
     path.write_text(json.dumps(config))
     with pytest.raises(ValueError, match="placeholder"):
         builder.build(source, tmp_path / "output")
@@ -123,8 +130,6 @@ def test_map_helper_is_shared_across_all_archives(source, tmp_path):
 
 
 def test_mcp_examples_use_current_spec_title():
-    import re
-
     text = (
         ROOT / "plugins/regrid-research/skills/property-research/references/mcp-tools.md"
     ).read_text()
@@ -266,9 +271,9 @@ def test_cli_path_paging_schema_usage_and_export_guidance():
     assert "CLI-only" in cli
     assert "/usage/detailed" in tools and "never per-token" in tools
     assert "fields.py" in tools and "one request each" in tools
-    assert "map.py export" in (refs / "map.md").read_text()
+    assert 'map.py" export' in (refs / "map.md").read_text()
     skill = (SKILL_ROOT / "SKILL.md").read_text()
-    assert "map.py export" in skill and "return_count" in (refs / "batch.md").read_text()
+    assert 'map.py" export' in skill and "return_count" in (refs / "batch.md").read_text()
     assert "not saved in checkpoints" in (refs / "batch.md").read_text()
     assert "CLI" in (PLUGIN / "skills/setup/SKILL.md").read_text()
 
@@ -308,8 +313,6 @@ def test_setup_declares_property_research_dependency():
 
 
 def test_consistent_terminology():
-    import re
-
     for path in DOC_FILES:
         text = path.read_text()
         assert not re.search(r"(?i)\bneighbors?\b", text), path
@@ -317,8 +320,6 @@ def test_consistent_terminology():
 
 
 def test_skill_descriptions_are_third_person_and_bounded():
-    import re
-
     for path in SKILL_FILES:
         desc = re.search(r"^description: (.+)$", path.read_text(), re.M).group(1)
         assert len(desc) <= 1024, path
@@ -356,9 +357,117 @@ def test_cli_is_the_fallback_route_and_freshness_script_is_routed():
     for word in ("MCP", "export", "tiles"):
         assert word in cli_line
     cli = (SKILL_ROOT / "references/cli.md").read_text()
-    assert "scripts/freshness.py county VERSE.json --path /us/<st>/<county>" in cli
+    assert 'scripts/freshness.py" county VERSE.json --path /us/<st>/<county>' in cli
     description = skill.split("---")[1]
     assert "CLI or a supplied" in description
     batch = (SKILL_ROOT / "references/batch.md").read_text()
     assert "with the actual\n  outcome" in batch and "uncertain" in batch
     assert "MCP `/parcels/typeahead`: returns no parcel records" not in batch
+
+
+def test_plugin_license_is_mit_and_identical_to_repo_license():
+    assert (PLUGIN / "LICENSE").read_bytes() == (ROOT / "LICENSE").read_bytes()
+    manifest = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())
+    assert manifest["license"] == "MIT"
+
+
+def test_builder_reads_license_from_source_directory(source, tmp_path):
+    (source / "LICENSE").write_bytes(b"source license\n")
+    cowork, code, skill = map(archive_contents, builder.build(source, tmp_path / "out"))
+    assert cowork["LICENSE"] == code["LICENSE"] == skill["property-research/LICENSE"]
+    assert code["LICENSE"] == b"source license\n"
+
+
+def test_license_ships_in_every_archive_identical_to_repo_license(source, tmp_path):
+    license_text = (ROOT / "LICENSE").read_bytes()
+    cowork, code, skill = map(archive_contents, builder.build(source, tmp_path / "out"))
+    assert cowork["LICENSE"] == code["LICENSE"] == license_text
+    assert skill["property-research/LICENSE"] == license_text
+    assert "LICENSE" not in skill
+
+
+def test_manifest_carries_distribution_metadata():
+    manifest = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())
+    assert manifest["license"] == "MIT"
+    assert manifest["repository"] == "https://github.com/domfahey/regrid"
+    assert manifest["homepage"] == (
+        "https://github.com/domfahey/regrid/tree/main/plugins/regrid-research"
+    )
+
+
+def test_shipped_readme_leads_with_current_status_and_omits_history():
+    readme = (PLUGIN / "README.md").read_text()
+    section = readme.split("## Validation and acceptance", 1)[1]
+    assert section.lstrip().startswith("Status for 0.8.0")
+    assert "Historical 0.4.0" not in readme
+    assert "Historical 0.3.0" not in readme
+    history = (PLUGIN / "evals/README.md").read_text()
+    assert "## Historical verification" in history
+    assert "Historical 0.2.0 verification" in history
+    assert "results/map-hosts-0.8.0.json" in history
+    assert "map-hosts-0.7.0.json" not in history
+
+
+def test_descriptions_state_exclusions():
+    for path, words in (
+        (SKILL_FILES[0], ("batch", "data-issue", "appraisal", "legal ownership")),
+        (SKILL_FILES[1], ("property lookup",)),
+    ):
+        desc = re.search(r"^description: (.+)$", path.read_text(), re.M).group(1).lower()
+        assert "do not use for" in desc, path
+        for word in words:
+            assert word in desc, (path, word)
+    assert "non-us" not in re.search(r"do not use for.*", SKILL_FILES[0].read_text().lower()).group(
+        0
+    )
+
+
+def test_skill_md_defines_skill_path_and_hides_fields_json():
+    skill = (SKILL_ROOT / "SKILL.md").read_text()
+    assert "`<skill>`" in skill and "contains `SKILL.md`" in skill
+    assert 'python3 "<skill>/scripts/fields.py" explain' in skill
+    assert "don't open it" in skill and "](references/fields.json)" in skill
+
+
+def test_one_script_path_convention():
+    for path in DOC_FILES:
+        text = path.read_text()
+        assert "/path/to/property-research" not in text, path
+        assert "../scripts/" not in text, path
+        assert not re.search(r"python3 scripts/", text), path
+    for path in DOC_FILES:
+        text = path.read_text()
+        assert not re.search(r"python3 <skill>/", text), path
+        assert not re.search(r"python3 \$\{CLAUDE_PLUGIN_ROOT\}", text), path
+        for match in re.finditer(r"python3 (\S+\.py\S*)", text):
+            assert re.fullmatch(r'"<skill>/scripts/(?:[a-z_]+|<name>)\.py"', match.group(1)), (
+                path,
+                match.group(1),
+            )
+
+
+def test_command_uses_skill_prefixed_paths_and_states_hosts():
+    text = (PLUGIN / "commands/address-map.md").read_text()
+    assert "`${CLAUDE_PLUGIN_ROOT}/skills/property-research`" in text
+    # Quotes belong at the call site only; a quoted definition would nest quotes there.
+    assert '"${CLAUDE_PLUGIN_ROOT}' not in text
+    assert "elsewhere it is\nthe property-research skill folder" in text
+    assert 'python3 "<skill>/scripts/map.py" render' in text
+    assert not re.search(r"(?<!<skill>/)(?<![\w/.-])(scripts|references)/", text)
+    assert "Claude Code and Cowork only" in (SKILL_ROOT / "references/map.md").read_text()
+
+
+def test_skill_keeps_public_docs_vs_auth_rule():
+    skill = (SKILL_ROOT / "SKILL.md").read_text()
+    assert "does not establish authenticated parcel access" in " ".join(skill.split())
+
+
+def test_manifest_has_privacy_policy_url_and_privacy_note_ships(source, tmp_path):
+    manifest = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())
+    assert manifest["privacyPolicyUrl"] == (
+        "https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/PRIVACY.md"
+    )
+    note = (PLUGIN / "PRIVACY.md").read_bytes()
+    cowork, code, skill = map(archive_contents, builder.build(source, tmp_path / "out"))
+    assert cowork["PRIVACY.md"] == code["PRIVACY.md"] == note
+    assert b"https://regrid.com/terms/privacy" in note

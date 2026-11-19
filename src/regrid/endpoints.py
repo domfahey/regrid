@@ -236,9 +236,10 @@ class EndpointsMixin:
             try:
                 self._query_params(fields, paging=True, **kwargs)
             except ValueError:
-                raise QueryPagingError(
-                    "Query filters are incompatible with offset_id paging"
-                ) from None
+                pass  # leave the except block so the sanitized error carries no context
+            else:
+                return
+            raise QueryPagingError("Query filters are incompatible with offset_id paging")
 
     def _query_params(
         self,

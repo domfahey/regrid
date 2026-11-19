@@ -413,3 +413,35 @@ def test_neighbours_branch_loads_subject_once(tmp_path, monkeypatch):
     monkeypatch.setattr(cli.parcel_map, "render", lambda *a, **k: {})
     assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 0
     assert len(calls) == 1
+
+
+def _subject_variant(monkeypatch, mutate):
+    subject = good_feature(lat=39.9, lon=-75.03)
+    mutate(subject)
+    return _install(
+        monkeypatch, lambda request: httpx.Response(200, json={"parcels": {"features": [subject]}})
+    )
+
+
+@pytest.mark.parametrize(
+    "geometry",
+    [
+        {"type": "Point", "coordinates": [-75.03, 39.9]},
+        {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1]]]},
+    ],
+)
+def test_invalid_subject_geometry_skips_neighbours(tmp_path, monkeypatch, geometry):
+    seen = _subject_variant(monkeypatch, lambda f: f.update(geometry=geometry))
+    cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"])
+    assert len(seen) == 1
+
+
+def test_non_string_path_does_not_block_neighbours(tmp_path, monkeypatch):
+    def handler(request):
+        feature = good_feature(lat=39.9, lon=-75.03)
+        feature["properties"]["path"] = 5
+        return httpx.Response(200, json={"parcels": {"features": [feature]}})
+
+    seen = _install(monkeypatch, handler)
+    cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"])
+    assert len(seen) == 2

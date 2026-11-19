@@ -8,10 +8,12 @@ import re
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
-SOURCE = Path(__file__).resolve().parents[1] / "plugins" / "regrid-research"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SOURCE = REPO_ROOT / "plugins" / "regrid-research"
 MCP_URL = "https://support.regrid.com/mcp"
 SKILLS = ("property-research", "setup")
-BASE_FILES = (".claude-plugin/plugin.json", ".mcp.json", "README.md")
+BASE_FILES = (".claude-plugin/plugin.json", ".mcp.json", "README.md", "PRIVACY.md")
+LICENSE_FILE = "LICENSE"  # read from the plugin source directory
 TOKEN_PATTERN = re.compile(rb"rg_[A-Za-z0-9_-]{8,}")
 
 
@@ -91,28 +93,23 @@ def build(source: Path, output: Path) -> list[Path]:
     version = manifest["version"]
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise ValueError("Plugin version must be three numeric components")
+    license_bytes = read_public_file(source, LICENSE_FILE)
     skills_only = dict(common)
     for name in SKILLS:
         skills_only.update(skill_files(source, name))
-    common = {**skills_only, **command_files(source)}
+    common = {**skills_only, **command_files(source), LICENSE_FILE: license_bytes}
     local_config = json.loads(common[".mcp.json"])
     expected = {
         "mcpServers": {
             "regrid": {
-                "command": "npx",
-                "args": [
-                    "-y",
-                    "mcp-remote",
-                    MCP_URL,
-                    "--header",
-                    "x-regrid-token: ${REGRID_TOKEN}",
-                ],
-                "env": {"REGRID_TOKEN": "${REGRID_TOKEN}"},
+                "type": "http",
+                "url": MCP_URL,
+                "headers": {"x-regrid-token": "${REGRID_TOKEN}"},
             }
         }
     }
     if local_config != expected:
-        raise ValueError("Local MCP config must use the approved token placeholder bridge")
+        raise ValueError("Local MCP config must use the approved native HTTP token placeholder")
     cowork = dict(common)
     cowork[".mcp.json"] = json_bytes({"mcpServers": {"regrid": {"type": "http", "url": MCP_URL}}})
     standalone = {
@@ -120,6 +117,7 @@ def build(source: Path, output: Path) -> list[Path]:
         for name, data in skills_only.items()
         if name.startswith("skills/property-research/")
     }
+    standalone["property-research/" + LICENSE_FILE] = license_bytes
     output.mkdir(parents=True, exist_ok=True)
     paths = []
     for label, files in (
@@ -136,7 +134,7 @@ def build(source: Path, output: Path) -> list[Path]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=SOURCE)
-    parser.add_argument("--output", type=Path, default=SOURCE.parents[1] / "dist")
+    parser.add_argument("--output", type=Path, default=REPO_ROOT / "dist")
     args = parser.parse_args()
     for path in build(args.source, args.output):
         print(path)

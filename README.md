@@ -320,7 +320,7 @@ The [Regrid Research guide](plugins/regrid-research/README.md) covers separate
 Cowork and Claude Code packages built from one canonical research skill:
 
 - `dist/regrid-research-cowork-0.8.0.zip`: remote connector declaration and skills.
-- `dist/regrid-research-claude-code-0.8.0.zip`: local bridge and skills.
+- `dist/regrid-research-claude-code-0.8.0.zip`: native HTTP MCP connection and skills.
 - `dist/regrid-property-research-skill-0.8.0.zip`: standalone skill with references.
 
 Build with `.venv/bin/python scripts/build_claude_plugins.py`. For Cowork,

@@ -180,7 +180,7 @@ completed merely because its first request and continuation plan were prepared.
 
 ## Optional offline helper
 
-Run the packaged [workflow.py](../scripts/workflow.py) with Python 3.10+; it uses
+Run the packaged `<skill>/scripts/workflow.py` with Python 3.10+; it uses
 only the standard library, so no package installation is required. It performs
 no API calls or credential reads. Execute it for validation and persistence;
 read its source only when integrating its functions into a batch runner.
@@ -197,10 +197,10 @@ resuming. The `save` command also validates before writing atomically:
 
 
 ```sh
-python3 /path/to/property-research/scripts/workflow.py validate /path/to/result.json
-python3 /path/to/property-research/scripts/workflow.py save /path/to/result.json /path/to/checkpoint.json
-python3 /path/to/property-research/scripts/workflow.py validate /path/to/checkpoint.json
-python3 /path/to/property-research/scripts/workflow.py pending /path/to/checkpoint.json
+python3 "<skill>/scripts/workflow.py" validate /path/to/result.json
+python3 "<skill>/scripts/workflow.py" save /path/to/result.json /path/to/checkpoint.json
+python3 "<skill>/scripts/workflow.py" validate /path/to/checkpoint.json
+python3 "<skill>/scripts/workflow.py" pending /path/to/checkpoint.json
 ```
 
 Substitute the actual installed skill directory and user-requested file paths.

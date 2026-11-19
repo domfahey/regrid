@@ -90,7 +90,10 @@ def load_trigger_cases() -> list[dict]:
     return cases
 
 
-def packet(cases: list[dict], include_skill: bool) -> dict:
+FIELDS_NOTE = "Large data file read only by scripts/fields.py; content omitted from this packet."
+
+
+def packet(cases: list[dict], include_skill: bool, include_fields: bool = False) -> dict:
     instructions = (
         "Offline behavioral evaluation. Do not call live tools, read .env, or use the network. "
         "Only the supplied test doubles are callable (the regrid test double, and in the feature "
@@ -112,7 +115,11 @@ def packet(cases: list[dict], include_skill: bool) -> dict:
         skill = ROOT.parent / "skills/property-research"
         result["skill"] = (skill / "SKILL.md").read_text()
         result["references"] = {
-            path.name: path.read_text()
+            path.name: (
+                FIELDS_NOTE
+                if path.name == "fields.json" and not include_fields
+                else path.read_text()
+            )
             for path in sorted((skill / "references").iterdir())
             if path.suffix in {".md", ".json"}
         }
@@ -139,7 +146,9 @@ def main() -> None:
             f"Validated {len(cases)} synthetic fixtures and matching rubrics (not model behavior)"
         )
     else:
-        print(json.dumps(packet(cases, not args.without_skill), indent=2))
+        feature_ids = {case["id"] for case in load_cases("feature")}
+        include_fields = any(case["id"] in feature_ids for case in cases)
+        print(json.dumps(packet(cases, not args.without_skill, include_fields), indent=2))
 
 
 if __name__ == "__main__":

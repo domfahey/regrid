@@ -39,7 +39,7 @@ def test_all_suite_includes_feature_and_unique_ids():
 
 def test_trigger_cases_cover_every_label():
     prompts = run.load_trigger_cases()
-    assert len(prompts) == 12
+    assert len(prompts) == 15
     assert {item["expected_skill"] for item in prompts} == {"property-research", "setup", "none"}
 
 
@@ -152,3 +152,34 @@ def test_feature_suite_validates_trigger_cases(tmp_path, monkeypatch):
     _write(tmp_path, monkeypatch, triggers=triggers)
     with pytest.raises(AssertionError):
         run.load_cases("feature")
+
+
+def test_packet_omits_fields_json_content_outside_feature_suite():
+    refs = run.packet(run.load_cases("research"), True)["references"]
+    note = refs["fields.json"]
+    assert "fields.py" in note and len(note) < 200 and "\n" not in note
+    assert "answers.md" in refs and "result.schema.json" in refs
+
+
+def test_feature_packet_includes_fields_catalog():
+    refs = run.packet(run.load_cases("feature"), True, include_fields=True)["references"]
+    assert (
+        refs["fields.json"]
+        == (run.ROOT.parent / "skills/property-research/references/fields.json").read_text()
+    )
+
+
+def test_packet_suite_all_includes_fields_catalog(monkeypatch, capsys):
+    monkeypatch.setattr("sys.argv", ["run.py", "packet", "--suite", "all"])
+    run.main()
+    refs = json.loads(capsys.readouterr().out)["references"]
+    assert (
+        refs["fields.json"]
+        == (run.ROOT.parent / "skills/property-research/references/fields.json").read_text()
+    )
+
+
+def test_packet_research_suite_keeps_placeholder(monkeypatch, capsys):
+    monkeypatch.setattr("sys.argv", ["run.py", "packet", "--suite", "research"])
+    run.main()
+    assert "omitted" in json.loads(capsys.readouterr().out)["references"]["fields.json"]
