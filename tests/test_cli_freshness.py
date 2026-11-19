@@ -215,3 +215,30 @@ def test_cache_without_base_url_is_a_miss(tmp_path, verse_server, capsys):
     cache.write_text(json.dumps({"retrieved_at": _aged(1), "response": VERSE}))
     assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", str(cache)]) == 0
     assert len(verse_server) == 1
+
+
+@pytest.mark.parametrize("value", ["inf", "-inf", "nan", "1e10", "-1", "36501", "abc"])
+def test_max_age_days_rejects_unsafe_values(tmp_path, verse_server, capsys, value):
+    cache = tmp_path / "verse.json"
+    freshness.write_cache(cache, _aged(1), VERSE, DEFAULT_BASE)
+    argv = ["freshness", "--path", "/us/nj/camden", "--cache", str(cache), "--max-age-days", value]
+    assert cli.main(argv) == 2
+    assert verse_server == []
+
+
+@pytest.mark.parametrize("value", ["0", "36500", "0.5"])
+def test_max_age_days_accepts_bounds(tmp_path, verse_server, value):
+    cache = tmp_path / "verse.json"
+    argv = ["freshness", "--path", "/us/nj/camden", "--cache", str(cache), "--max-age-days", value]
+    assert cli.main(argv) == 0
+
+
+def test_trailing_slash_base_url_shares_cache(tmp_path, verse_server, capsys):
+    cache = tmp_path / "verse.json"
+    base = ["--base-url", DEFAULT_BASE + "/"]
+    args = [*base, "freshness", "--path", "/us/nj/camden", "--cache", str(cache)]
+    assert cli.main(args) == 0
+    assert json.loads(cache.read_text())["base_url"] == DEFAULT_BASE
+    capsys.readouterr()
+    assert cli.main(args) == 0
+    assert len(verse_server) == 1 and json.loads(capsys.readouterr().out)["cache"] == "hit"

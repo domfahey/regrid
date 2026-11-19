@@ -1,4 +1,6 @@
 import json
+import os
+import sys
 
 import httpx
 import pytest
@@ -315,3 +317,99 @@ def test_render_failure_reports_neighbours_file(tmp_path, monkeypatch, capsys):
     err = capsys.readouterr().err
     assert f"response saved to {tmp_path / 'm.json'}" in err
     assert f"neighbours saved to {tmp_path / 'm.neighbours.json'}" in err
+
+
+def _subject_server(monkeypatch, feature):
+    def handler(request):
+        return httpx.Response(200, json={"parcels": {"features": [feature]}})
+
+    return _install(monkeypatch, handler)
+
+
+def test_neighbours_skipped_for_non_us_subject(tmp_path, monkeypatch, capsys):
+    subject = good_feature(lat=43.7, lon=-79.4)
+    subject["properties"]["path"] = "/ca/on/toronto/1"
+    seen = _subject_server(monkeypatch, subject)
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 1
+    err = capsys.readouterr().err
+    assert len(seen) == 1 and err.count("requests made:") == 1 and "requests made: 1" in err
+    assert "regrid: neighbours skipped: subject is not mappable" in err
+
+
+def test_neighbours_skipped_for_subject_without_geometry(tmp_path, monkeypatch, capsys):
+    subject = good_feature(lat=39.9, lon=-75.03)
+    del subject["geometry"]
+    seen = _subject_server(monkeypatch, subject)
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 1
+    err = capsys.readouterr().err
+    assert len(seen) == 1 and "neighbours skipped: subject is not mappable" in err
+
+
+@pytest.mark.parametrize("which", ["output", "response", "neighbours"])
+def test_directory_targets_rejected_before_request(tmp_path, monkeypatch, capsys, which):
+    seen = _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03})
+    out, extra = tmp_path / "m.html", []
+    {"output": out, "response": tmp_path / "r.json", "neighbours": tmp_path / "m.neighbours.json"}[
+        which
+    ].mkdir()
+    if which == "response":
+        extra = ["--save-response", str(tmp_path / "r.json")]
+    assert cli.main(["address-map", "x", str(out), "--neighbours", "--replace", *extra]) == 1
+    err = capsys.readouterr().err
+    assert seen == [] and "requests made: 0" in err and err.count("requests made:") == 1
+
+
+def test_replace_does_not_write_through_symlink(tmp_path, monkeypatch, capsys):
+    _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03})
+    victim = tmp_path / "victim.txt"
+    victim.write_text("keep")
+    resp, neigh = tmp_path / "m.json", tmp_path / "m.neighbours.json"
+    victim2 = tmp_path / "victim2.txt"
+    victim2.write_text("keep")
+    resp.symlink_to(victim)
+    neigh.symlink_to(victim2)
+    args = ["address-map", "x", str(tmp_path / "m.html"), "--neighbours", "--replace"]
+    assert cli.main(args) == 0
+    assert victim.read_text() == victim2.read_text() == "keep"
+    assert not resp.is_symlink() and not neigh.is_symlink()
+    assert "parcels" in json.loads(resp.read_text())
+    assert "parcels" in json.loads(neigh.read_text())
+    assert [p.name for p in tmp_path.iterdir() if p.name.startswith(".")] == []
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX umask")
+def test_saved_response_follows_umask(tmp_path, seen):
+    old = os.umask(0o022)
+    try:
+        assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 0
+    finally:
+        os.umask(old)
+    assert (tmp_path / "m.json").stat().st_mode & 0o777 == 0o644
+
+
+def test_save_json_race_reports_exists(tmp_path, monkeypatch, capsys):
+    _install(monkeypatch, lambda r: httpx.Response(200, json={"parcels": {"features": []}}))
+    real = os.path.lexists
+    target = str(tmp_path / "m.json")
+    # Pre-check passes, then the file appears before the final link.
+    monkeypatch.setattr(os.path, "lexists", lambda p: False if str(p) == target else real(p))
+    (tmp_path / "m.json").write_text("other")
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html")]) == 1
+    err = capsys.readouterr().err
+    assert "exists; pass --replace" in err and "Could not write" not in err
+    assert (tmp_path / "m.json").read_text() == "other"
+
+
+def test_neighbours_branch_loads_subject_once(tmp_path, monkeypatch):
+    calls = []
+    real = cli.parcel_map.load_features
+
+    def counting(document):
+        calls.append(1)
+        return real(document)
+
+    monkeypatch.setattr(cli.parcel_map, "load_features", counting)
+    _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03})
+    monkeypatch.setattr(cli.parcel_map, "render", lambda *a, **k: {})
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 0
+    assert len(calls) == 1

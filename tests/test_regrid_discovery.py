@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -133,3 +134,50 @@ def test_comparison_requires_observed_models_and_identical_shared_inputs():
     baseline["files"] = {"data/evidence.json": "different"}
     with pytest.raises(ValueError, match="input hashes"):
         discovery.compare(skill, baseline)
+
+
+def packaged_property_research(tmp_path):
+    """Return the packager's property-research file set, relative to the skill directory."""
+    spec = importlib.util.spec_from_file_location(
+        "build_claude_plugins",
+        Path(__file__).resolve().parents[1] / "scripts/build_claude_plugins.py",
+    )
+    assert spec and spec.loader
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    plugin = Path(__file__).resolve().parents[1] / "plugins/regrid-research"
+    prefix = "skills/property-research/"
+    return {
+        name.removeprefix(prefix)
+        for name in builder.skill_files(plugin, "property-research")
+        if name.startswith(prefix)
+    }
+
+
+def test_allowlist_matches_packaged_property_research(tmp_path):
+    assert set(discovery.ALLOWLIST) == packaged_property_research(tmp_path)
+
+
+def test_staged_skill_contains_every_packaged_file(tmp_path):
+    destination = tmp_path / "trial"
+    discovery.stage("existing-evidence", "skill", destination)
+    staged = {
+        str(p.relative_to(destination / "skills/property-research"))
+        for p in (destination / "skills/property-research").rglob("*")
+        if p.is_file()
+    }
+    assert staged == packaged_property_research(tmp_path)
+
+
+def test_every_skill_link_is_staged(tmp_path):
+    text = discovery.SKILL.joinpath("SKILL.md").read_text()
+    targets = set()
+    for target in re.findall(r"\]\(([^)\s]+)\)", text):
+        if "://" in target or target.startswith(("mailto:", "#")):
+            continue
+        path = target.split("#", 1)[0]
+        if path:
+            targets.add(path)
+    assert targets, "SKILL.md should link to its references"
+    missing = sorted(t for t in targets if t not in discovery.ALLOWLIST)
+    assert missing == []

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 import tempfile
@@ -16,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+MAX_AGE_DAYS_LIMIT = 36500
 DATE_KEYS = ("last_refresh", "assessor_data_date", "usps_data_date")
 
 
@@ -66,21 +68,38 @@ def default_cache_path(env: Mapping[str, str] | None = None, os_name: str | None
     return Path(base) / "regrid" / "verse.json"
 
 
+def check_max_age_days(value: object) -> float:
+    """Return ``value`` as a float, or raise ValueError unless it is finite and in 0..36500."""
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError, OverflowError):
+        number = math.nan
+    if not math.isfinite(number) or not 0 <= number <= MAX_AGE_DAYS_LIMIT:
+        raise ValueError(f"max_age_days must be a finite number between 0 and {MAX_AGE_DAYS_LIMIT}")
+    return number
+
+
 def is_stale(retrieved_at: str, max_age_days: float, now: datetime | None = None) -> bool:
-    """True when ``retrieved_at`` is older than ``max_age_days`` or cannot be parsed."""
+    """True when ``retrieved_at`` is older than ``max_age_days`` or cannot be parsed.
+
+    ``max_age_days`` is checked first, before ``retrieved_at`` is parsed: it must be a finite
+    number from 0 to 36500, otherwise ValueError is raised.
+    """
+    limit = timedelta(days=check_max_age_days(max_age_days))
     try:
         when = datetime.fromisoformat(retrieved_at.replace("Z", "+00:00"))
     except ValueError:
         return True
     if when.tzinfo is None:
         when = when.replace(tzinfo=timezone.utc)
-    return (now or datetime.now(timezone.utc)) - when > timedelta(days=max_age_days)
+    return (now or datetime.now(timezone.utc)) - when > limit
 
 
 def read_cache(path: Path, base_url: str | None = None) -> tuple[str, dict] | None:
     """Return ``(retrieved_at, response)`` or None if the cache is absent or unusable.
 
-    When ``base_url`` is given, a cache stored for a different (or no) base URL is a miss.
+    When ``base_url`` is given (trailing slashes ignored), a cache stored for a different
+    (or no) base URL is a miss.
     """
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -91,7 +110,7 @@ def read_cache(path: Path, base_url: str | None = None) -> tuple[str, dict] | No
     retrieved_at, response = data.get("retrieved_at"), data.get("response")
     if not isinstance(retrieved_at, str) or not isinstance(response, dict):
         return None
-    if base_url is not None and data.get("base_url") != base_url:
+    if base_url is not None and data.get("base_url") != base_url.rstrip("/"):
         return None
     return retrieved_at, response
 
@@ -100,6 +119,7 @@ def write_cache(path: Path, retrieved_at: str, response: dict, base_url: str | N
     """Atomically write the cache; the directory is created private where supported."""
     path = Path(path)
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    base_url = base_url.rstrip("/") if base_url is not None else None
     document = {"retrieved_at": retrieved_at, "base_url": base_url, "response": response}
     body = json.dumps(document, allow_nan=False)
     handle, temp_name = tempfile.mkstemp(dir=path.parent, prefix=".verse-", suffix=".tmp")

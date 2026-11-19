@@ -116,8 +116,8 @@ line leaves the attempt uncertain and is never retried. A cache hit reports 0.
 - Record lookups: reserve with the input ID and `record_limit` equal to the page limit.
 - Neighbours: see [neighbour requests](#neighbour-requests).
 
-Paged searches: each page is one attempt with `record_limit` equal to the page limit
-(three pages, three attempts; the CLI prints `regrid: up to K requests for N records`,
+Paged searches: each page is one attempt with `record_limit` equal to that page's
+requested limit (three pages, three attempts; the CLI prints `regrid: up to K requests for N records`,
 so reserve K attempts). Paging positions are not saved in checkpoints; a resumed
 open-ended search needs fresh authorization before it pages again.
 

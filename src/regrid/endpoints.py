@@ -41,6 +41,10 @@ _USAGE = {
 _SCHEMA_NAMES = {"parcel", "building", "address", "enhanced_ownership", "zoning", "ca"}
 
 
+class QueryPagingError(ValueError):
+    """Query filters that are valid on their own but cannot be used with offset_id paging."""
+
+
 def _country(country: str) -> str:
     value = country.lower() if isinstance(country, str) else country
     country = safe_validate(CountryInput, {"value": value}).value
@@ -197,6 +201,55 @@ class EndpointsMixin:
         **options: Any,
     ) -> dict[str, Any]:
         """Query up to four fields, e.g. {'geoid': {'eq': '48113'}}."""
+        prefix, params = self._query_params(
+            fields,
+            country=country,
+            validate_fields=validate_fields,
+            allow_unknown_fields=allow_unknown_fields,
+            options=options,
+        )
+        return self._request("GET", f"{prefix}/parcels/query", params=params)
+
+    def validate_query(
+        self,
+        fields: Mapping[str, Mapping[str, Any]],
+        *,
+        country: str = "us",
+        paging: bool = False,
+        validate_fields: bool = False,
+        allow_unknown_fields: bool = False,
+        **options: Any,
+    ) -> None:
+        """Validate a query exactly as ``query`` would, without sending a request.
+
+        With ``paging=True`` the filters are also checked for use with ``offset_id`` paging;
+        a filter that is valid unpaged but not pageable raises ``QueryPagingError``.
+        """
+        kwargs: dict[str, Any] = {
+            "country": country,
+            "validate_fields": validate_fields,
+            "allow_unknown_fields": allow_unknown_fields,
+            "options": options,
+        }
+        self._query_params(fields, **kwargs)
+        if paging:
+            try:
+                self._query_params(fields, paging=True, **kwargs)
+            except ValueError:
+                raise QueryPagingError(
+                    "Query filters are incompatible with offset_id paging"
+                ) from None
+
+    def _query_params(
+        self,
+        fields: Mapping[str, Mapping[str, Any]],
+        *,
+        country: str,
+        validate_fields: bool,
+        allow_unknown_fields: bool,
+        options: dict[str, Any],
+        paging: bool = False,
+    ) -> tuple[str, dict[str, Any]]:
         if type(validate_fields) is not bool or type(allow_unknown_fields) is not bool:
             raise ValueError("Catalog validation flags must be booleans")
         prefix = _country(country)
@@ -227,14 +280,14 @@ class EndpointsMixin:
                 validated,
                 country="ca" if prefix else "us",
                 allow_unknown=allow_unknown_fields,
-                paging=params.get("offset_id") is not None,
+                paging=paging or params.get("offset_id") is not None,
             )
         for field, operators in validated.items():
             for operator, value in operators.items():
                 if isinstance(value, (list, tuple, dict, bool)) or value is None:
                     value = _json(value)
                 params[f"fields[{field}][{operator}]"] = value
-        return self._request("GET", f"{prefix}/parcels/query", params=params)
+        return prefix, params
 
     def parcel(self, ll_uuid: str, *, country: str = "us", **options: Any) -> dict[str, Any]:
         """Retrieve one parcel by its Regrid UUID."""

@@ -7,6 +7,7 @@ from .client import (
     RegridError,
     RegridHTTPError,
 )
+from .endpoints import QueryPagingError
 from .typed import TypedRegridClient
 
 __all__ = [
@@ -16,5 +17,6 @@ __all__ = [
     "RegridHTTPError",
     "AuthenticationError",
     "RegridDecodeError",
+    "QueryPagingError",
 ]
 __version__ = "0.3.0"
