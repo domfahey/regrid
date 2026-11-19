@@ -131,6 +131,10 @@ def test_generated_attributes_match_catalog_without_runtime_model_construction()
         "2026-07-09T13:22:32+0000",
         "2026-07-09T13:22:32+00:00",
         "2026-07-09T13:22:32-05:00",
+        "2025-03-14 09:26:53 -0400",
+        "2025-03-14 09:26:53 -04:00",
+        "2025-03-14 09:26:53.12 +0530",
+        "2025-03-14 09:26:53 +00",
     ],
 )
 def test_ll_updated_at_accepts_timezone_aware_timestamps_unchanged(value):
@@ -154,8 +158,19 @@ def test_ll_updated_at_accepts_timezone_aware_timestamps_unchanged(value):
         "2026-07-09T13:22:32+05:99",
         "2026-07-09T13:22:32+0560",
         "2026-02-30T13:22:32Z",
+        "2025-03-14 09:26:53 Z",
+        "2025-03-14 09:26:53  -0400",
+        "2025-03-14 09:26:53 -2500",
+        "2025-03-14 09:26:53 -04:60",
+        "2025-03-14 09:26:53 ",
+        "2025-03-14 09:26:53",
     ],
 )
 def test_ll_updated_at_rejects_naive_date_only_and_garbage(value):
     with pytest.raises(ValidationError):
         ParcelFields.model_validate({"ll_updated_at": value})
+
+
+def test_parcel_fields_validates_live_ll_updated_at_shape():
+    fields = ParcelFields.model_validate({"ll_updated_at": "2025-03-14 09:26:53 -0400"})
+    assert fields.to_dict() == {"ll_updated_at": "2025-03-14 09:26:53 -0400"}
