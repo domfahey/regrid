@@ -1,66 +1,81 @@
 {
- "schema_version": 1,
- "synthetic": true,
- "cases": [
-  {
-   "id": "trigger_01",
-   "prompt": "Show 12 Example Ave, Haddonfield NJ on a satellite map",
-   "expected_skill": "property-research"
-  },
-  {
-   "id": "trigger_02",
-   "prompt": "Can you outline the parcel boundary for APN TEST_67_6 in Camden County NJ?",
-   "expected_skill": "property-research"
-  },
-  {
-   "id": "trigger_03",
-   "prompt": "Draw the lot lines around 40 Sample Road, Cherry Hill NJ",
-   "expected_skill": "property-research"
-  },
-  {
-   "id": "trigger_04",
-   "prompt": "Export these parcels to a spreadsheet",
-   "expected_skill": "property-research"
-  },
-  {
-   "id": "trigger_05",
-   "prompt": "Who owns 12 Example Ave, Haddonfield NJ 08033 and when did it last sell?",
-   "expected_skill": "property-research"
-  },
-  {
-   "id": "trigger_06",
-   "prompt": "What does the usedesc field mean in a parcel record?",
-   "expected_skill": "property-research"
-  },
-  {
-   "id": "trigger_07",
-   "prompt": "Is Regrid connected?",
-   "expected_skill": "setup"
-  },
-  {
-   "id": "trigger_08",
-   "prompt": "My Regrid token seems to be rejected, can you help me diagnose the connection?",
-   "expected_skill": "setup"
-  },
-  {
-   "id": "trigger_09",
-   "prompt": "Check whether the Regrid MCP tools and authentication are working",
-   "expected_skill": "setup"
-  },
-  {
-   "id": "trigger_10",
-   "prompt": "Write a Python function that merges two sorted lists",
-   "expected_skill": "none"
-  },
-  {
-   "id": "trigger_11",
-   "prompt": "What is the capital of Australia?",
-   "expected_skill": "none"
-  },
-  {
-   "id": "trigger_12",
-   "prompt": "Summarize this quarterly sales email thread for my manager",
-   "expected_skill": "none"
-  }
- ]
+  "schema_version": 1,
+  "synthetic": true,
+  "cases": [
+    {
+      "id": "trigger_01",
+      "prompt": "Show 12 Example Ave, Haddonfield NJ on a satellite map",
+      "expected_skill": "property-research"
+    },
+    {
+      "id": "trigger_02",
+      "prompt": "Can you outline the parcel boundary for APN TEST_67_6 in Camden County NJ?",
+      "expected_skill": "property-research"
+    },
+    {
+      "id": "trigger_03",
+      "prompt": "Draw the lot lines around 40 Sample Road, Cherry Hill NJ",
+      "expected_skill": "property-research"
+    },
+    {
+      "id": "trigger_04",
+      "prompt": "Export these parcels to a spreadsheet",
+      "expected_skill": "property-research"
+    },
+    {
+      "id": "trigger_05",
+      "prompt": "Who owns 12 Example Ave, Haddonfield NJ 08033 and when did it last sell?",
+      "expected_skill": "property-research"
+    },
+    {
+      "id": "trigger_06",
+      "prompt": "What does the usedesc field mean in a parcel record?",
+      "expected_skill": "property-research"
+    },
+    {
+      "id": "trigger_07",
+      "prompt": "Is Regrid connected?",
+      "expected_skill": "setup"
+    },
+    {
+      "id": "trigger_08",
+      "prompt": "My Regrid token seems to be rejected, can you help me diagnose the connection?",
+      "expected_skill": "setup"
+    },
+    {
+      "id": "trigger_09",
+      "prompt": "Check whether the Regrid MCP tools and authentication are working",
+      "expected_skill": "setup"
+    },
+    {
+      "id": "trigger_10",
+      "prompt": "Write a Python function that merges two sorted lists",
+      "expected_skill": "none"
+    },
+    {
+      "id": "trigger_11",
+      "prompt": "What is the capital of Australia?",
+      "expected_skill": "none"
+    },
+    {
+      "id": "trigger_12",
+      "prompt": "Summarize this quarterly sales email thread for my manager",
+      "expected_skill": "none"
+    },
+    {
+      "id": "trigger_13",
+      "prompt": "Who owns 100 Queen Street West, Toronto?",
+      "expected_skill": "none"
+    },
+    {
+      "id": "trigger_14",
+      "prompt": "Submit a Regrid Batch API job for these 50,000 addresses",
+      "expected_skill": "none"
+    },
+    {
+      "id": "trigger_15",
+      "prompt": "What is 12 Example Ave, Haddonfield NJ worth on the market today?",
+      "expected_skill": "none"
+    }
+  ]
 }

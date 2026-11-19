@@ -15,7 +15,7 @@ Research with existing evidence first; use the connected Regrid MCP server at
 https://support.regrid.com/mcp only when retrieval is needed. Before the first
 live lookup, read [the tool reference](references/mcp-tools.md), discover
 the tools exposed in this session, and inspect the relevant input schema.
-The live schema takes precedence over saved examples. Discover once per session. Public
+The live schema takes precedence over saved examples. Discover once per session; refresh only after a schema mismatch. Public
 documentation access does not establish authenticated parcel access.
 
 Load supporting resources only for the relevant task:
@@ -24,8 +24,8 @@ Load supporting resources only for the relevant task:
 - Supplied-evidence prose or reuse by another skill: [composition](references/composition.md)
   alone. Do not load a schema merely to answer from supplied evidence.
 - Structured handoffs, requested checkpoints, or contract validation: additionally
-  load the [versioned result schema](references/result.schema.json). Consult the
-  [synthetic result example](references/result-example.json) only if an example is needed.
+  load the [versioned result schema](references/result.schema.json). Use the
+  [synthetic example](references/result-example.json) only if needed.
 - Request and record budgets, multiple inputs, or checkpoints: [batch and resume](references/batch.md).
 - Map, boundary, or neighbouring parcels: [map guide](references/map.md). The
   `/regrid-research:address-map` command runs this flow for one address.

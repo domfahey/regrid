@@ -39,7 +39,7 @@ def test_all_suite_includes_feature_and_unique_ids():
 
 def test_trigger_cases_cover_every_label():
     prompts = run.load_trigger_cases()
-    assert len(prompts) == 12
+    assert len(prompts) == 15
     assert {item["expected_skill"] for item in prompts} == {"property-research", "setup", "none"}
 
 

@@ -321,7 +321,7 @@ records 13/13 scenarios and 40/40 criteria passed, with the evaluator transcript
 and content hashes retained. These evaluations use a synthetic tool double; the
 20-address case checks the first request and continuation plan, not a full live
 batch. No without-skill baseline was run. Evaluation files are repository-only
-and are not shipped in the plugin ZIPs; see the repository copy of this README
+and are not shipped in the plugin ZIPs; see the discovery section above in this file
 for that report. The packaged live tool reference distinguishes executed calls
 from the schema-checked address example.
 
