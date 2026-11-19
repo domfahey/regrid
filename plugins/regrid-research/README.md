@@ -14,9 +14,9 @@ its references. Setup is separate from research; choose only one connection.
 
 | Package in `dist/` | Use |
 | --- | --- |
-| `regrid-research-cowork-0.9.2.zip` | Cowork plugin with a remote HTTP connector declaration; credentials configured in Claude |
-| `regrid-research-claude-code-0.9.2.zip` | Claude Code plugin with a native HTTP MCP server and environment placeholder |
-| `regrid-property-research-skill-0.9.2.zip` | Standalone research skill for an already configured Regrid connector |
+| `regrid-research-cowork-0.9.3.zip` | Cowork plugin with a remote HTTP connector declaration; credentials configured in Claude |
+| `regrid-research-claude-code-0.9.3.zip` | Claude Code plugin with a native HTTP MCP server and environment placeholder |
+| `regrid-property-research-skill-0.9.3.zip` | Standalone research skill for an already configured Regrid connector |
 
 The two plugin packages also ship the `/regrid-research:address-map <US street
 address>` command: one address request, the saved response rendered as a satellite
@@ -27,7 +27,7 @@ per host rather than enabling both. Archives through `0.4.0` are superseded.
 
 ## Connect in Cowork
 
-Upload `regrid-research-cowork-0.9.2.zip` under Customize > Plugins > Add > Upload
+Upload `regrid-research-cowork-0.9.3.zip` under Customize > Plugins > Add > Upload
 plugin. Its connector declaration contains only the remote URL, not a local
 process or credential. Add/connect Regrid from the plugin's Connectors tab, or
 configure the same URL through Customize > Connectors:
@@ -42,7 +42,7 @@ configure the same URL through Customize > Connectors:
    without retrieving parcels; public documentation access alone does not verify auth.
 6. Run `/regrid-research:setup`, then ask who owns a specific address once
    authenticated access is verified. If using the standalone skill instead of
-   the plugin, upload `regrid-property-research-skill-0.9.2.zip` through Claude's
+   the plugin, upload `regrid-property-research-skill-0.9.3.zip` through Claude's
    skill interface and ask for the same lookup with your connected Regrid tools.
 
 **Request-header authentication is a limited beta.** If the section is absent,
@@ -64,7 +64,7 @@ been verified in this account.
 
 ## Connect in Claude Code
 
-`regrid-research-claude-code-0.9.2.zip` contains the research and setup skills plus a native
+`regrid-research-claude-code-0.9.3.zip` contains the research and setup skills plus a native
 HTTP MCP server (`"type": "http"`) for the Regrid MCP URL with the
 `x-regrid-token: ${REGRID_TOKEN}` header, which Claude Code expands from the host
 environment. No Node/npx or helper process is needed, and the token never appears in
@@ -192,13 +192,13 @@ stay in the SDK but the skill does not use them).
 
 ## Validation and acceptance
 
-Status for 0.9.2:
+Status for 0.9.3:
 
 - Passed: structural validation (`claude plugin validate --strict`), packaging
   tests, and the offline `make check` suite.
 - Passed: the satellite map rendered in a plain browser with synthetic data
   (imagery, outlines, info panel and Esri credit shown; no console errors);
-  see `evals/results/map-hosts-0.9.2.json`.
+  see `evals/results/map-hosts-0.9.3.json`.
 - Not run: Claude Code, Claude apps and Cowork host checks of the map page and
   command; the live Regrid geometry check (billable, needs authorization); and
   model or Cowork acceptance.

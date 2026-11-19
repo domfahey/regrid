@@ -2,16 +2,26 @@
 
 User-visible changes are grouped by release using the categories from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version numbering follows [Semantic Versioning](https://semver.org/); the current `0.x` API remains under development.
 
-The Python SDK/CLI and the Regrid Research plugin are versioned independently. The latest tagged releases are SDK `0.4.2` (`sdk-v0.4.2`) and Regrid Research `0.9.2` (`regrid-research-v0.9.2`); the first were SDK `0.3.0` and Regrid Research `0.8.0`. Keep pending changes under Unreleased until the next release is prepared.
+The Python SDK/CLI and the Regrid Research plugin are versioned independently. The latest tagged releases are SDK `0.4.3` (`sdk-v0.4.3`) and Regrid Research `0.9.3` (`regrid-research-v0.9.3`); the first were SDK `0.3.0` and Regrid Research `0.8.0`. Keep pending changes under Unreleased until the next release is prepared.
 
 ## Unreleased
+
+No changes yet.
+
+## [SDK 0.4.3][sdk-v0.4.3] and [Regrid Research 0.9.3][regrid-research-v0.9.3] - 2026-11-19
+
+Patch release with the fixes from the live checks (PR #21) and the 24-hour audit (PR #24), end-to-end coverage of every CLI subcommand (PR #22), higher-signal tests (PR #23) and skill drift guards (PRs #19, #20). Unverified at release:
+- the Claude Code, Claude apps and Cowork map host checks (the map page passed a plain-browser render check)
+- a live `/mcp` connection over the native HTTP transport
+- model and Cowork acceptance evaluations
+- whether POST geometry search accepts `return_parcels`
 
 ### Fixed
 
 - Offline helpers: a path through a symlink loop gives a clean `Path contains a symlink loop` error in `map`, `export`, `address-map` (zero requests) and the skill's `map.py`, instead of a `RuntimeError` traceback. `render()`/`regrid map` refuse an output path that is a directory before rendering, like `export`. Exports fall back to `properties.fields.ll_uuid` when the top-level `ll_uuid` is an empty string, matching `feature_uuid`.
 - `fields.py`/`regrid fields`: a custom `--catalog` too deeply nested to print gives the clean `fields:` error instead of a `RecursionError` traceback.
 - CLI: the `--max-records` paging note about `pages`/`complete` keys in Regrid's response is computed from the final merged result, so it matches the output when those keys first appear on a later page.
-- Evals: `_is_canadian_route` checks only route-bearing keys (`url`, `path`, `endpoint`), URL-decodes them, skips empty segments and flags `/schemas/ca`; free-text address fields such as `Los Angeles/CA/90001` are no longer flagged.
+- Evals: `_is_canadian_route` checks only route-bearing values (`url`, `path`, `endpoint`, and the tokens of shell `command`/`args`, including `--path=`), URL-decodes them, skips empty segments and flags `/schemas/ca`; free-text address fields such as `Los Angeles/CA/90001` are no longer flagged.
 - Docs: `references/cli.md` says `address` defaults to 1 record (the other searches to 5); `references/mcp-tools.md` no longer says `fields.py` marks queryability (use `regrid query --validate-fields`) and notes that `return_parcels` on POST search is unverified.
 - Changelog: the 0.4.2 `export` bullet no longer says the summary lists only core columns when no CSV is written; `columns` includes the extra fields whenever `--all-fields` is used.
 - SDK: typed parcel validation accepts `ll_updated_at` timestamps with a space before a numeric offset (`2025-03-14 09:26:53 -0400`), the shape the live API returns. Before this, `ParcelFields`, `TypedRegridClient` and `make live` rejected real parcel responses.
@@ -24,6 +34,7 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ### Added
 
+- Tests: the non-e2e suite's low-signal tests (bare `raises`, loose substrings, truthiness, tests asserting nothing) now assert exact messages, exact requests sent and negative outcomes (no request, no token, no file); each upgrade was mutation-tested.
 - Tests: `make e2e` now runs every CLI subcommand end to end (subprocess or SDK over real local TLS against a fake Regrid server in `tests/e2e_support.py`): parcel searches incl. POST and `--max-records` paging, `TypedRegridClient`, `address-map`, `map`, `export`, `fields`, `freshness` caching, `schema`, `usage`, `verse`, tiles, `grid`, `report` and `client-token-typeahead` (local server only), plus redirect, error, timeout and missing-token safety. `tests/test_e2e_inventory.py` (in `make check`) fails if a subcommand has no e2e test.
 - Tests: `tests/test_cli_docs.py` now fails unless `references/cli.md` shows every CLI subcommand as code (`regrid <cmd>` or a backtick before it) and every long option on one line that is word-bounded with that code subcommand (global options need only the flag). It checks presence, not accuracy.
 - Tests: `tests/test_cli_docs.py` also checks the per-command `--options` keys listed in `references/cli.md` against the keys the client accepts (exact sets for `verse`, `usage` and `schema`; `parcel` and `parcel-path` reject `limit`). New `tests/test_mcp_docs.py` checks that the endpoint table in `references/mcp-tools.md` matches `references/endpoints.json` and that every API path it names is known or explicitly forbidden.
@@ -286,5 +297,7 @@ Describe user-facing changes rather than copying commit logs. Add repository com
 [regrid-research-v0.9.0]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.0
 [sdk-v0.4.1]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.1
 [regrid-research-v0.9.1]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.1
+[sdk-v0.4.3]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.3
+[regrid-research-v0.9.3]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.3
 [sdk-v0.4.2]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.2
 [regrid-research-v0.9.2]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.2
