@@ -62,21 +62,21 @@ failure repeatedly, or silently switch data sources.
 1. Identify the requested facts, output format, and any caller budget.
    Preserve each input's stable ID, address, unit, and geographic scope. For APNs,
    establish county or equivalent scope; an APN alone is not nationally unique. Use ZIP or city/state when provided. Ask
-   only for information whose absence prevents a meaningful lookup.
-2. Inspect supplied/cached evidence and its provenance before selecting a tool.
+   only for what a meaningful lookup needs.
+2. Inspect supplied/cached evidence and provenance before selecting a tool.
    Use sufficient evidence without refetching; preserve conflicting source
    observations instead of silently choosing or merging them. Missing provenance
    must remain unknown; an explicit refresh still requires retrieval.
-   When needed, select the endpoint through the tools' current schemas or
-   Regrid documentation discovery. Preserve geographic scope in the actual tool
+   When needed, select the endpoint from current tool schemas or Regrid documentation.
+   Preserve geographic scope in the actual tool
    arguments, not just the handoff. If the tool cannot express it, stop
    and report that limitation; never issue an unscoped substitute. Keep requests
    read-only; submit no issue reports or other external changes.
 3. For one property start with `limit=1`. Explicitly disable stacked results and
-   premium datasets when supported and not requested. Request geometry only for a map:
-   `return_geometry=true` on point, area, and query searches (other lookups always return
-   it; [map guide](references/map.md)). Never paste geometry into chat.
-   Pass only supported options.
+   premium datasets when supported and not requested. Request geometry only for a map or GeoJSON
+   export (`return_geometry=true` on point, area, and query searches); other lookups include
+   it by default (`null` when no boundary is on file; [map guide](references/map.md)).
+   Never paste geometry into chat; pass only supported options.
 4. Record execution apart from identity: `lookup_status` is `success`,
    `error`, or `not_attempted`; `match_status` is `confirmed`, `ambiguous`,
    `unmatched`, or `not_assessed`. A successful evaluation of supplied

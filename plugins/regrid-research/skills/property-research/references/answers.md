@@ -37,7 +37,8 @@ without that field, say the parcel matched but its response has no recorded owne
 value. For other statuses, lead with the uncertainty, no-match result, or error.
 
 "Parcel ID" means the county assessor's parcel number (`parcelnumb`, the APN as
-recorded). The Regrid ID (`ll_uuid`) belongs in provenance, not in the parcel ID field.
+recorded). The Regrid ID (`ll_uuid`) is not the parcel ID; keep it with the saved response and
+cite that response via `evidence_id` or `source_url`. Never add it to `provenance`.
 
 Include parcel ID and source refresh date when available; if absent, identify
 them as unavailable when relevant. Retrieval time is not source freshness.

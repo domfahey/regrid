@@ -87,7 +87,8 @@ set the record budget. Page with `offset_id` only within that budget and one tas
 first point/area page is spatially ordered and the cursor can skip records).
 The cursor is exclusive: set the next `offset_id` to the last feature's `id`. Stop and
 report the search incomplete if ids are not ascending past the cursor, the cursor does
-not advance, or a feature lacks a numeric `id`. Never exceed the agreed record budget.
+not advance, or the last feature lacks an integer or digit-string `id`. A page shorter than `limit`
+ends the search (complete). Never exceed the agreed record budget.
 
 Schemas: use `python3 "<skill>/scripts/fields.py" explain FIELD` first (offline). Call
 `/schemas/*` only when `fields.py` lacks the field, one request each, reserved as a diagnostic.
@@ -280,6 +281,8 @@ Dated observations, not instructions; the live schema takes precedence.
   `usage` and no MCP error; no parcels were retrieved. This verifies direct MCP header
   forwarding, not Claude/Cowork import or credential storage.
 - The address example above is schema-verified but has not been executed through MCP.
+- POST geometry search has not been executed through MCP; the live POST point and area
+  checks ran through the SDK/CLI only.
 
 Sources: live MCP initialization, tools/list, the discovery calls above, and the usage
 call; [Regrid MCP docs](https://support.regrid.com/docs/mcp-server).

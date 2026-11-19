@@ -133,7 +133,7 @@
       ],
       "properties": {
         "parcel_id": {
-          "description": "County assessor's parcel number (parcelnumb, the APN as recorded); the Regrid ID (ll_uuid) goes in provenance.",
+          "description": "County assessor's parcel number (parcelnumb, the APN as recorded); the Regrid ID (ll_uuid) is not the parcel ID; keep it in the saved response (cite via evidence_id or source_url), never in provenance.",
           "type": [
             "string",
             "null"

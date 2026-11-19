@@ -129,8 +129,8 @@ authorization before it pages again.
 
 Neighbouring parcels are one `kind="lookup"` request with `authorized_retry=True`, the
 subject's input ID, and record_limit 25. If the user already asked for neighbours,
-state the cost ("one request, up to 25 records") and proceed; otherwise offer it with
-that cost and wait. A single-property map with
+state the cost ("one request, up to 25 records") and proceed if the budget check
+below passes; otherwise offer it with that cost and wait. A single-property map with
 no workflow ledger needs no entry. When a workflow ledger or handoff is in use,
 the user's neighbours request is the authorization. Check that at least one request
 and 25 records remain, then reserve. Complete it with the actual returned count; an

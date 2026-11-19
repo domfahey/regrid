@@ -35,4 +35,4 @@ Never put the Regrid token in chat, command arguments, the saved response, or th
 
 If the MCP tools are missing in Claude Code and the `regrid` CLI is available, run
 `regrid address-map ADDRESS OUTPUT.html [--neighbours]` per `<skill>/references/cli.md`
-instead (one request; two with neighbours).
+instead (one request; up to two with neighbours).
