@@ -169,6 +169,13 @@ def area_check(feature: dict, tolerance: float = 0.05) -> dict[str, Any]:
             "ratio": None,
         }
     ratio = computed / recorded
+    if not math.isfinite(ratio):
+        return {
+            "status": "unavailable",
+            "computed_sqft": computed,
+            "recorded_sqft": recorded,
+            "ratio": None,
+        }
     status = "ok" if abs(ratio - 1) <= tolerance else "mismatch"
     return {"status": status, "computed_sqft": computed, "recorded_sqft": recorded, "ratio": ratio}
 
@@ -468,10 +475,8 @@ def render_html(
         "__NEIGHBOURS__": neighbour_data,
         "__DATA__": data,
     }
-    page = _PAGE
-    for marker, value in replacements.items():
-        page = page.replace(marker, value)
-    return page
+    pattern = re.compile("|".join(re.escape(marker) for marker in replacements))
+    return pattern.sub(lambda match: replacements[match.group(0)], _PAGE)
 
 
 EXISTS = "Output file exists; pass --replace to overwrite it"
@@ -613,7 +618,7 @@ _PROPERTY_COLUMNS = frozenset({"headline", "path", "ll_uuid"})
 NO_OUTPUT = "Choose --csv and/or --geojson"
 
 
-_PLAIN_NUMBER = re.compile(r"[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?")
+_PLAIN_NUMBER = re.compile(r"[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?", re.ASCII)
 
 
 def _csv_cell(value: object) -> str:
@@ -621,7 +626,12 @@ def _csv_cell(value: object) -> str:
     if value is None:
         return ""
     if isinstance(value, (dict, list)):
-        text = json.dumps(value, ensure_ascii=False)
+        try:
+            text = json.dumps(value, ensure_ascii=False, allow_nan=False)
+        except ValueError as error:
+            raise MapError(
+                "A CSV cell contains a value that is not JSON (NaN or Infinity)"
+            ) from error
     else:
         text = str(value)
     if text[:1] not in {"=", "+", "-", "@", "\t", "\r"}:

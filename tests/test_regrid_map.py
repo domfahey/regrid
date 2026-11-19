@@ -856,3 +856,34 @@ def test_public_point_helpers():
     inside = good_feature(lat=39.9, lon=-75.03)
     assert parcel_map.fallback_point(inside) == [39.9, -75.03]
     assert parcel_map.fallback_point(good_feature(lat=0, lon=0)) is None
+
+
+def test_render_html_replaces_markers_in_one_pass():
+    subject = good_feature()
+    subject["properties"]["headline"] = "x __NEIGHBOURS__ y"
+    page = parcel_map.render_html(
+        [subject],
+        candidates=False,
+        retrieved_at=None,
+        warnings=["warn __DATA__"],
+        neighbours=[{"owner": "ACME __DATA__ LLC", "coords": []}],
+    )
+    for name in ("parcel-data", "neighbour-data"):
+        match = re.search(rf'<script type="application/json" id="{name}">(.*?)</script>', page)
+        json.loads(match.group(1))
+    assert "ACME __DATA__ LLC" in page
+    assert "x __NEIGHBOURS__ y" in page
+
+
+def test_area_check_non_finite_ratio_is_unavailable():
+    result = parcel_map.area_check(good_feature(ll_gissqft=1e-320))
+    assert result["status"] == "unavailable" and result["ratio"] is None
+
+
+def test_csv_cell_non_ascii_digits_prefixed():
+    assert parcel_map._csv_cell("-١٢") == "'-١٢"
+
+
+def test_csv_cell_nan_in_container_is_error():
+    with pytest.raises(MapError, match="not JSON"):
+        parcel_map._csv_cell({"a": float("nan")})

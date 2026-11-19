@@ -74,7 +74,11 @@ def is_stale(retrieved_at: str, max_age_days: float, now: datetime | None = None
         return True
     if when.tzinfo is None:
         when = when.replace(tzinfo=timezone.utc)
-    return (now or datetime.now(timezone.utc)) - when > timedelta(days=max_age_days)
+    try:
+        limit = timedelta(days=max_age_days)
+    except (OverflowError, ValueError) as error:
+        raise ValueError("max_age_days must be a finite, reasonable number of days") from error
+    return (now or datetime.now(timezone.utc)) - when > limit
 
 
 def read_cache(path: Path, base_url: str | None = None) -> tuple[str, dict] | None:
