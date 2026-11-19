@@ -164,8 +164,8 @@ def test_host_results_never_claim_unrun_checks():
 
 
 def test_versions():
-    assert json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())["version"] == "0.7.0"
-    assert regrid.__version__ == "0.2.0"
+    assert json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())["version"] == "0.8.0"
+    assert regrid.__version__ == "0.3.0"
 
 
 def test_premium_guide_covers_every_flag_and_requires_authorization():
