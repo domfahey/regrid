@@ -359,3 +359,15 @@ def test_deeply_nested_json_is_invalid_input_without_context(recording_client):
             call()
         assert info.value.__context__ is None
     assert requests == []
+
+
+def test_validate_query_checks_limit_and_paging_flag(recording_client):
+    _, requests = recording_client
+    with RegridClient(token="t", max_limit=10, transport=httpx.MockTransport(lambda r: None)) as c:
+        with pytest.raises(ValueError, match="exceeds configured maximum"):
+            c.validate_query({"geoid": {"eq": "1"}}, limit=50)
+        c.validate_query({"geoid": {"eq": "1"}}, limit=10)
+        for bad in ("false", 0, "x", 1):
+            with pytest.raises(ValueError, match="paging"):
+                c.validate_query({"geoid": {"eq": "1"}}, paging=bad)
+    assert requests == []

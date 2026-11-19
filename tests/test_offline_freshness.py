@@ -184,7 +184,7 @@ def test_is_stale_validates_max_age_before_parsing():
     assert freshness.is_stale("garbage", 0) is True
 
 
-@pytest.mark.parametrize("bad", ["abc", None, float("inf"), -0.1, 36501, "nan"])
+@pytest.mark.parametrize("bad", ["abc", None, float("inf"), -0.1, 36501, "nan", True, False])
 def test_check_max_age_days_rejects(bad):
     with pytest.raises(ValueError, match="36500"):
         freshness.check_max_age_days(bad)

@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .client import RegridClient, RegridError
+from .config import validate_limit
 from .endpoints import QueryPagingError
 from .offline import fields as parcel_fields
 from .offline import freshness as county_freshness
@@ -375,9 +376,11 @@ def _cursor(feature: Any) -> int | None:
 def _drop_trimmed_siblings(merged: dict[str, Any], kept: list[Any], trimmed: list[Any]) -> None:
     """Remove sibling features that belong to parcels trimmed off the end."""
 
-    def uuids(features: list[Any]) -> set[Any]:
+    def uuids(features: list[Any], *, parcels: bool = False) -> set[Any]:
         found = set()
         for feature in features:
+            if parcels and (own := parcel_map.feature_uuid(feature)) is not None:
+                found.add(own)
             properties = feature.get("properties") if isinstance(feature, dict) else None
             if not isinstance(properties, dict):
                 continue
@@ -388,8 +391,8 @@ def _drop_trimmed_siblings(merged: dict[str, Any], kept: list[Any], trimmed: lis
                 found.update(u for u in many if isinstance(u, str))
         return found
 
-    kept_uuids = uuids(kept)
-    dropped = uuids(trimmed) - kept_uuids
+    kept_uuids = uuids(kept, parcels=True)
+    dropped = uuids(trimmed, parcels=True) - kept_uuids
     if not dropped:
         return
     for key, value in merged.items():
@@ -428,6 +431,10 @@ def _paged_search(
         raise _PagingError("--max-records is not supported for POST point searches")
     if "offset_id" in options:
         raise _PagingError("--max-records conflicts with offset_id")
+    try:
+        validate_limit(limit, client.max_limit)
+    except ValueError as exc:
+        raise _PagingError(_error_message(exc, os_error="", type_error="")) from None
     _validate_paging(client, command, args, options)
     # Worst case under an inclusive cursor: later pages add at least limit - 1 new records.
     first = min(limit, total)

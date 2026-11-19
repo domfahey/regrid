@@ -644,3 +644,19 @@ def test_paging_note_names_only_the_key_not_kept(monkeypatch, capsys, existing, 
         in lines
     )
     assert f"regrid: paging note: response {kept} kept as response_{kept}" in lines
+
+
+def test_trimmed_siblings_use_fields_only_parcel_uuids():
+    def parcel(uuid):
+        return {"id": 1, "properties": {"fields": {"ll_uuid": uuid}}}
+
+    kept, trimmed = [parcel("u3")], [parcel("u4")]
+    assert _trim_siblings([_building(["u3", "u4"])], kept, trimmed) == [_building(["u3", "u4"])]
+    assert _trim_siblings([_building(["u4"])], kept, trimmed) == []
+
+
+def test_paged_search_rejects_limit_above_client_max_before_requests(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 10)])
+    code = cli.main([*POINT, "--max-records", "5", "--options", '{"limit":5000}'])
+    assert code == 1 and seen == []
+    assert "Invalid Regrid request parameters" in capsys.readouterr().err

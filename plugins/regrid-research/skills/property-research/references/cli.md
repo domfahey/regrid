@@ -80,6 +80,7 @@ stderr note.
 
 ## Ledger
 
-Every CLI command that calls the API ends stderr with `regrid: requests made: N`. The CLI
+Every CLI command that calls the API prints `regrid: requests made: N` on stderr. It is the last
+line, except that `address-map` and `freshness` print it before their final note or error lines. The CLI
 is ledger-unaware: reserve before the command and complete from that line, as
 [batch and resume](batch.md#cli-and-suggestion-requests) describes.
