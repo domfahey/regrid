@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 MAX_AGE_DAYS_LIMIT = 36500
+FUTURE_SKEW = timedelta(minutes=5)
 DATE_KEYS = ("last_refresh", "assessor_data_date", "usps_data_date")
 
 
@@ -92,7 +93,9 @@ def is_stale(retrieved_at: str, max_age_days: float, now: datetime | None = None
         return True
     if when.tzinfo is None:
         when = when.replace(tzinfo=timezone.utc)
-    return (now or datetime.now(timezone.utc)) - when > limit
+    age = (now or datetime.now(timezone.utc)) - when
+    # A timestamp in the future beyond a small clock skew cannot be trusted.
+    return age > limit or age < -FUTURE_SKEW
 
 
 def read_cache(path: Path, base_url: str | None = None) -> tuple[str, dict] | None:
@@ -103,7 +106,7 @@ def read_cache(path: Path, base_url: str | None = None) -> tuple[str, dict] | No
     """
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+    except (OSError, ValueError, RecursionError):
         return None
     if not isinstance(data, dict):
         return None

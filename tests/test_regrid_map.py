@@ -911,3 +911,19 @@ def test_check_mappable_matches_render_messages():
         parcel_map.check_mappable(
             {"properties": {"path": "/ca/x"}, "geometry": None}, label="Candidate 2"
         )
+
+
+def test_render_missing_output_directory_is_clean_error(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    with pytest.raises(MapError, match="Output directory does not exist"):
+        parcel_map.render(response, tmp_path / "nodir" / "o.html")
+
+
+def test_zero_area_ring_is_rejected(tmp_path):
+    point = [-75.03, 39.9]
+    degenerate = _other({"type": "Polygon", "coordinates": [[point] * 4]})
+    with pytest.raises(MapError, match="zero area"):
+        parcel_map.render(write_response(tmp_path / "r.json", degenerate), tmp_path / "m.html")
+    collinear = [[-75.03, 39.9], [-75.02, 39.9], [-75.01, 39.9], [-75.03, 39.9]]
+    with pytest.raises(MapError, match="zero area"):
+        parcel_map.validate_geometry({"type": "Polygon", "coordinates": [collinear]})

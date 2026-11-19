@@ -98,6 +98,9 @@ def _validate_ring(ring: object) -> None:
         _validate_position(position)
     if ring[0] != ring[-1]:
         raise MapError("Polygon rings must be closed")
+    twice_area = sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(ring, ring[1:]))
+    if abs(twice_area) < 1e-12:
+        raise MapError("Polygon ring has zero area")
 
 
 def _validate_polygon(polygon: object) -> None:
@@ -563,6 +566,8 @@ def render(
         and Path(output_path).resolve() == Path(neighbours_path).resolve()
     ):
         raise MapError("Output must not be the neighbours file")
+    if not Path(output_path).parent.is_dir():
+        raise MapError("Output directory does not exist")
     try:
         document = json.loads(Path(response_path).read_text(encoding="utf-8"))
     except (ValueError, RecursionError) as exc:
