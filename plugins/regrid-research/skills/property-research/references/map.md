@@ -71,7 +71,8 @@ python3 <skill>/scripts/map.py export RESPONSE.json [--csv F] [--geojson F] [--a
 
 CSV has the core columns (headline, path, ll_uuid, owner, parcelnumb, ll_last_refresh,
 ll_gisacre, ll_gissqft, lat, lon); `--all-fields` appends the rest, sorted. Cells that
-start with `=`, `+`, `-` or `@` get a `'` prefix. GeoJSON keeps geometry verbatim with
+start with `=`, `+`, `-`, `@`, tab or CR get a `'` prefix, except plain numbers (`-75.1`
+stays as is). GeoJSON keeps geometry verbatim with
 core properties only. Never paste geometry into chat.
 
 ## Limits

@@ -13,11 +13,11 @@ request count is on stderr. Apply the same scope, limit and premium rules as ove
 
 | Endpoint | Command |
 | --- | --- |
-| `/parcels/address` | `regrid address QUERY [--path P] [--options JSON]` |
-| `/parcels/apn` | `regrid apn PARCELNUMB [--path P]` |
-| `/parcels/owner` | `regrid owner OWNER [--path P]` (no `--max-records`) |
-| `/parcels/point` | `regrid point --lat L --lon L [--radius M]` |
-| `/parcels/area` | `regrid area --geojson FILE` |
+| `/parcels/address` | `regrid address QUERY [--options '{"path":"/us/nj/camden"}']` |
+| `/parcels/apn` | `regrid apn PARCELNUMB [--options '{"path":"/us/nj/camden"}']` |
+| `/parcels/owner` | `regrid owner OWNER [--options '{"path":"/us/nj/camden"}']` (no `--max-records`) |
+| `/parcels/point` | `regrid point --lat L --lon L [--options '{"radius":M}']` (or `--geojson` Point JSON or @FILE; `--method GET|POST`) |
+| `/parcels/area` | `regrid area --geojson @FILE` (GeoJSON as a JSON string or @file) |
 | `/parcels/query` | `regrid query --fields '{"field":{"op":v}}'` |
 | `/parcels/{ll_uuid}` | `regrid parcel LL_UUID` |
 | `/parcels/path` | `regrid parcel-path PATH` |
@@ -37,13 +37,15 @@ records` before the first request, and outputs `{"parcels": FeatureCollection,
 "pages": P}`. Get the user's agreed record budget first; page only within one task.
 
 Export from a saved response, with no requests:
-`regrid export RESPONSE [--csv F] [--geojson F] [--all-fields] [--replace]`.
+`regrid export RESPONSE [--csv F] [--geojson F] [--all-fields] [--replace]`. CSV cells
+starting with `=`, `+`, `-`, `@`, tab or CR get a `'` prefix; plain numbers such as
+`-75.1` stay as they are.
 
 ## Tiles
 
 `regrid tilejson`, `regrid tile` and `regrid grid` are CLI-only: there is no MCP
 equivalent. Tile output is binary or UTFGrid data for files; never put it in the map
-page and keep it out of chat. Each call is one request: reserve it as a diagnostic.
+page and keep it out of chat. `tile` requires `--output FILE`. Each call is one request: reserve it as a diagnostic.
 
 ## County pull dates (freshness)
 
