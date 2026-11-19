@@ -14,11 +14,16 @@ from .client import RegridClient, RegridError
 
 def _object(value: str) -> dict[str, Any]:
     """Load an object without including possibly sensitive input in errors."""
+    valid = True
+    result: Any = None
     try:
         raw = Path(value[1:]).read_text() if value.startswith("@") else value
         result = json.loads(raw)
     except (OSError, ValueError, UnicodeError):
-        raise ValueError("Expected valid JSON or @file containing JSON") from None
+        valid = False
+    # Raise outside the except block: __context__ would retain the raw input.
+    if not valid:
+        raise ValueError("Expected valid JSON or @file containing JSON")
     if not isinstance(result, dict):
         raise ValueError("JSON input must be an object")
     return result

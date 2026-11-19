@@ -2,7 +2,7 @@
 
 User-visible changes are grouped by release using the categories from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version numbering follows [Semantic Versioning](https://semver.org/); the current `0.x` API remains under development.
 
-No releases have been tagged in this repository. The Python SDK/CLI metadata version is `0.1.0`; the independently versioned Regrid Research plugin is `0.5.0`. These metadata versions do not establish published releases. Keep pending changes under Unreleased until an actual release is prepared.
+No releases have been tagged in this repository. The Python SDK/CLI metadata version is `0.1.0`; the independently versioned Regrid Research plugin is `0.5.1`. These metadata versions do not establish published releases. Keep pending changes under Unreleased until an actual release is prepared.
 
 ## Unreleased
 
@@ -26,6 +26,8 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 
 ### Changed
 
+- Regrid Research 0.5.1 is a fix-only version: strict boolean checkpoint/retry flags in the workflow helper and corrected authentication detection in the discovery runner (see Fixed). Handoff schemas are unchanged. Detection was checked against a logged-out Claude CLI 2.1.327, which records the first trial as blocked; an expired OAuth session was not reproduced.
+
 - Regrid Research 0.5.0 adds opt-in `1.1` query handoffs and explicit upgrades while retaining `1.0` compatibility; caller-verified per-attempt reconciliation preserves uncertain history. Setup diagnostic calls share the workflow request budget without consuming property records. Evidence-only prose avoids loading schemas/examples, and saved tool catalogs load only for unavailable or mismatched live schemas. New regression scenarios cover these composition boundaries; offline evaluations remain separate from Claude/Cowork acceptance.
 
 - Regrid Research 0.4.0 adds metadata-first discovery trials with without-skill baselines and trace/model recording, direct resource links, qualified MCP names, safer actionable validation diagnostics, and an explicit checkpoint save CLI. The helper requires Python 3.10+ with only the standard library; `workflow.py save INPUT DEST` validates before saving and refuses existing destinations unless an explicitly requested update uses `--replace`. The [0.4.0 acceptance report](plugins/regrid-research/evals/results/authoring-0.4.0-report.json) records Claude model evaluations blocked by expired CLI authentication and Cowork import/authenticated lookup unverified because Desktop inspection was unavailable. Passing local tests and structural validation does not establish those acceptance gates.
@@ -46,7 +48,7 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 - Reject non-finite upstream JSON numbers before serialization can silently convert them to null.
 - `TypedRegridClient.grid()` accepts the `TileJSON` model returned by `TypedRegridClient.tilejson()` as `metadata`.
 - `query(..., country="US", validate_fields=True)` no longer fails; country case is normalized before catalog validation.
-- `ll_updated_at` validation behaves the same on Python 3.10 as on later versions and accepts lowercase `z`, any fractional-second precision, and `+HH`/`+HHMM` offsets. Timestamps without seconds are rejected.
+- `ll_updated_at` validation behaves the same on Python 3.10 as on later versions and accepts lowercase `t`/`z`, any fractional-second precision, and `+HH`/`+HHMM` offsets. Only the extended form `YYYY-MM-DD`, `T` or space, `HH:MM:SS`, optional fraction, then `Z` or an hour/minute offset is accepted; basic-format, week-date, seconds-less, and offset-with-seconds timestamps that newer Python versions parsed are rejected.
 - The CLI treats an empty or whitespace-only `REGRID_TOKEN` as unset, so public commands work and authenticated commands report the missing-token error. Surrounding whitespace is trimmed from the token.
 - UTFGrid discovery falls back to `grids` when TileJSON contains `"grid": null`.
 - Reject a `lat` or `lon` supplied without the other on point searches, including when GeoJSON is given, and whitespace-only `path` options on address, APN, owner, and query searches.
@@ -58,7 +60,7 @@ No releases have been tagged in this repository. The Python SDK/CLI metadata ver
 
 - Store account tokens as `SecretStr` and mask temporary-token models unless explicitly exported.
 - Sanitize request and response-validation failures without retaining input-bearing Pydantic exceptions.
-- Transport, JSON-decode, and JSON/GeoJSON input errors no longer retain the original exception as `__context__`, which could hold a token-bearing URL, the response body, or raw input.
+- Transport, JSON-decode, and JSON/GeoJSON input errors, including CLI JSON arguments, no longer retain the original exception as `__context__`, which could hold a token-bearing URL, the response body, or raw input.
 - Reject unsafe UTFGrid URLs and replace metadata credentials with the configured client token.
 - Keep local environment files and private keys out of Git. The live runner suppresses HTTP logging and prints no credentials, property details, response bodies, or exception text.
 

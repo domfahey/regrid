@@ -68,6 +68,8 @@ def test_finite_response_numbers_are_preserved():
         "https://app.regrid.com/api/v2#",
         "https://:@app.regrid.com/api/v2",
         "https://@app.regrid.com/api/v2",
+        "https://app.regrid.com/api/v2 ",
+        "https://app.regrid.com/api\u00a0v2",
     ],
 )
 def test_service_url_rejects_empty_delimiters(field, bad_url):

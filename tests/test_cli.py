@@ -333,3 +333,16 @@ def test_base_urls_and_report_text(requests):
     assert requests[0].url.params["details"] == "Please check this parcel"
     assert cli.main(["--tiles-base-url", "https://tiles.example.test", "tilejson"]) == 0
     assert requests[1].url.host == "tiles.example.test"
+
+
+def test_json_argument_error_does_not_retain_input_context():
+    with pytest.raises(ValueError) as caught:
+        cli._object('{"owner": "SECRET"')
+    assert caught.value.__context__ is None
+    assert caught.value.__cause__ is None
+
+
+def test_surrounding_whitespace_is_trimmed_from_token(requests, monkeypatch, capsys):
+    monkeypatch.setenv("REGRID_TOKEN", "  padded-token\n")
+    assert cli.main(["address", "123 Main"]) == 0
+    assert requests[-1].url.params["token"] == "padded-token"

@@ -172,3 +172,39 @@ def test_timeout_is_not_success(tmp_path, monkeypatch):
 def test_invalid_limits(tmp_path, timeout, budget):
     with pytest.raises(ValueError):
         runner.run_suite(tmp_path / "results", timeout=timeout, budget=budget)
+
+
+def test_observed_logged_out_cli_trace_is_blocked(tmp_path, monkeypatch):
+    # Shape recorded from Claude CLI 2.1.327 with no login: exit 1, empty stderr, a synthetic
+    # assistant message, and an error result that still reports subtype "success".
+    trace = "\n".join(
+        json.dumps(item)
+        for item in [
+            {"type": "system", "subtype": "init", "model": "claude-haiku-5-5"},
+            {
+                "type": "assistant",
+                "error": "authentication_failed",
+                "message": {
+                    "model": "<synthetic>",
+                    "content": [{"type": "text", "text": "Not logged in · Please run /login"}],
+                },
+            },
+            {
+                "type": "result",
+                "subtype": "success",
+                "is_error": True,
+                "terminal_reason": "api_error",
+                "result": "Not logged in · Please run /login",
+            },
+        ]
+    )
+
+    def fake_run(command, **kwargs):
+        return SimpleNamespace(stdout=trace, stderr="", returncode=1)
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    report = runner.run_trial(
+        "claude", "haiku", "checkpoint-correction", "skill", tmp_path, "2.test", 1, 0.25
+    )
+    assert report["status"] == "blocked"
+    assert report["auth_blocked"] is True

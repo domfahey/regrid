@@ -21,7 +21,8 @@ def _date_string(value: str) -> str:
 
 
 _TIMESTAMP = re.compile(
-    r"(\d\d\d\d-\d\d-\d\d[T ]\d\d:\d\d:\d\d)(?:\.(\d+))?(?:([Zz])|([+-]\d\d)(?::?(\d\d))?)"
+    r"(\d\d\d\d-\d\d-\d\d)[Tt ](\d\d:\d\d:\d\d)(?:\.(\d+))?(?:([Zz])|([+-]\d\d)(?::?(\d\d))?)",
+    re.ASCII,
 )
 
 
@@ -29,7 +30,8 @@ def _timestamp_string(value: str) -> str:
     match = _TIMESTAMP.fullmatch(value)
     if match is None:
         raise ValueError("Expected an ISO timestamp with time zone")
-    base, fraction, zulu, hours, minutes = match.groups()
+    day, time, fraction, zulu, hours, minutes = match.groups()
+    base = day + "T" + time
     if fraction:
         base += "." + fraction[:6].ljust(6, "0")
     offset = "+00:00" if zulu else hours + ":" + (minutes or "00")
