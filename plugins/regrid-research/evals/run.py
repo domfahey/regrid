@@ -7,6 +7,7 @@ import importlib.util
 import json
 import re
 from pathlib import Path
+from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parent
 
@@ -20,23 +21,28 @@ def validate_handoff(document: dict) -> None:
     module.validate(document)
 
 
-def _strings(value: object):
+def _route_strings(value: object, key: str = ""):
+    """Yield strings under route-bearing keys (url, path, endpoint); free text such as query is skipped."""
     if isinstance(value, str):
-        yield value
+        if key.lower() in {"url", "path", "endpoint"}:
+            yield value
     elif isinstance(value, dict):
-        for item in value.values():
-            yield from _strings(item)
+        for name, item in value.items():
+            yield from _route_strings(item, str(name))
     elif isinstance(value, list):
         for item in value:
-            yield from _strings(item)
+            yield from _route_strings(item, key)
 
 
 def _has_canadian_segment(path: str) -> bool:
-    parts = path.strip().lower().split("/")
-    for i, part in enumerate(parts[:-1]):
+    parts = [p for p in unquote(path).strip().lower().split("/") if p]
+    for i, part in enumerate(parts):
         if part != "ca" or (i and parts[i - 1] == "us"):
             continue
-        if parts[i + 1][:1].strip():
+        if i + 1 < len(parts):
+            if parts[i + 1][:1].strip():
+                return True
+        elif i and parts[i - 1] == "schemas":
             return True
     return False
 
@@ -44,10 +50,12 @@ def _has_canadian_segment(path: str) -> bool:
 def _is_canadian_route(arguments: dict) -> bool:
     """True when a `ca` path segment is followed by more segments and is not /us/ca/ (California).
 
-    Checks path-like strings, URL paths and path= parameter values. Other query values
-    (state2=ca, fields[state2][eq]=ca) are California filters, never routes.
+    Checks only route-bearing fields (url, path, endpoint): their paths and path= parameter values, with
+    percent-encoding decoded and empty segments ignored. `/schemas/ca` is the Canadian schema.
+    Other query values (state2=ca, fields[state2][eq]=ca) are California filters, and free-text
+    fields such as an address query are never routes.
     """
-    for text in _strings(arguments):
+    for text in _route_strings(arguments):
         for chunk in re.split(r"[?&#]", text):
             key, sep, value = chunk.partition("=")
             if sep and key.strip().lower() != "path":
