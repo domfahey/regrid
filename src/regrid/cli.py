@@ -47,6 +47,17 @@ def _run_map(args: dict[str, Any]) -> None:
     print(json.dumps(summary, indent=2, ensure_ascii=False, allow_nan=False))
 
 
+def _run_export(args: dict[str, Any]) -> None:
+    summary = parcel_map.export(
+        Path(args["response"]),
+        csv_path=Path(args["csv"]) if args["csv"] else None,
+        geojson_path=Path(args["geojson"]) if args["geojson"] else None,
+        all_fields=args["all_fields"],
+        replace=args["replace"],
+    )
+    print(json.dumps(summary, indent=2, ensure_ascii=False, allow_nan=False))
+
+
 def _run_fields(args: dict[str, Any]) -> None:
     catalog = parcel_fields.load_catalog(
         Path(str(files("regrid").joinpath("data/parcel_fields.json")))
@@ -299,7 +310,7 @@ def _run_freshness(args: dict[str, Any]) -> int:
 
 
 # Commands that run locally: no token, no HTTP client.
-_OFFLINE = {"map": _run_map, "fields": _run_fields}
+_OFFLINE = {"map": _run_map, "fields": _run_fields, "export": _run_export}
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -325,6 +336,16 @@ def _parser() -> argparse.ArgumentParser:
     offline.add_argument("--all-candidates", action="store_true", help="Map every feature")
     offline.add_argument("--retrieved-at", metavar="ISO", help="Retrieval timestamp to display")
     offline.add_argument("--replace", action="store_true", help="Overwrite an existing output")
+    export = commands.add_parser(
+        "export",
+        help="Export a saved parcel response to CSV and/or GeoJSON (offline, no API call)",
+        description="Write core parcel columns as CSV and/or a GeoJSON FeatureCollection.",
+    )
+    export.add_argument("response", help="Saved parcel response JSON file")
+    export.add_argument("--csv", metavar="FILE", help="Destination CSV file")
+    export.add_argument("--geojson", metavar="FILE", help="Destination GeoJSON file")
+    export.add_argument("--all-fields", action="store_true", help="Append every other field")
+    export.add_argument("--replace", action="store_true", help="Overwrite existing outputs")
     field_catalog = commands.add_parser(
         "fields",
         help="Explain or search US parcel field definitions (offline, no API call)",

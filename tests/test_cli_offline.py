@@ -64,3 +64,18 @@ def test_regrid_fields_cli(monkeypatch, capsys):
 def test_regrid_fields_search_cli(capsys):
     assert cli.main(["fields", "search", "ASSESSMENT"]) == 0
     assert json.loads(capsys.readouterr().out)["matches"]
+
+
+def test_export_cli_offline(tmp_path, monkeypatch, capsys):
+    monkeypatch.delenv("REGRID_TOKEN", raising=False)
+    monkeypatch.setattr(cli, "RegridClient", lambda **kw: pytest.fail("no client for export"))
+    response = write_response(tmp_path / "r.json", good_feature())
+    argv = ["export", str(response), "--csv", str(tmp_path / "o.csv")]
+    assert cli.main([*argv, "--geojson", str(tmp_path / "o.geojson"), "--all-fields"]) == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["features"] == 1 and summary["geojson"] == str(tmp_path / "o.geojson")
+    assert cli.main(argv) == 1
+    assert "--replace" in capsys.readouterr().err
+    assert cli.main([*argv, "--replace"]) == 0
+    assert cli.main(["export", str(response)]) == 1
+    assert "Choose --csv and/or --geojson" in capsys.readouterr().err
