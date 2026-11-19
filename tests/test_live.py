@@ -1,7 +1,15 @@
+import logging
+
 import httpx
 import pytest
 
 from regrid import RegridClient, live
+
+
+@pytest.fixture(autouse=True)
+def restore_logging():
+    yield
+    logging.disable(logging.NOTSET)
 
 
 def test_missing_configuration_makes_no_requests(monkeypatch, capsys):

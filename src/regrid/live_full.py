@@ -73,23 +73,18 @@ def _features(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return features
 
 
-def _first_id(payload: dict[str, Any]) -> Any:
-    features = _features(payload)
-    return features[0].get("id") if features else None
-
-
 def _text(value: Any) -> str | None:
     return value.strip() if isinstance(value, str) and value.strip() else None
 
 
-def _number(value: Any) -> float | None:
+def _number(value: Any, limit: float = 180) -> float | None:
     if isinstance(value, bool):
         return None
     try:
         result = float(value)
     except (TypeError, ValueError):
         return None
-    return result if math.isfinite(result) and abs(result) <= 180 else None
+    return result if math.isfinite(result) and abs(result) <= limit else None
 
 
 def county_path(path: str | None) -> str | None:
@@ -247,7 +242,7 @@ class Runner:
                 county=county_path(path),
                 parcelnumb=_text(fields.get("parcelnumb")),
                 owner=_text(fields.get("owner")),
-                lat=_number(fields.get("lat")),
+                lat=_number(fields.get("lat"), 90),
                 lon=_number(fields.get("lon")),
                 geoid=_text(fields.get("geoid")),
             )
@@ -378,10 +373,10 @@ class Runner:
             features = _features(payload)
             if not features:
                 raise CheckFailed("no features")
+            if not features[0].get("geometry"):
+                raise CheckFailed("geometry missing")
             notes = []
             if method == "GET":
-                if not features[0].get("geometry"):
-                    raise CheckFailed("geometry missing")
                 self.area_id = features[0].get("id")
             else:
                 same = self.area_id is not None and features[0].get("id") == self.area_id
@@ -490,10 +485,7 @@ class Runner:
 
     def tiles(self) -> None:
         subject = self.subject
-        have_coordinates = (
-            subject is not None and subject.lat is not None and subject.lon is not None
-        )
-        if subject is None or not have_coordinates:
+        if subject is None or subject.lat is None or subject.lon is None:
             self.skip("tile", "no subject coordinates")
             self.skip("grid", "no subject coordinates")
             return
@@ -501,8 +493,6 @@ class Runner:
 
         def tile() -> Outcome:
             data = self.client.tile(TILE_ZOOM, x, y, format="mvt")
-            if not isinstance(data, bytes):
-                raise CheckFailed("tile was not bytes")
             return Outcome(f"{len(data)} bytes", [] if data else ["empty tile"])
 
         def grid() -> Outcome:

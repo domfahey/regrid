@@ -1,4 +1,5 @@
 import json
+import logging
 from urllib.parse import urlparse
 
 import httpx
@@ -22,6 +23,7 @@ PRIVATE = (
     "private-owner",
     "123456",
     "654321",
+    "34007",
 )
 
 SUBJECT = {
@@ -158,10 +160,22 @@ def test_happy_path(capsys):
         "return_matched_addresses": "false",
         "return_enhanced_ownership": "false",
     }
-    for method, path in (("GET", "/parcels/address"), ("GET", "/parcels/apn")):
-        params = calls[(method, path)].url.params
-        assert params["limit"] == "1"
+    searches = [
+        r for r in server.requests if "/parcels/" in r.url.path and r.url.host != "tiles.regrid.com"
+    ]
+    assert len(searches) == 12
+    for request in searches:
+        params = request.url.params
+        if request.url.path.endswith(f"/{UUID}") or request.url.path.endswith("/path"):
+            assert "limit" not in params
+        else:
+            assert params["limit"] in ("1", "2")
         assert {key: params[key] for key in flags} == flags
+    for request in server.requests:
+        if request.method == "POST":
+            assert request.url.path.removeprefix("/api/v2") in ("/parcels/point", "/parcels/area")
+        assert "/report" not in request.url.path
+        assert "/client_token" not in request.url.path
     assert calls[("GET", "/parcels/apn")].url.params["path"] == COUNTY
     assert calls[("GET", "/parcels/owner")].url.params["path"] == COUNTY
     assert calls[("GET", "/parcels/query")].url.params["path"] == COUNTY
@@ -478,8 +492,22 @@ def test_final_usage_failure_and_unavailable_counters(capsys):
     assert "PASS final usage: comparable record counters unavailable" in lines(capsys)
 
 
-def test_main_runs_with_environment(monkeypatch, capsys):
+@pytest.fixture
+def restore_logging():
+    yield
+    logging.disable(logging.NOTSET)
+
+
+def test_main_runs_with_environment(monkeypatch, capsys, restore_logging):
     server = Server()
+    seen = []
+    inner = server.respond
+
+    def respond(request, route):
+        seen.append(logging.root.manager.disable)
+        return inner(request, route)
+
+    server.respond = respond
     transport = httpx.MockTransport(server)
     real = live_full.RegridClient
     monkeypatch.setenv("REGRID_TOKEN", TOKEN)
@@ -489,13 +517,14 @@ def test_main_runs_with_environment(monkeypatch, capsys):
         live_full, "RegridClient", lambda *a, **kw: real(*a, transport=transport, **kw)
     )
     assert live_full.main() == 0
+    assert seen and all(level >= logging.CRITICAL for level in seen)
     output = lines(capsys)
     assert "PASS typeahead: 2 suggestions" in output
     assert server.requests[0].url.path.endswith("/schemas/parcel")
     assert any(r.url.params.get("query") == "private-address" for r in server.requests)
 
 
-def test_main_initialization_failure_is_generic(monkeypatch, capsys):
+def test_main_initialization_failure_is_generic(monkeypatch, capsys, restore_logging):
     monkeypatch.setenv("REGRID_TOKEN", TOKEN)
 
     def boom(*args, **kwargs):
@@ -529,9 +558,28 @@ def test_geometry_helpers():
     assert live_full._number(True) is None
     assert live_full._number("x") is None
     assert live_full._number("500") is None
+    assert live_full._number("91", 90) is None
+    assert live_full._number("89", 90) == 89.0
     assert live_full._cursor(True) is None
     assert live_full._cursor(-1) is None
     assert live_full._cursor("12") == 12
     assert live_full._cursor("1x") is None
     with pytest.raises(live_full.CheckFailed):
         live_full._features({"parcels": {"features": "x"}})
+
+
+def test_string_uuid_ids_have_no_usable_cursor(capsys):
+    def uuids(request):
+        return httpx.Response(200, json=collection("123e4567-e89b-42d3-a456-426614174000"))
+
+    server = Server()
+    original = server.respond
+
+    def respond(request, route):
+        if route[1] == "/parcels/point" and request.url.params.get("radius") == "50":
+            return uuids(request)
+        return original(request, route)
+
+    server.respond = respond
+    assert run_full(server) == 1
+    assert "FAIL paging: page 1 has no usable cursor" in lines(capsys)
