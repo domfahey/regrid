@@ -218,3 +218,85 @@ def test_invalid_requests_fail_before_transport(recording_client, method, args, 
     with pytest.raises((ValueError, TypeError)):
         getattr(client, method)(*args, **options)
     assert not requests
+
+
+def test_json_error_does_not_retain_input_context(recording_client):
+    client, _ = recording_client
+    with pytest.raises(ValueError, match="Invalid Regrid JSON request") as excinfo:
+        client.report(details={"x": float("nan")})
+    assert excinfo.value.__context__ is None
+    assert excinfo.value.__cause__ is None
+
+
+def test_geometry_error_does_not_retain_input_context(recording_client):
+    client, _ = recording_client
+    with pytest.raises(ValueError, match="Invalid Regrid GeoJSON request") as excinfo:
+        client.query({"geoid": {"eq": "1"}}, geojson="{not json SECRET")
+    assert excinfo.value.__context__ is None
+    assert excinfo.value.__cause__ is None
+
+
+def test_query_validate_fields_accepts_uppercase_us(recording_client):
+    client, requests = recording_client
+    client.query({"geoid": {"eq": "48113"}}, country="US", validate_fields=True)
+    assert len(requests) == 1
+
+
+def test_query_validate_fields_still_rejects_uppercase_ca(recording_client):
+    client, requests = recording_client
+    with pytest.raises(ValueError, match="US queries only"):
+        client.query({"postcode": {"eq": "R0B 0J0"}}, country="CA", validate_fields=True)
+    assert requests == []
+
+
+@pytest.mark.parametrize(
+    "lat,lon",
+    [(32.8, None), (None, -105.2)],
+    ids=["lat-only", "lon-only"],
+)
+def test_point_rejects_unpaired_coordinates_with_geojson(recording_client, lat, lon):
+    client, requests = recording_client
+    with pytest.raises(ValueError, match="Invalid Regrid request parameters"):
+        client.point(lat=lat, lon=lon, geojson={"type": "Point", "coordinates": [0, 0]})
+    assert requests == []
+
+
+def test_point_accepts_paired_coordinates_with_geojson(recording_client):
+    client, requests = recording_client
+    client.point(lat=40.5, lon=-105.2, geojson=POINT)
+    assert len(requests) == 1
+    assert requests[0].url.params["lat"] == "40.5"
+    assert requests[0].url.params["lon"] == "-105.2"
+
+
+@pytest.mark.parametrize(
+    "method,args",
+    [
+        ("address", ("1 Main St",)),
+        ("apn", ("0001-A",)),
+        ("owner", ("Smith",)),
+        ("query", ({"owner": {"eq": "Smith"}},)),
+    ],
+)
+@pytest.mark.parametrize("path", ["   ", "\t", ""])
+def test_blank_path_option_is_rejected_before_transport(recording_client, method, args, path):
+    client, requests = recording_client
+    with pytest.raises(ValueError, match="Invalid Regrid request parameters"):
+        getattr(client, method)(*args, path=path)
+    assert requests == []
+
+
+@pytest.mark.parametrize(
+    "method,args",
+    [
+        ("address", ("1 Main St",)),
+        ("apn", ("0001-A",)),
+        ("owner", ("Smith",)),
+        ("query", ({"owner": {"eq": "Smith"}},)),
+    ],
+)
+def test_normal_path_option_is_sent_unchanged(recording_client, method, args):
+    client, requests = recording_client
+    getattr(client, method)(*args, path="/us/tx/dallas")
+    assert len(requests) == 1
+    assert requests[0].url.params["path"] == "/us/tx/dallas"

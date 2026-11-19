@@ -211,7 +211,13 @@ class TypedRegridClient:
         return self.raw.tile(z, x, y, format=format, retina=retina)
 
     def grid(
-        self, z: int, x: int, y: int, *, metadata: Mapping[str, Any] | None = None
+        self,
+        z: int,
+        x: int,
+        y: int,
+        *,
+        metadata: TileJSON | Mapping[str, Any] | None = None,
     ) -> UTFGridResponse:
         """Fetch and validate UTFGrid JSON discovered from raster TileJSON."""
-        return _validate(UTFGridResponse, self.raw.grid(z, x, y, metadata=metadata))
+        raw_metadata = metadata.to_dict() if isinstance(metadata, TileJSON) else metadata
+        return _validate(UTFGridResponse, self.raw.grid(z, x, y, metadata=raw_metadata))

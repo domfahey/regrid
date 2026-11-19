@@ -4,6 +4,7 @@ import httpx
 import pytest
 
 from regrid import RegridClient, TypedRegridClient
+from regrid.config import ClientSettings
 
 
 @pytest.mark.parametrize("client_class", [RegridClient, TypedRegridClient])
@@ -57,3 +58,35 @@ def test_finite_response_numbers_are_preserved():
         ),
     ) as client:
         assert client.usage() == {"amount": 0.125}
+
+
+@pytest.mark.parametrize("field", ["base_url", "tiles_base_url"])
+@pytest.mark.parametrize(
+    "bad_url",
+    [
+        "https://app.regrid.com/api/v2?",
+        "https://app.regrid.com/api/v2#",
+        "https://:@app.regrid.com/api/v2",
+        "https://@app.regrid.com/api/v2",
+        "https://app.regrid.com/api/v2 ",
+        "https://app.regrid.com/api\u00a0v2",
+    ],
+)
+def test_service_url_rejects_empty_delimiters(field, bad_url):
+    with pytest.raises(ValueError, match="Service URLs must be HTTPS"):
+        ClientSettings(**{field: bad_url})
+
+
+@pytest.mark.parametrize("field", ["base_url", "tiles_base_url"])
+@pytest.mark.parametrize(
+    "good_url",
+    [
+        "https://app.regrid.com/api/v2",
+        "https://tiles.regrid.com",
+        "https://app.regrid.com/api/v2/",
+        "https://localhost:8443/api/v2",
+    ],
+)
+def test_service_url_accepts_plain_https_origins(field, good_url):
+    settings = ClientSettings(**{field: good_url})
+    assert getattr(settings, field) == good_url.rstrip("/")

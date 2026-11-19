@@ -262,6 +262,40 @@ def test_http_error(monkeypatch, response, capsys):
     assert captured.out == ""
 
 
+@pytest.mark.parametrize("token", ["", "   "])
+def test_blank_token_is_treated_as_unset(token, monkeypatch, capsys):
+    seen = []
+    monkeypatch.setattr(
+        cli,
+        "RegridClient",
+        lambda **kw: RegridClient(
+            **kw,
+            transport=httpx.MockTransport(lambda req: seen.append(req) or httpx.Response(200)),
+        ),
+    )
+    monkeypatch.delenv("REGRID_TOKEN", raising=False)
+    assert cli.main(["address", "123 Main"]) == 1
+    unset_err = capsys.readouterr().err
+    monkeypatch.setenv("REGRID_TOKEN", token)
+    assert cli.main(["address", "123 Main"]) == 1
+    captured = capsys.readouterr()
+    assert captured.err == unset_err == "regrid: Regrid returned HTTP 401\n"
+    assert captured.out == ""
+    assert not seen
+
+
+@pytest.mark.parametrize("token", ["", "   "])
+def test_blank_token_public_schema_succeeds(requests, monkeypatch, token, capsys):
+    monkeypatch.setenv("REGRID_TOKEN", token)
+    assert cli.main(["schema"]) == 0
+    assert len(requests) == 1
+    assert requests[0].url.path == "/api/v2/schemas/parcel"
+    assert dict(requests[0].url.params) == {}
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == RESPONSE
+    assert captured.err == ""
+
+
 def test_parser_help_error(capsys):
     assert cli.main(["--help"]) == 0
     assert "REGRID_TOKEN" in capsys.readouterr().out
@@ -299,3 +333,16 @@ def test_base_urls_and_report_text(requests):
     assert requests[0].url.params["details"] == "Please check this parcel"
     assert cli.main(["--tiles-base-url", "https://tiles.example.test", "tilejson"]) == 0
     assert requests[1].url.host == "tiles.example.test"
+
+
+def test_json_argument_error_does_not_retain_input_context():
+    with pytest.raises(ValueError) as caught:
+        cli._object('{"owner": "SECRET"')
+    assert caught.value.__context__ is None
+    assert caught.value.__cause__ is None
+
+
+def test_surrounding_whitespace_is_trimmed_from_token(requests, monkeypatch, capsys):
+    monkeypatch.setenv("REGRID_TOKEN", "  padded-token\n")
+    assert cli.main(["address", "123 Main"]) == 0
+    assert requests[-1].url.params["token"] == "padded-token"

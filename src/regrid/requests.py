@@ -12,6 +12,7 @@ from functools import lru_cache
 from typing import Annotated, Any, Literal, TypeVar
 
 from pydantic import (
+    AfterValidator,
     BaseModel,
     ConfigDict,
     Field,
@@ -25,6 +26,16 @@ from pydantic import (
 )
 
 NonemptyText = Annotated[str, StringConstraints(strict=True, min_length=1)]
+
+
+def _reject_blank_text(value: str) -> str:
+    # Same rule as TextInput: whitespace-only text is blank. Values are never altered.
+    if not value.strip():
+        raise ValueError("Text must not be blank")
+    return value
+
+
+PathText = Annotated[NonemptyText, AfterValidator(_reject_blank_text)]
 Number = Annotated[StrictInt | StrictFloat, Field(allow_inf_nan=False)]
 Latitude = Annotated[Number, Field(ge=-90, le=90)]
 Longitude = Annotated[Number, Field(ge=-180, le=180)]
@@ -98,6 +109,8 @@ class PointRequest(StrictRequest):
 
     @model_validator(mode="after")
     def valid_point(self) -> PointRequest:
+        if (self.lat is None) != (self.lon is None):
+            raise ValueError("lat and lon must be provided together")
         if self.geojson is None:
             if self.lat is None or self.lon is None or self.method == "POST":
                 raise ValueError("Coordinates or GeoJSON are required; POST requires GeoJSON")
@@ -142,7 +155,7 @@ _OPTION_TYPES: dict[str, Any] = {
     "limit": Limit,
     "radius": Radius,
     "offset_id": Offset,
-    "path": NonemptyText,
+    "path": PathText,
     "geojson": dict[str, Any] | str,
     "begin_date": Annotated[str, StringConstraints(strict=True, pattern=r"^\d{4}-\d{2}-\d{2}$")],
     "end_date": Annotated[str, StringConstraints(strict=True, pattern=r"^\d{4}-\d{2}-\d{2}$")],

@@ -215,6 +215,37 @@ def test_authorized_retry_preserves_old_attempt_and_respects_shared_budget():
         workflow.reserve_attempt(retried, ["input-000001"], 1, authorized_retry=True)
 
 
+@pytest.mark.parametrize("requested", ["false", 1])
+def test_checkpoint_requested_flag_must_be_exactly_true(tmp_path, requested):
+    path = tmp_path / "checkpoint.json"
+    with pytest.raises(ValueError, match="requested"):
+        workflow.save_checkpoint(state(), path, requested=requested)
+    assert not path.exists()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_checkpoint_replace_flag_must_be_boolean_and_leaves_file_untouched(tmp_path):
+    path = tmp_path / "checkpoint.json"
+    workflow.save_checkpoint(state(), path, requested=True)
+    original = path.read_bytes()
+    replacement = workflow.reserve_attempt(state(), ["input-000001"], 1)
+    with pytest.raises(ValueError, match="boolean"):
+        workflow.save_checkpoint(replacement, path, requested=True, replace="false")
+    assert path.read_bytes() == original
+    assert list(tmp_path.iterdir()) == [path]
+
+
+@pytest.mark.parametrize("authorized_retry", ["false", 1])
+def test_authorized_retry_flag_must_be_boolean_and_does_not_mutate(authorized_retry):
+    doc = workflow.reserve_attempt(state(), ["input-000001"], 1)
+    doc = workflow.complete_attempt(doc, "attempt-000001", "uncertain")
+    before = deepcopy(doc)
+    with pytest.raises(ValueError, match="boolean"):
+        workflow.reserve_attempt(doc, ["input-000001"], 1, authorized_retry=authorized_retry)
+    assert doc == before
+    assert len(doc["attempts"]) == 1
+
+
 def test_extracted_standalone_helper_validates_and_resumes_checkpoint(tmp_path):
     import subprocess
     import sys

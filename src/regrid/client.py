@@ -102,10 +102,14 @@ class RegridClient(EndpointsMixin):
             if self._token is None:
                 raise AuthenticationError(401)
             params["token"] = self._token.get_secret_value()
+        response = None
         try:
             response = self._http.request(method, url, params=params, json=json)
         except httpx.HTTPError:
-            raise RegridError("Regrid transport request failed") from None
+            pass
+        # Raise outside the except block: __context__ would retain the token-bearing URL.
+        if response is None:
+            raise RegridError("Regrid transport request failed")
         if not 200 <= response.status_code < 300:
             error = AuthenticationError if response.status_code in (401, 403) else RegridHTTPError
             raise error(response.status_code)
@@ -113,10 +117,15 @@ class RegridClient(EndpointsMixin):
 
     @staticmethod
     def _decode(response: httpx.Response) -> dict[str, Any]:
+        valid = True
+        data: Any = None
         try:
             data = response.json(parse_float=_finite_float, parse_constant=_reject_json_constant)
         except (ValueError, UnicodeError):
-            raise RegridDecodeError("Regrid returned invalid JSON") from None
+            valid = False
+        # Raise outside the except block: __context__ would retain the raw response body.
+        if not valid:
+            raise RegridDecodeError("Regrid returned invalid JSON")
         if not isinstance(data, dict):
             raise RegridDecodeError("Expected a JSON object from Regrid")
         if data.get("status") == "error":

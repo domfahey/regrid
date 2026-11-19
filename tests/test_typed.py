@@ -17,6 +17,7 @@ from regrid.models import (
     TileJSON,
     TypeaheadResponse,
     UsageResponse,
+    UTFGridResponse,
     VerseResponse,
 )
 from regrid.typed import TypedRegridClient
@@ -326,3 +327,32 @@ def test_tile_bytes_and_close_lifecycle():
     with pytest.raises(RuntimeError, match="client has been closed"):
         client.raw.usage()
     assert len(seen) == 1
+
+
+def test_typed_tilejson_model_can_be_reused_as_grid_metadata():
+    seen = []
+    tilejson_payload = {
+        "tiles": ["https://tiles.regrid.com/raster/{z}/{x}/{y}.png"],
+        "grids": ["https://tiles.regrid.com/utf/{z}/{x}/{y}.json"],
+        "minzoom": 0,
+        "maxzoom": 18,
+    }
+    grid_payload = {"grid": [" !", "!!"], "keys": ["", "parcel-1"], "data": {"parcel-1": {}}}
+
+    def handler(request):
+        seen.append(request)
+        if request.url.path == "/api/v1/parcels":
+            assert dict(request.url.params) == {"token": "test-auth-token"}
+            return httpx.Response(200, json=tilejson_payload)
+        assert request.url.path == "/utf/15/8828/12121.json"
+        assert dict(request.url.params) == {"token": "test-auth-token"}
+        return httpx.Response(200, json=grid_payload)
+
+    with TypedRegridClient("test-auth-token", transport=httpx.MockTransport(handler)) as client:
+        metadata = client.tilejson(format="png")
+        result = client.grid(15, 8828, 12121, metadata=metadata)
+
+    assert isinstance(metadata, TileJSON)
+    assert isinstance(result, UTFGridResponse)
+    assert result.keys == ["", "parcel-1"]
+    assert [request.url.path for request in seen] == ["/api/v1/parcels", "/utf/15/8828/12121.json"]

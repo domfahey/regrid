@@ -5,6 +5,7 @@ Catalog version: 2026-07-09. Values stay in their original JSON representation.
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime
 from typing import Annotated, Any
 from uuid import UUID
@@ -19,8 +20,22 @@ def _date_string(value: str) -> str:
     return value
 
 
+_TIMESTAMP = re.compile(
+    r"(\d\d\d\d-\d\d-\d\d)[Tt ](\d\d:\d\d:\d\d)(?:\.(\d+))?(?:([Zz])|([+-]\d\d)(?::?(\d\d))?)",
+    re.ASCII,
+)
+
+
 def _timestamp_string(value: str) -> str:
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    match = _TIMESTAMP.fullmatch(value)
+    if match is None:
+        raise ValueError("Expected an ISO timestamp with time zone")
+    day, time, fraction, zulu, hours, minutes = match.groups()
+    base = day + "T" + time
+    if fraction:
+        base += "." + fraction[:6].ljust(6, "0")
+    offset = "+00:00" if zulu else hours + ":" + (minutes or "00")
+    parsed = datetime.fromisoformat(base + offset)
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise ValueError("Expected a timestamp with time zone")
     return value
