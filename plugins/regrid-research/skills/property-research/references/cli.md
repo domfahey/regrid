@@ -61,10 +61,11 @@ Endpoint commands also take `--country us|ca` (default `us`; Canada stays as leg
 out of this skill's scope):
 Commands accepting `--country`: `point`, `area`, `address`, `apn`, `owner`, `query`, `parcel`, `parcel-path`, `typeahead`, `verse`, `usage`.
 `--options` takes JSON on `point`, `area`, `address`, `apn`, `owner`, `query`, `parcel`,
-`verse`, `usage` and `schema`, and on `parcel-path` (`--options`); `typeahead` has none.
+`parcel-path`, `verse`, `usage` and `schema`; `typeahead` has none.
 Each command rejects keys it does not support. `limit` goes on `point`, `area`, `address`, `apn`, `owner` and
 `query`; `parcel` and `parcel-path` reject it (return flags only). `verse` accepts only
-`return_geometry`; `usage` and `schema` take the date and `premium_only` keys shown below.
+`return_geometry`. `usage` takes `return_full_history`, `begin_date`, `end_date`,
+`return_by_token` and `return_by_this_token`; `schema` takes `premium_only` (parcel schema only).
 
 - `area --method GET|POST`: `POST` sends the GeoJSON as a JSON body for geometry too
   large for a URL; same read-only search, same one request per page. See
