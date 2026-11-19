@@ -255,3 +255,9 @@ Run per host (Claude Code, Claude apps, Cowork) with the 0.8.0 archive:
 3. Check the browser console for blocked scripts or tile errors.
 4. Record `verified`, `failed` or `not_run` per host in
    `results/map-hosts-0.7.0.json`, with notes. Leave `not_run` without evidence.
+
+`--suite feature` adds eight map, export, field-explanation, freshness, typo, and
+out-of-scope scenarios (`feature-cases.json`, grader-only `feature-rubric.json`);
+`--suite all` includes it. `trigger-cases.json` lists 12 prompts labelled with the
+expected skill (`property-research`, `setup`, or `none`) for skill-discovery checks;
+validation checks structure only, not model behavior.
