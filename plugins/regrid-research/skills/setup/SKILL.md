@@ -16,7 +16,7 @@ archives; the references linked below belong to it, and the budget rules are in 
    token in chat.
 2. Inspect the tools available in this session for the Regrid MCP connection.
    If missing, report that the connector is not available and use the appropriate
-   host setup below. Do not inspect secret files or request a token in chat.
+   host setup below.
 3. If network access is allowed and tools exist, inspect relevant schemas; make a
    documentation discovery call only when needed. Report this
    separately from authenticated access; public documentation needs no token.

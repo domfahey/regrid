@@ -85,6 +85,10 @@ is one request and zero records: it reports how many parcels match, so the user 
 set the record budget. Page with `offset_id` only within that budget and one task; pass
 `offset_id=0` on the first page so pages are id-ordered (verified live; without it the
 first point/area page is spatially ordered and the cursor can skip records).
+The cursor is exclusive: set the next `offset_id` to the last feature's `id`. Stop and
+report the search incomplete if ids are not ascending past the cursor, the cursor does
+not advance, or the last feature lacks an integer or digit-string `id`. A page shorter than `limit`
+ends the search (complete). Never exceed the agreed record budget.
 
 Schemas: use `python3 "<skill>/scripts/fields.py" explain FIELD` first (offline). Call
 `/schemas/*` only when `fields.py` lacks the field, one request each, reserved as a diagnostic.
@@ -124,8 +128,8 @@ Exception: `zoning` additionally allows `between` and `order`.
 Scope with `path` or `geojson`, and run a `return_count` first.
 
 **Area (`/parcels/area`).** `geojson` is a Polygon, MultiPolygon, Point, MultiPoint,
-LineString, MultiLineString, Feature or FeatureCollection. REFERENCE.md gives a
-maximum area of 80 square miles, including buffering; no URL-length limit is sourced.
+LineString, MultiLineString, Feature or FeatureCollection. Regrid's documented
+maximum area is 80 square miles, including buffering; no URL-length limit is sourced.
 Run `return_count` first, then fetch within the record budget.
 
 **Regrid ID (`/parcels/{ll_uuid}`).** Use it to re-fetch a parcel whose `ll_uuid` is
@@ -144,8 +148,7 @@ the no-token ones; prefer `fields.py`.
 `/parcels/point` and `/parcels/area` also accept `POST` with a JSON body. Use it only
 when a GeoJSON geometry is too large for a GET URL. It is read-only search and costs
 the same as GET (one request per call; reserve it first). Send the same query
-parameters, and `{"geojson": <geometry>}` as the body (the shape the SDK sends; not
-yet executed through MCP):
+parameters, and `{"geojson": <geometry>}` as the body (the shape the SDK sends):
 
 ```json
 {
@@ -222,7 +225,7 @@ arguments, and avoid token-breakdown options, since they may return token fragme
 
 ## Address example checked against the live schema
 
-This request shape is schema-verified but has not been executed through MCP:
+This request shape is schema-verified:
 
 ```json
 {
@@ -278,6 +281,8 @@ Dated observations, not instructions; the live schema takes precedence.
   `usage` and no MCP error; no parcels were retrieved. This verifies direct MCP header
   forwarding, not Claude/Cowork import or credential storage.
 - The address example above is schema-verified but has not been executed through MCP.
+- POST geometry search has not been executed through MCP; the live POST point and area
+  checks ran through the SDK/CLI only.
 
 Sources: live MCP initialization, tools/list, the discovery calls above, and the usage
 call; [Regrid MCP docs](https://support.regrid.com/docs/mcp-server).
