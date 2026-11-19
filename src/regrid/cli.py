@@ -34,7 +34,7 @@ def _object(value: str) -> dict[str, Any]:
     try:
         raw = Path(value[1:]).read_text() if value.startswith("@") else value
         result = json.loads(raw)
-    except (OSError, ValueError, UnicodeError):
+    except (OSError, ValueError, UnicodeError, RecursionError):
         valid = False
     # Raise outside the except block: __context__ would retain the raw input.
     if not valid:
@@ -93,6 +93,8 @@ def _error_message(exc: Exception, *, os_error: str, type_error: str) -> str:
     """One credential-free line: SDK messages verbatim, local errors fixed or whitespace-folded."""
     if isinstance(exc, RegridError):
         return str(exc)
+    if isinstance(exc, RecursionError):
+        return "Response or input is nested too deeply"
     if isinstance(exc, OSError):
         return os_error
     if isinstance(exc, TypeError):
@@ -128,6 +130,11 @@ def _subject_mappable(subject: Any) -> bool:
     return True
 
 
+def _collision_key(path: Path) -> str:
+    """Resolved path folded for case-insensitive filesystems (conservative on case-sensitive)."""
+    return os.path.normcase(str(path.resolve())).casefold()
+
+
 def _address_map(
     args: dict[str, Any], sent: list[int], saved: list[Path], notes: list[str]
 ) -> None:
@@ -136,7 +143,7 @@ def _address_map(
     neighbours_path = output.with_name(f"{output.stem}.neighbours.json")
     replace = args["replace"]
     targets = [response_path, output] + ([neighbours_path] if args["neighbours"] else [])
-    if len({target.resolve() for target in targets}) != len(targets):
+    if len({_collision_key(target) for target in targets}) != len(targets):
         raise ValueError("Saved response and map output must be different files")
     for target in targets:
         if not target.parent.is_dir():
@@ -228,7 +235,13 @@ def _run_address_map(args: dict[str, Any]) -> int:
     message = None
     try:
         _address_map(args, sent, saved, notes)
-    except (RegridError, ValueError, TypeError, OSError) as exc:  # MapError is a ValueError
+    except (
+        RegridError,
+        ValueError,
+        TypeError,
+        OSError,
+        RecursionError,
+    ) as exc:  # MapError is a ValueError
         message = _error_message(
             exc, os_error="Could not write output file", type_error="Invalid input or output file"
         )
@@ -432,7 +445,7 @@ def _paged_search(
     requests_cap = 1 + -(-(total - first) // (limit - 1))
     print(f"regrid: up to {requests_cap} requests for {total} records", file=sys.stderr)
     features: list[Any] = []
-    seen_ids: set[Any] = set()
+    seen_ids: set[tuple[str, Any]] = set()
     merged: dict[str, Any] = {}
     noted: set[str] = set()
     pages = 0
@@ -450,15 +463,22 @@ def _paged_search(
         pages += 1
         if pages == 1:
             merged = _copy_first_page(result)
+            if "pages" in merged or "complete" in merged:
+                print(
+                    "regrid: paging note: response pages/complete kept as "
+                    "response_pages/response_complete",
+                    file=sys.stderr,
+                )
         else:
             _merge_page(merged, result, noted)
         new = []
         for feature in page:
             fid = _feature_id(feature)
             if fid is not None:
-                if fid in seen_ids:
+                key = (type(fid).__name__, fid)
+                if key in seen_ids:
                     continue
-                seen_ids.add(fid)
+                seen_ids.add(key)
             new.append(feature)
         features.extend(new)
         _drop_trimmed_siblings(merged, features[:total], features[total:])
@@ -487,7 +507,11 @@ def _paged_result(
     parcels = merged.get("parcels")
     collection = {**(parcels if isinstance(parcels, dict) else {}), "features": features}
     collection.setdefault("type", "FeatureCollection")
-    return {**merged, "parcels": collection, "pages": pages, "complete": complete}
+    result = {**merged, "parcels": collection}
+    for key in ("pages", "complete"):
+        if key in merged:
+            result[f"response_{key}"] = merged[key]
+    return {**result, "pages": pages, "complete": complete}
 
 
 def _freshness(args: dict[str, Any], sent: list[int]) -> None:
@@ -511,7 +535,7 @@ def _freshness(args: dict[str, Any], sent: list[int]) -> None:
         state = "miss"
         try:
             county_freshness.write_cache(cache_path, retrieved_at, verse, base_url)
-        except (OSError, ValueError):
+        except (OSError, ValueError, RecursionError):
             print("regrid: warning: verse cache not saved", file=sys.stderr)
     try:
         dates = county_freshness.county_dates(verse, county)
@@ -536,7 +560,7 @@ def _run_freshness(args: dict[str, Any]) -> int:
     message = None
     try:
         _freshness(args, sent)
-    except (RegridError, ValueError, TypeError, OSError) as exc:
+    except (RegridError, ValueError, TypeError, OSError, RecursionError) as exc:
         message = _error_message(
             exc,
             os_error="Could not read or write the verse cache",
@@ -814,10 +838,10 @@ def main(argv: list[str] | None = None) -> int:
             Path(output).write_bytes(result)
         else:
             print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
-    except (RegridError, ValueError, TypeError, OSError) as exc:
+    except (RegridError, ValueError, TypeError, OSError, RecursionError) as exc:
         # SDK messages are sanitized; local messages may contain supplied option names/paths.
         generic = "Invalid input or output file"
-        if isinstance(exc, (RegridError, _PagingError)):
+        if isinstance(exc, (RegridError, _PagingError, RecursionError)):
             message = _error_message(exc, os_error=generic, type_error=generic)
         else:
             message = generic
@@ -825,7 +849,12 @@ def main(argv: list[str] | None = None) -> int:
             partial = _paged_result(
                 progress["merged"], progress["features"], progress["pages"], False
             )
-            print(json.dumps(partial, indent=2, ensure_ascii=False, allow_nan=False))
+            try:
+                text = json.dumps(partial, indent=2, ensure_ascii=False, allow_nan=False)
+            except (ValueError, RecursionError):
+                text = None
+            if text is not None:
+                print(text)
         print(f"regrid: {message}", file=sys.stderr)
         print(f"regrid: requests made: {count}", file=sys.stderr)
         return 1
