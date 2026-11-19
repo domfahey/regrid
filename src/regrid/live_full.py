@@ -464,13 +464,14 @@ class Runner:
                 begin_date=today.replace(day=1).isoformat(),
                 end_date=today.isoformat(),
             )
-            for model in (DetailedUsageResponse, UsageResponse):
-                try:
-                    model.model_validate(payload)
-                except Exception:
-                    continue
-                return Outcome(f"validated as {model.__name__}")
-            raise CheckFailed("response did not validate")
+            try:
+                detailed = DetailedUsageResponse.model_validate(payload)
+            except Exception as exc:
+                raise CheckFailed("response did not validate as DetailedUsageResponse") from exc
+            rows = detailed.usage.cycle_usage
+            if rows is None:
+                raise CheckFailed("response has no cycle_usage rows")
+            return Outcome(f"{len(rows)} cycle rows")
 
         self.step("usage detailed", 1, check)
 

@@ -44,6 +44,17 @@ SUBJECT = {
 }
 
 
+DETAILED_USAGE = {
+    "usage": {
+        "cycle_dates": {"begin": 1, "end": 2},
+        "cycle_usage": [
+            {"country": "us", "service": "parcels", "requests": 3, "parcels": 7, "area": 12}
+        ],
+        "date_range": {"begin_ts": 1, "begin": "a", "end": "b", "total": []},
+    }
+}
+
+
 def collection(*ids, geometry=True):
     features = []
     for feature_id in ids:
@@ -94,7 +105,7 @@ class Server:
             self.usage_calls += 1
             return httpx.Response(200, json=usage(10 * self.usage_calls))
         if path == "/usage/detailed":
-            return httpx.Response(200, json={"usage": {"cycle_usage": []}})
+            return httpx.Response(200, json=DETAILED_USAGE)
         if path == "/verse":
             feature = {"type": "Feature", "properties": {"path": COUNTY + "/"}}
             return httpx.Response(200, json={"type": "FeatureCollection", "features": [feature]})

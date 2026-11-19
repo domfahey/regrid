@@ -7,7 +7,7 @@ import pytest
 
 from regrid.offline import freshness
 
-VERSE = {
+COLLECTION = {
     "type": "FeatureCollection",
     "features": [
         {
@@ -23,6 +23,8 @@ VERSE = {
         }
     ],
 }
+# The real /verse body wraps the collection under a top-level "verse" key.
+VERSE = {"verse": COLLECTION}
 
 
 def test_county_path_trims_parcel_path():
@@ -47,8 +49,36 @@ def test_county_dates_reports_dates_only():
     }
 
 
+def test_county_dates_accepts_legacy_bare_collection():
+    result = freshness.county_dates(COLLECTION, "/us/nj/camden")
+    assert result["path"] == "/us/nj/camden" and result["last_refresh"] == "2026-09-01"
+
+
+def test_county_dates_wrapped_without_features_is_not_found():
+    with pytest.raises(freshness.FreshnessError, match="^No verse entry found"):
+        freshness.county_dates({"verse": {"features": "x"}}, "/us/nj/camden")
+
+
+def test_county_dates_resolves_real_wrapped_sample():
+    props = {"county": "Camden", "state": "NJ", "last_refresh": "2026-08-19", "geoid": "34007"}
+    real = {
+        "verse": {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": {"path": "/us/pa/delaware", "county": "Delaware"},
+                },
+                {"type": "Feature", "properties": {"path": "/us/nj/camden", **props}, "id": 1},
+            ],
+        }
+    }
+    result = freshness.county_dates(real, "/us/nj/camden/x/1")
+    assert result["county"] == "Camden" and result["last_refresh"] == "2026-08-19"
+
+
 def test_county_dates_accepts_single_feature():
-    result = freshness.county_dates(VERSE["features"][0], "/us/nj/camden")
+    result = freshness.county_dates(COLLECTION["features"][0], "/us/nj/camden")
     assert result["path"] == "/us/nj/camden"
     assert result["county"] == "Camden" and result["last_refresh"] == "2026-09-01"
 

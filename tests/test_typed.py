@@ -96,7 +96,19 @@ PARCELS = {"parcels": {"type": "FeatureCollection", "features": []}}
             "usage",
             (),
             {"detailed": True},
-            {"usage": {"cycle_usage": [{"country": "US", "service": "api", "parcels": 2}]}},
+            {
+                "usage": {
+                    "cycle_usage": [
+                        {
+                            "country": "us",
+                            "service": "parcels",
+                            "requests": 1,
+                            "parcels": 2,
+                            "area": 3,
+                        }
+                    ]
+                }
+            },
             DetailedUsageResponse,
             "/usage/detailed",
         ),
