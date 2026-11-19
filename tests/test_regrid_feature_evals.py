@@ -118,3 +118,37 @@ def test_cli_validate_feature(capsys, monkeypatch):
     monkeypatch.setattr("sys.argv", ["run.py", "validate", "--suite", "feature"])
     run.main()
     assert "Validated 8" in capsys.readouterr().out
+
+
+def test_california_us_path_is_not_flagged_non_us(tmp_path, monkeypatch):
+    data = _load("feature-cases.json")
+    case = data["cases"][0]
+    case["tool_history"] = [
+        {
+            "tool": case["available_tools"][0]["name"],
+            "arguments": {"endpoint": "path", "parameters": {"path": "/us/ca/los-angeles"}},
+            "result": {"isError": True, "content": [{"type": "text", "text": "x"}]},
+        }
+    ]
+    _write(tmp_path, monkeypatch, cases=data)
+    run.load_cases("feature")
+
+
+def test_feature_packet_allows_shell_and_read_file_doubles():
+    text = run.packet(run.load_cases("feature"), False)["instructions"]
+    assert "shell" in text and "read_file" in text
+    assert "only simulated callable tool" not in text
+
+
+def test_non_us_map_context_does_not_claim_all_us():
+    case = next(c for c in run.load_cases("feature") if c["id"] == "non_us_map")
+    assert "deliberately outside the US" in case["context"]
+    assert "in the US." not in case["context"].replace("outside the US", "")
+
+
+def test_feature_suite_validates_trigger_cases(tmp_path, monkeypatch):
+    triggers = _load("trigger-cases.json")
+    triggers["cases"][0]["expected_skill"] = "other"
+    _write(tmp_path, monkeypatch, triggers=triggers)
+    with pytest.raises(AssertionError):
+        run.load_cases("feature")

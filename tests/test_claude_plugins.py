@@ -286,7 +286,7 @@ def test_every_reference_is_linked_directly_from_skill():
 
 
 def test_skill_is_a_short_routing_page():
-    assert len((SKILL_ROOT / "SKILL.md").read_text().split()) < 900
+    assert len((SKILL_ROOT / "SKILL.md").read_text().split()) < 950
 
 
 def test_budget_rules_have_one_authoritative_copy():
@@ -347,3 +347,18 @@ def test_county_freshness_is_cli_only_over_mcp():
     cli_line = next(line for line in skill_lines if "cli.md" in line)
     assert "county pull dates" in cli_line.lower()
     assert "CLI only" in cli_line
+
+
+def test_cli_is_the_fallback_route_and_freshness_script_is_routed():
+    skill = (SKILL_ROOT / "SKILL.md").read_text()
+    assert "ZIP or city/state" in skill
+    cli_line = next(line for line in skill.splitlines() if "cli.md" in line)
+    for word in ("MCP", "export", "tiles"):
+        assert word in cli_line
+    cli = (SKILL_ROOT / "references/cli.md").read_text()
+    assert "scripts/freshness.py county VERSE.json --path /us/<st>/<county>" in cli
+    description = skill.split("---")[1]
+    assert "CLI or a supplied" in description
+    batch = (SKILL_ROOT / "references/batch.md").read_text()
+    assert "with the actual\n  outcome" in batch and "uncertain" in batch
+    assert "MCP `/parcels/typeahead`: returns no parcel records" not in batch

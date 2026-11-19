@@ -1,6 +1,6 @@
 ---
 name: property-research
-description: Looks up recorded owners, parcel IDs, sale and assessment details, zoning, and parcel boundaries for US properties with Regrid, and draws satellite parcel maps with optional neighbouring parcels. Exports results to CSV or GeoJSON, runs geographic parcel searches, and reports county data freshness. Use for US address, APN, owner-name, "who owns", parcel map or boundary, and property-research requests.
+description: Looks up recorded owners, parcel IDs, sale and assessment details, zoning, and parcel boundaries for US properties with Regrid, and draws satellite parcel maps with optional neighbouring parcels. Exports results to CSV or GeoJSON, runs geographic parcel searches, and reports county data freshness (county pull dates via the CLI or a supplied /verse file; otherwise the parcel's ll_last_refresh). Use for US address, APN, owner-name, "who owns", parcel map or boundary, and property-research requests.
 ---
 
 # Regrid property research
@@ -29,7 +29,7 @@ Load supporting resources only for the relevant task:
   `/regrid-research:address-map` command runs this flow for one address.
 - Spreadsheet or GeoJSON requested: `scripts/map.py export` from the saved response
   ([map guide](references/map.md#export)), with no extra requests.
-- County pull dates: CLI only (`regrid freshness`), even when MCP is connected: [CLI guide](references/cli.md).
+- MCP tools missing in Claude Code but the `regrid` CLI available, files (export/freshness), tiles, or county pull dates (CLI only, even when MCP is connected): [CLI guide](references/cli.md).
 - Ambiguous or mistyped address: suggestions flow in the [tool guide](references/mcp-tools.md).
 - Field meaning: run `scripts/fields.py explain FIELD` (it reads the
   [field catalog](references/fields.json)); only fields it lacks justify a
@@ -57,7 +57,7 @@ failure, or silently switch data sources.
 
 1. Identify the requested facts, output format, and any caller-provided budget.
    Preserve each input's stable ID, address, unit, and geographic scope. For APNs,
-   establish county or equivalent scope; an APN alone is not nationally unique. Ask
+   establish county or equivalent scope; an APN alone is not nationally unique. Use ZIP or city/state when provided. Ask
    only for missing information that prevents a meaningful lookup.
 2. Inspect supplied/cached evidence and its provenance before selecting a tool.
    Use sufficient evidence without fetching it again; preserve conflicting source

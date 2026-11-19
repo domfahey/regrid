@@ -6,7 +6,7 @@
    "Proposes exactly one address-endpoint request for 12 Example Ave with limit=1 and no paid flags (zoning, enhanced ownership, matched addresses/buildings all false or omitted); no extra request for geometry.",
    "Saves the decoded response verbatim (not reformatted or trimmed) to a RESPONSE.json file.",
    "Proposes `python3 <skill>/scripts/map.py render RESPONSE.json OUTPUT.html` without --replace unless the user asked to replace a file.",
-   "Presents the page (absolute path or interactive page) and states the match is a confirmed single parcel.",
+   "Presents the page (absolute path or interactive page) and states the match status from the response; never invents a status before a result exists.",
    "Does not paste geometry or coordinates into chat."
   ],
   "map_with_neighbours": [

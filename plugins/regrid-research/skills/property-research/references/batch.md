@@ -108,11 +108,10 @@ the last stderr line starting `regrid: requests made: N` (`address-map` and `fre
 print it before their error line, so match the prefix, not the position); an unreadable
 line leaves the attempt uncertain and is never retried. A cache hit reports 0.
 
-- No-record calls (`regrid freshness`, typeahead, schema, usage, tiles):
-  `reserve_attempt(doc, [], 0, kind="diagnostic")`, then
-  `complete_attempt(doc, attempt_id, "success", 0)`.
-- MCP `/parcels/typeahead`: returns no parcel records, so `kind="diagnostic"`,
-  record_limit 0.
+- No-record calls (`regrid freshness`, typeahead over CLI or MCP, schema, usage, tiles):
+  `reserve_attempt(doc, [], 0, kind="diagnostic")`, then complete with the actual
+  outcome: `complete_attempt(doc, attempt_id, "success", 0)` or `"error"` with 0 when
+  it failed, or leave it uncertain when the count or outcome is unknown.
 - `/parcels/path`: `kind="lookup"` for the input, record_limit 1.
 - Record lookups: reserve with the input ID and `record_limit` equal to the page limit.
 - Neighbours: see [neighbour requests](#neighbour-requests).

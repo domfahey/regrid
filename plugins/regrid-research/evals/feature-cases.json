@@ -573,7 +573,7 @@
   {
    "id": "non_us_map",
    "user_request": "Show 100 Queen Street West, Toronto, ON on a satellite map",
-   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Paid datasets are not authorized. Calls in tool_history have already happened. The user asks about a Canadian address.",
+   "context": "All addresses, identifiers, and entities in this fixture are synthetic; this one is deliberately outside the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Paid datasets are not authorized. Calls in tool_history have already happened. The user asks about a Canadian address.",
    "us_only": true,
    "available_tools": [
     {

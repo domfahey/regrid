@@ -53,6 +53,10 @@ page and keep it out of chat. `tile` requires `--output FILE`. Each call is one 
 pull dates are not available over MCP; say they need the CLI. Report dates only and
 never label data stale.
 
+If the user supplies a saved `/verse` response file, run
+`python3 <skill>/scripts/freshness.py county VERSE.json --path /us/<st>/<county>`
+offline (no request). Over MCP never call `/verse`.
+
 ```
 regrid freshness --path /us/<st>/<county> [--cache FILE] [--refresh] [--max-age-days N]
 ```

@@ -19,10 +19,25 @@ def validate_handoff(document: dict) -> None:
     module.validate(document)
 
 
+def _strings(value: object):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from _strings(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _strings(item)
+
+
+def _is_canadian_route(arguments: dict) -> bool:
+    """True for path-like values starting /ca/; /us/ca/... (California) is fine."""
+    return any(text.strip().lower().startswith(("/ca/", "ca/")) for text in _strings(arguments))
+
+
 def load_cases(suite: str = "research") -> list[dict]:
     if suite == "all":
         cases = load_cases("research") + load_cases("composition") + load_cases("feature")
-        load_trigger_cases()
         assert len({case["id"] for case in cases}) == len(cases)
         return cases
     prefix = {"composition": "composition-", "feature": "feature-"}.get(suite, "")
@@ -42,33 +57,22 @@ def load_cases(suite: str = "research") -> list[dict]:
         if suite == "composition":
             validate_handoff(case["supplied_evidence"])
         if suite == "feature":
-            validate_feature_case(case, names)
-            continue
+            assert case["us_only"] is True
+            assert names
         for event in case["tool_history"]:
             assert event["tool"] in names
             assert isinstance(event["arguments"], dict)
             assert isinstance(event["result"]["isError"], bool)
             assert event["result"]["content"]
+            if suite == "feature":
+                assert not _is_canadian_route(event["arguments"])
             if not event["result"]["isError"]:
                 result = json.loads(event["result"]["content"][0]["text"])
                 assert result["parcels"]["type"] == "FeatureCollection"
                 assert isinstance(result["parcels"]["features"], list)
+    if suite == "feature":
+        load_trigger_cases()
     return cases
-
-
-def validate_feature_case(case: dict, names: set[str]) -> None:
-    assert case["us_only"] is True
-    assert names
-    for event in case["tool_history"]:
-        assert event["tool"] in names
-        assert isinstance(event["arguments"], dict)
-        assert isinstance(event["result"]["isError"], bool)
-        assert event["result"]["content"]
-        assert "/ca/" not in json.dumps(event["arguments"]).lower()
-        if not event["result"]["isError"]:
-            result = json.loads(event["result"]["content"][0]["text"])
-            assert result["parcels"]["type"] == "FeatureCollection"
-            assert isinstance(result["parcels"]["features"], list)
 
 
 TRIGGER_LABELS = {"property-research", "setup", "none"}
@@ -89,8 +93,8 @@ def load_trigger_cases() -> list[dict]:
 def packet(cases: list[dict], include_skill: bool) -> dict:
     instructions = (
         "Offline behavioral evaluation. Do not call live tools, read .env, or use the network. "
-        "The only simulated callable tool is the supplied test double; its name is not a "
-        "production MCP name. Treat tool_history as results already retrieved in the current "
+        "Only the supplied test doubles are callable (the regrid test double, and in the feature "
+        "suite also shell and read_file); their names are not production MCP names. Treat tool_history as results already retrieved in the current "
         "task. For each case, decide the next action and answer the user using only the "
         "evidence supplied. If more retrieval is needed, propose the exact tool call but "
         "do not fabricate its result. Return JSON with a results array; each item has id, "
@@ -125,8 +129,6 @@ def main() -> None:
     )
     args = parser.parse_args()
     cases = load_cases(args.suite)
-    if args.suite == "feature":
-        load_trigger_cases()
     if args.selected:
         unknown = set(args.selected) - {case["id"] for case in cases}
         if unknown:
