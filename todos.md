@@ -51,7 +51,7 @@ Suggested batches:
 - [ ] **Windows CI job** (job added in CI; awaits a push, so it has NOT RUN): run `tests/test_regrid_map.py` and the workflow-helper tests
   on Windows. This covers `os.open` with `O_BINARY`, `os.link` and its fallback, and
   `python3` versus `py`.
-- [ ] **Map in Claude apps and Cowork** (checklist and results file added; awaiting user: not run): confirm that unpkg (Leaflet) and the Esri
+- [ ] **Map in Claude apps and Cowork** (Claude Code/browser verified 2026-11-19, see `evals/results/map-hosts-0.8.0.json`; Claude apps and Cowork awaiting user: not run): confirm that unpkg (Leaflet) and the Esri
   imagery load in those hosts' pages, and record the result.
 
 ## New lookups (MCP and CLI both offer these; the skill does not use them)
