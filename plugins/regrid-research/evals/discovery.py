@@ -12,15 +12,22 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent
 SKILL = ROOT.parent / "skills/property-research"
+# Must equal the property-research files scripts/build_claude_plugins.py packages
+# (SKILL.md, references/*.md|json, and the four helper scripts); tests enforce this.
 ALLOWLIST = (
     "SKILL.md",
-    "references/mcp-tools.md",
-    "references/tools.json",
-    "references/endpoints.json",
-    "references/composition.md",
+    "references/answers.md",
     "references/batch.md",
-    "references/result.schema.json",
+    "references/cli.md",
+    "references/composition.md",
+    "references/endpoints.json",
+    "references/fields.json",
+    "references/map.md",
+    "references/mcp-tools.md",
+    "references/premium.md",
     "references/result-example.json",
+    "references/result.schema.json",
+    "references/tools.json",
     "scripts/workflow.py",
     "scripts/map.py",
     "scripts/fields.py",
