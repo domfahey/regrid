@@ -15,7 +15,8 @@ Research with existing evidence first; use the connected Regrid MCP server at
 https://support.regrid.com/mcp only when retrieval is needed. Before the first
 live lookup, read [the tool reference](references/mcp-tools.md), discover
 the tools exposed in this session, and inspect the relevant input schema.
-The live schema takes precedence over saved examples. Discover once per session.
+The live schema takes precedence over saved examples. Discover once per session. Public
+documentation access does not establish authenticated parcel access.
 
 Load supporting resources only for the relevant task:
 
@@ -32,9 +33,9 @@ Load supporting resources only for the relevant task:
   ([map guide](references/map.md#export)), with no extra requests.
 - MCP tools missing in Claude Code but the `regrid` CLI available, files (export/freshness), tiles, or county pull dates (CLI only, even when MCP is connected): [CLI guide](references/cli.md).
 - Ambiguous or mistyped address: suggestions flow in the [tool guide](references/mcp-tools.md).
-- Field meaning: run `python3 <skill>/scripts/fields.py explain FIELD`; do not read
-  `references/fields.json` (large; [data file used by fields.py](references/fields.json) — don't open it).
-  Only fields it lacks justify a `/schemas/*` request.
+- Field meaning: run `python3 <skill>/scripts/fields.py explain FIELD` (its large
+  [data file](references/fields.json): don't open it). Only fields it lacks justify a
+  `/schemas/*` request.
 - Zoning, enhanced ownership, matched buildings or addresses requested: [premium datasets](references/premium.md).
 - Offline validation or saving: `<skill>/scripts/workflow.py`, per [batch and resume](references/batch.md) (Python 3.10+, standard library only).
 - Live schema unavailable or mismatched: [raw tool schemas](references/tools.json) and

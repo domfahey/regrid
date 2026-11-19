@@ -442,3 +442,8 @@ def test_command_uses_skill_prefixed_paths_and_states_hosts():
     assert "python3 <skill>/scripts/map.py render" in text
     assert not re.search(r"(?<!<skill>/)(?<![\w/.-])(scripts|references)/", text)
     assert "Claude Code and Cowork only" in (SKILL_ROOT / "references/map.md").read_text()
+
+
+def test_skill_keeps_public_docs_vs_auth_rule():
+    skill = (SKILL_ROOT / "SKILL.md").read_text()
+    assert "does not establish authenticated parcel access" in " ".join(skill.split())
