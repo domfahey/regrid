@@ -1,7 +1,11 @@
 """Parcel geometry is validated offline and cross-checked against the recorded area."""
 
 import importlib.util
+import json
 import math
+import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -169,3 +173,126 @@ def test_oversized_integer_recorded_area_is_unavailable():
     result = parcel_map.area_check(feature(square(), ll_gissqft=10**400))
     assert result["status"] == "unavailable"
     assert result["recorded_sqft"] is None
+
+
+def write_response(path, *features):
+    path.write_text(json.dumps({"parcels": {"features": list(features)}}), encoding="utf-8")
+    return path
+
+
+def good_feature(**fields):
+    fields.setdefault("ll_gissqft", expected_sqft())
+    return feature(square(), **fields)
+
+
+def test_render_writes_page_and_summary(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature(owner="Example LLC"))
+    output = tmp_path / "map.html"
+    summary = parcel_map.render(response, output)
+    assert summary["features"] == 1
+    assert summary["area_checks"][0]["status"] == "ok"
+    assert summary["warnings"] == []
+    html = output.read_text(encoding="utf-8")
+    for needle in ("leaflet@1.9.4", 'integrity="sha256-', "World_Imagery", "Esri", "Example LLC"):
+        assert needle in html
+
+
+def test_page_has_no_token_and_only_allowed_hosts(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature(owner="Example LLC"))
+    output = tmp_path / "map.html"
+    parcel_map.render(response, output)
+    html = output.read_text(encoding="utf-8")
+    hosts = set(re.findall(r"https?://([^/\"'\s]+)", html))
+    assert hosts <= {"unpkg.com", "server.arcgisonline.com"}
+    assert "token" not in html.lower()
+
+
+def test_hostile_record_text_is_inert(tmp_path):
+    hostile = "</script><img src=x onerror=alert(1)>\"'"
+    response = write_response(tmp_path / "r.json", good_feature(owner=hostile))
+    output = tmp_path / "map.html"
+    parcel_map.render(response, output)
+    html = output.read_text(encoding="utf-8")
+    assert "</script><img" not in html
+    assert "<img" not in html
+
+
+def test_multiple_features_require_explicit_choice(tmp_path):
+    second = feature(square(lon=-75.0, lat=39.95), ll_gissqft=expected_sqft(-75.0, 39.95))
+    response = write_response(tmp_path / "r.json", good_feature(), second)
+    with pytest.raises(MapError, match="--feature or --all-candidates"):
+        parcel_map.render(response, tmp_path / "a.html")
+    with pytest.raises(MapError):
+        parcel_map.render(response, tmp_path / "b.html", index=5)
+    single = parcel_map.render(response, tmp_path / "c.html", index=1)
+    assert single["features"] == 1
+    assert "Candidate 2" not in (tmp_path / "c.html").read_text(encoding="utf-8")
+    both = parcel_map.render(response, tmp_path / "d.html", all_candidates=True)
+    assert both["features"] == 2
+    assert "Candidate 2" in (tmp_path / "d.html").read_text(encoding="utf-8")
+
+
+def test_null_geometry_with_point_and_without(tmp_path):
+    with_point = write_response(
+        tmp_path / "p.json", feature(None, lat="39.9", lon="-75.03", owner="Example LLC")
+    )
+    output = tmp_path / "map.html"
+    summary = parcel_map.render(with_point, output)
+    assert summary["features"] == 1
+    assert "No boundary on file for this parcel" in output.read_text(encoding="utf-8")
+
+    without = write_response(tmp_path / "n.json", feature(None, owner="Example LLC"))
+    with pytest.raises(MapError, match="no boundary"):
+        parcel_map.render(without, tmp_path / "n.html")
+    assert not (tmp_path / "n.html").exists()
+
+
+def test_invalid_geometry_is_rejected_before_rendering(tmp_path):
+    bad = feature({"type": "Point", "coordinates": [-75.03, 39.9]})
+    with pytest.raises(MapError, match="Unsupported geometry"):
+        parcel_map.render(write_response(tmp_path / "r.json", bad), tmp_path / "m.html")
+
+
+def test_mismatch_adds_warning(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature(ll_gissqft=1.0))
+    output = tmp_path / "map.html"
+    summary = parcel_map.render(response, output)
+    assert summary["warnings"]
+    html = output.read_text(encoding="utf-8")
+    assert summary["warnings"][0] in html
+
+
+def test_render_refuses_overwrite(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    output = tmp_path / "map.html"
+    output.write_bytes(b"original")
+    with pytest.raises(MapError, match="exists"):
+        parcel_map.render(response, output)
+    assert output.read_bytes() == b"original"
+    parcel_map.render(response, output, replace=True)
+    assert output.read_bytes() != b"original"
+    assert [p.name for p in tmp_path.iterdir() if p.name.startswith(".")] == []
+
+
+def test_cli_render_and_errors(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    output = tmp_path / "map.html"
+    ok = subprocess.run(
+        [sys.executable, str(SCRIPT), "render", str(response), str(output)],
+        capture_output=True,
+        text=True,
+    )
+    assert ok.returncode == 0
+    assert json.loads(ok.stdout)["features"] == 1
+
+    broken = tmp_path / "broken.json"
+    broken.write_text("{not json")
+    bad = subprocess.run(
+        [sys.executable, str(SCRIPT), "render", str(broken), str(tmp_path / "x.html")],
+        capture_output=True,
+        text=True,
+    )
+    assert bad.returncode == 1
+    assert bad.stdout == ""
+    assert len(bad.stderr.strip().splitlines()) == 1
+    assert "Traceback" not in bad.stderr
