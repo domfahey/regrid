@@ -1,3 +1,5 @@
+import json
+
 import httpx
 import pytest
 
@@ -25,27 +27,38 @@ def test_catalog_query_preserves_wire_values_and_does_not_send_sdk_flags():
     }
 
 
+NOT_QUERYABLE = "Field is not queryable in the local catalog"
+BAD_OPERATOR = "Operator is not supported for this catalog field"
+BAD_VALUE = "Invalid value or pagination combination for catalog operator"
+
+
 @pytest.mark.parametrize(
-    "fields",
+    ("fields", "message"),
     [
-        {"new_field": {"eq": "value"}},
-        {"geoid": {"gt": "00123"}},
-        {"ll_gisacre": {"eq": True}},
-        {"ll_gisacre": {"between": [1]}},
-        {"owner": {"in": "SMITH"}},
-        {"owner": {"isnull": "true"}},
-        {"rdi": {"ilike": "R"}},
-        {"struct": {"eq": "true"}},
+        ({"new_field": {"eq": "value"}}, NOT_QUERYABLE),
+        ({"geoid": {"gt": "00123"}}, BAD_OPERATOR),
+        ({"ll_gisacre": {"eq": True}}, BAD_VALUE),
+        ({"ll_gisacre": {"between": [1]}}, BAD_VALUE),
+        ({"ll_gisacre": {"between": [1, 2, 3]}}, BAD_VALUE),
+        ({"owner": {"in": "SMITH"}}, BAD_VALUE),
+        ({"owner": {"isnull": "true"}}, BAD_VALUE),
+        ({"rdi": {"ilike": "R"}}, BAD_OPERATOR),
+        ({"struct": {"eq": "true"}}, BAD_VALUE),
     ],
 )
-def test_invalid_catalog_queries_never_send(fields):
-    def forbidden(request):
-        pytest.fail("invalid query reached transport")
+def test_invalid_catalog_queries_never_send(fields, message):
+    seen = []
 
-    with RegridClient("test", transport=httpx.MockTransport(forbidden)) as client:
+    def respond(request):
+        seen.append(request)
+        return httpx.Response(200, json={})
+
+    with RegridClient("test", transport=httpx.MockTransport(respond)) as client:
         with pytest.raises(ValueError) as error:
             client.query(fields, validate_fields=True)
+    assert str(error.value) == message
     assert error.value.__context__ is None
+    assert seen == []
 
 
 def test_unknown_escape_hatch_and_legacy_queries_still_work():
@@ -58,8 +71,21 @@ def test_unknown_escape_hatch_and_legacy_queries_still_work():
     with RegridClient("test", transport=httpx.MockTransport(respond)) as client:
         client.query({"future": {"eq": "x"}}, validate_fields=True, allow_unknown_fields=True)
         client.query({"future": {"future_operator": "x"}})
-    assert len(calls) == 2
-    assert all("validate_fields" not in request.url.params for request in calls)
+    # SDK-only flags are consumed locally; the wire sees just the filter and defaults.
+    assert [request.url.params.multi_items() for request in calls] == [
+        [
+            ("return_parcels", "true"),
+            ("fields[future][eq]", "x"),
+            ("limit", "5"),
+            ("token", "test"),
+        ],
+        [
+            ("return_parcels", "true"),
+            ("fields[future][future_operator]", "x"),
+            ("limit", "5"),
+            ("token", "test"),
+        ],
+    ]
 
 
 def test_catalog_is_not_applied_to_canadian_fields():
@@ -69,16 +95,25 @@ def test_catalog_is_not_applied_to_canadian_fields():
 
 
 @pytest.mark.parametrize(
-    "fields",
+    ("fields", "wire"),
     [
-        {"ll_gisacre": {"order": "ASC"}},
-        {"zoning": {"between": ["RS-1", "RS-9"], "order": "DESC"}},
-        {"struct": {"eq": False, "isnull": True}},
-        {"owner": {"in": ["SMITH", "JONES"]}},
-        {"saledate": {"between": ["2020", "2021/04/22"]}},
+        ({"ll_gisacre": {"order": "ASC"}}, {"fields[ll_gisacre][order]": "ASC"}),
+        (
+            {"zoning": {"between": ["RS-1", "RS-9"], "order": "DESC"}},
+            {"fields[zoning][between]": '["RS-1","RS-9"]', "fields[zoning][order]": "DESC"},
+        ),
+        (
+            {"struct": {"eq": False, "isnull": True}},
+            {"fields[struct][eq]": "false", "fields[struct][isnull]": "true"},
+        ),
+        ({"owner": {"in": ["SMITH", "JONES"]}}, {"fields[owner][in]": '["SMITH","JONES"]'}),
+        (
+            {"saledate": {"between": ["2020", "2021/04/22"]}},
+            {"fields[saledate][between]": '["2020","2021/04/22"]'},
+        ),
     ],
 )
-def test_documented_operator_shapes_are_accepted(fields):
+def test_documented_operator_shapes_are_accepted(fields, wire):
     calls = []
 
     def respond(request):
@@ -87,30 +122,52 @@ def test_documented_operator_shapes_are_accepted(fields):
 
     with RegridClient("test", transport=httpx.MockTransport(respond)) as client:
         client.query(fields, validate_fields=True)
-    assert len(calls) == 1
+    (request,) = calls
+    assert dict(request.url.params) == {
+        "token": "test",
+        "limit": "5",
+        "return_parcels": "true",
+        **wire,
+    }
 
 
 def test_order_and_pagination_are_incompatible():
-    with RegridClient("test", transport=httpx.MockTransport(lambda r: pytest.fail())) as client:
+    seen = []
+    transport = httpx.MockTransport(lambda r: seen.append(r))
+    with RegridClient("test", transport=transport) as client:
         with pytest.raises(ValueError, match="pagination"):
             client.query({"ll_gisacre": {"order": "ASC"}}, offset_id=0, validate_fields=True)
+    assert seen == []
 
 
 @pytest.mark.parametrize("flag", ["validate_fields", "allow_unknown_fields"])
 def test_catalog_flags_require_real_booleans(flag):
-    with RegridClient("test") as client:
+    seen = []
+    transport = httpx.MockTransport(lambda r: seen.append(r))
+    with RegridClient("test", transport=transport) as client:
         with pytest.raises(ValueError, match="booleans"):
             client.query({"owner": {"eq": "SMITH"}}, **{flag: "true"})
+    assert seen == []
 
 
 def test_unknown_escape_does_not_disable_four_field_maximum():
-    with RegridClient("test", transport=httpx.MockTransport(lambda r: pytest.fail())) as client:
-        with pytest.raises(ValueError):
+    seen = []
+    transport = httpx.MockTransport(lambda r: (seen.append(r), httpx.Response(200, json={}))[1])
+    with RegridClient("test", transport=transport) as client:
+        with pytest.raises(ValueError, match="^Invalid Regrid request parameters$"):
             client.query(
                 {f"future_{i}": {"eq": "x"} for i in range(5)},
                 validate_fields=True,
                 allow_unknown_fields=True,
             )
+        assert seen == []
+        # Four unknown fields are the documented maximum and still go out.
+        client.query(
+            {f"future_{i}": {"eq": "x"} for i in range(4)},
+            validate_fields=True,
+            allow_unknown_fields=True,
+        )
+    assert len(seen) == 1
 
 
 def test_explicit_nonqueryable_field_cannot_bypass_catalog():
@@ -137,13 +194,19 @@ def test_typed_client_and_cli_expose_same_catalog_validation(monkeypatch, capsys
         cli, "RegridClient", lambda **kw: RegridClient(**kw, transport=httpx.MockTransport(respond))
     )
     assert cli.main(["query", "--fields", '{"geoid":{"eq":"00123"}}', "--validate-fields"]) == 0
-    assert "features" in capsys.readouterr().out
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == {"parcels": {"type": "FeatureCollection", "features": []}}
+    assert captured.err == "regrid: requests made: 1\n"
     assert len(calls) == 2
+    assert all(call.url.params["fields[geoid][eq]"] == "00123" for call in calls)
     assert (
         cli.main(
             ["query", "--fields", '{"new_field":{"eq":"sensitive-value"}}', "--validate-fields"]
         )
         == 1
     )
-    assert "sensitive-value" not in capsys.readouterr().err
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "sensitive-value" not in captured.err
+    assert captured.err.endswith("regrid: requests made: 0\n")
     assert len(calls) == 2
