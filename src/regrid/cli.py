@@ -683,6 +683,20 @@ def _parser() -> argparse.ArgumentParser:
         "usage",
     }
     country_commands = option_commands - {"schema"} | {"typeahead"}
+    # Each example is accepted by its own command; the allowlists differ per endpoint.
+    option_examples = {
+        "point": '{"limit":5,"return_geometry":true}',
+        "area": '{"limit":5,"return_geometry":true}',
+        "query": '{"limit":5,"return_geometry":true}',
+        "address": '{"limit":5}',
+        "apn": '{"limit":5}',
+        "owner": '{"limit":5}',
+        "parcel": '{"return_stacked":true}',
+        "parcel-path": '{"return_stacked":true}',
+        "verse": '{"return_geometry":true}',
+        "usage": '{"begin_date":"2026-01-01"}',
+        "schema": '{"premium_only":true}',
+    }
     descriptions = {
         "point": "Find parcels by coordinates or Point/MultiPoint GeoJSON",
         "area": "Find parcels intersecting GeoJSON geometry",
@@ -730,7 +744,7 @@ def _parser() -> argparse.ArgumentParser:
                 default="{}",
                 help=(
                     "SDK keyword options as JSON object or @file; e.g. "
-                    '\'{"limit":5,"return_geometry":true}\'. Endpoint-specific validation applies.'
+                    f"'{option_examples[name]}'. Endpoint-specific validation applies."
                 ),
             )
         if name in country_commands:
