@@ -1,0 +1,9 @@
+{
+  "plugin_version": "0.9.5",
+  "hosts": {
+    "claude_code": "not_run",
+    "claude_apps": "not_run",
+    "cowork": "not_run"
+  },
+  "notes": "Not re-rendered for 0.9.5: `scripts/map.py` and `src/regrid/offline/map.py` are byte-identical to 0.9.3; `commands/address-map.md` changed only in its instructions (address prompt, neighbours flag, response location, CLI fallback), not in rendering. The 0.9.3 plain-browser render check (map-hosts-0.9.3.json) applies. claude_code, claude_apps and cowork hosts: not run (need the user's apps)."
+}

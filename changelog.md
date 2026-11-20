@@ -2,9 +2,18 @@
 
 User-visible changes are grouped by release using the categories from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version numbering follows [Semantic Versioning](https://semver.org/); the current `0.x` API remains under development.
 
-The Python SDK/CLI and the Regrid Research plugin are versioned independently. The latest tagged releases are SDK `0.4.4` (`sdk-v0.4.4`) and Regrid Research `0.9.4` (`regrid-research-v0.9.4`); the first were SDK `0.3.0` and Regrid Research `0.8.0`. Keep pending changes under Unreleased until the next release is prepared.
+The Python SDK/CLI and the Regrid Research plugin are versioned independently. The latest tagged releases are SDK `0.4.4` (`sdk-v0.4.4`) and Regrid Research `0.9.5` (`regrid-research-v0.9.5`); the first were SDK `0.3.0` and Regrid Research `0.8.0`. Keep pending changes under Unreleased until the next release is prepared.
 
 ## Unreleased
+
+No changes yet.
+
+## [Regrid Research 0.9.5][regrid-research-v0.9.5] - 2026-11-19
+
+Plugin-only patch release with the skill best-practice audit fixes (PR #28); the SDK stays at 0.4.4 (no SDK changes). Unverified at release:
+- the Claude Code, Claude apps and Cowork map host checks (map helper unchanged since 0.9.3, which passed a plain-browser render check)
+- a live `/mcp` connection, typeahead (needs an Enterprise token), and POST geometry search over MCP
+- model and Cowork acceptance evaluations
 
 ### Changed
 
@@ -318,6 +327,7 @@ Describe user-facing changes rather than copying commit logs. Add repository com
 [regrid-research-v0.9.0]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.0
 [sdk-v0.4.1]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.1
 [regrid-research-v0.9.1]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.1
+[regrid-research-v0.9.5]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.5
 [sdk-v0.4.4]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.4
 [regrid-research-v0.9.4]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.4
 [sdk-v0.4.3]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.3
