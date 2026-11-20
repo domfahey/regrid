@@ -31,6 +31,11 @@ def _install(monkeypatch, handler):
     return seen
 
 
+# Deep enough to exceed the recursion limit on every supported Python: 3.10 fails near 1000
+# frames, while 3.12/3.13 only fail past the ~10k C-stack limit for the parser and encoder.
+DEEP_LEVELS = 20_000
+
+
 def _deep_body(depth, wrap='{"parcels":{"features":[]},"x":%s}'):
     return (wrap % ("[" * depth + "]" * depth)).encode()
 
@@ -63,7 +68,7 @@ def test_decode_deep_json_raises_decode_error():
     assert info.value.__context__ is None
 
 
-@pytest.mark.parametrize("depth", [1500, 100_000])
+@pytest.mark.parametrize("depth", [DEEP_LEVELS, 100_000])
 @pytest.mark.parametrize(
     "argv",
     [
@@ -95,7 +100,7 @@ def test_deep_response_body(monkeypatch, capsys, tmp_path, argv, depth):
 def test_deep_decoded_result_fails_at_output(monkeypatch, capsys, tmp_path, argv):
     """A result that decodes but cannot be serialized still fails cleanly."""
     seen = _install(monkeypatch, lambda r: httpx.Response(200, json={}))
-    deep = {"parcels": {"features": [{"id": 1, "properties": {"x": _nested(1500)}}]}}
+    deep = {"parcels": {"features": [{"id": 1, "properties": {"x": _nested(DEEP_LEVELS)}}]}}
     deep["features"] = [{"properties": {"path": "/us/nj/camden"}}]
     monkeypatch.setattr(RegridClient, "_decode", staticmethod(lambda response: deep))
     argv = [str(tmp_path / "m.html") if a == "OUTPATH" else a for a in argv]
@@ -117,7 +122,7 @@ def test_freshness_deep_verse_cache_failure_is_a_warning(monkeypatch, capsys, tm
 
 
 @pytest.mark.parametrize("flag", ["--options", "--fields", "--geojson"])
-@pytest.mark.parametrize("depth", [1500, 100_000])
+@pytest.mark.parametrize("depth", [DEEP_LEVELS, 100_000])
 def test_deep_json_argument_makes_no_request(monkeypatch, capsys, flag, depth):
     seen = _install(monkeypatch, lambda r: httpx.Response(200, json={}))
     deep = "[" * depth + "]" * depth

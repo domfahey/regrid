@@ -180,7 +180,8 @@ def test_deeply_nested_catalog_is_a_clean_error(tmp_path, capsys):
 
 @pytest.mark.parametrize("argv", [["search", "deep"], ["explain", "deep"]])
 def test_deep_description_fails_cleanly_on_output(tmp_path, capsys, argv):
-    nested = "[" * 1500 + "]" * 1500
+    # Beyond the ~10k C-stack limit of Python 3.12/3.13 (3.10 fails near 1000).
+    nested = "[" * 20_000 + "]" * 20_000
     path = tmp_path / "deep.json"
     path.write_text(
         '{"fields": [{"name": "deep", "datatype": "text", "tier": "standard", "category": "Deep",'
