@@ -6,7 +6,14 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
-No changes yet.
+### Fixed
+
+- CLI: each command's `--options` help now shows an example that command accepts (the shared `{"limit":5,"return_geometry":true}` example was rejected by `address`, `apn`, `owner`, `parcel`, `parcel-path`, `usage`, `verse` and `schema`).
+
+### Changed
+
+- CI tests Python 3.13 as well as 3.10 and 3.12.
+- Tests: the `mcp-tools.md` tools table is checked against `tools.json` (names, required arguments, which tool makes API requests), and every `return_*`, `offset_id` and `radius` named in `mcp-tools.md` and `premium.md` must exist for that endpoint in `endpoints.json`. No drift was found.
 
 ## [Regrid Research 0.9.5][regrid-research-v0.9.5] - 2026-11-19
 

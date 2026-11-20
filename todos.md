@@ -59,13 +59,13 @@ Needs the owner (billable, credentialed or the owner's own apps):
   geometry search has never run through MCP.
 
 Cheap hardening (one small PR):
-- [ ] **Python 3.13+ in CI**: add 3.13 to the CI matrix. The symlink-loop bug appeared
+- [x] **Python 3.13+ in CI**: add 3.13 to the CI matrix. The symlink-loop bug appeared
   only on 3.13+ (`Path.resolve()` stopped raising), and CI tests 3.10 and 3.12 only.
-- [ ] **MCP tools drift test**: check the `mcp-tools.md` tools table (names, required
+- [x] **MCP tools drift test**: check the `mcp-tools.md` tools table (names, required
   arguments, which tool makes API requests) against `references/tools.json`.
-- [ ] **Response-option drift test**: every `return_*`, `offset_id` or `radius` named in
+- [x] **Response-option drift test**: every `return_*`, `offset_id` or `radius` named in
   `mcp-tools.md` and `premium.md` must exist for that endpoint in `references/endpoints.json`.
-- [ ] **`--options` help example**: the CLI help shows `{"limit":5,...}` under `usage`,
+- [x] **`--options` help example**: the CLI help shows `{"limit":5,...}` under `usage`,
   `verse` and `schema`, which all reject `limit`; show a valid example per command.
 - [ ] **POST `return_parcels`** (**authorization**: one request): settle whether POST
   geometry search accepts `return_parcels`; listed as unverified in every release.
