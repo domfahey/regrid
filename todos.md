@@ -42,6 +42,46 @@ Suggested batches:
 - **Then:** #8–#10. Each needs a decision or more code.
 - **Later:** #11–#17.
 
+## Next (after Regrid Research 0.9.5 / SDK 0.4.4, 2026-11-19)
+
+Every item in the table above is done or tracked below. Remaining work, in priority order.
+
+Needs the owner (billable, credentialed or the owner's own apps):
+- [ ] **Model evaluations** (**authorization**: model-billed): run the discovery, feature
+  and composition evals in `plugins/regrid-research/evals/` against a real model. They are
+  the only check that the skill routes and behaves correctly; release checks only
+  validate fixture structure.
+- [ ] **Map in the real hosts**: open `/regrid-research:address-map` once each in Claude
+  Code, the Claude apps and Cowork, and record `verified` or `failed` in
+  `evals/results/map-hosts-<version>.json` (all three are `not_run` in every release).
+- [ ] **Live `/mcp` connection** (**authorization**): exercise the plugin's real path,
+  Regrid's MCP server, end to end. Live checks so far used the SDK and CLI only; POST
+  geometry search has never run through MCP.
+
+Cheap hardening (one small PR):
+- [ ] **Python 3.13+ in CI**: add 3.13 to the CI matrix. The symlink-loop bug appeared
+  only on 3.13+ (`Path.resolve()` stopped raising), and CI tests 3.10 and 3.12 only.
+- [ ] **MCP tools drift test**: check the `mcp-tools.md` tools table (names, required
+  arguments, which tool makes API requests) against `references/tools.json`.
+- [ ] **Response-option drift test**: every `return_*`, `offset_id` or `radius` named in
+  `mcp-tools.md` and `premium.md` must exist for that endpoint in `references/endpoints.json`.
+- [ ] **`--options` help example**: the CLI help shows `{"limit":5,...}` under `usage`,
+  `verse` and `schema`, which all reject `limit`; show a valid example per command.
+- [ ] **POST `return_parcels`** (**authorization**: one request): settle whether POST
+  geometry search accepts `return_parcels`; listed as unverified in every release.
+
+Features (when wanted):
+- [ ] **Offline field lookups for other schemas**: zoning, building, address and enhanced
+  ownership fields still need a `/schemas/*` request; snapshot them like the parcel catalog.
+- [ ] **More commands**: `owner-portfolio` (count first, then page an owner search to CSV
+  within a budget) and `county-freshness`.
+- [ ] **Paging `limit` floor**: `--max-records` requires `limit >= 2`, which the exclusive
+  cursor (verified live) no longer needs.
+
+Watch: `property-research/SKILL.md` is at 919 of its 950-word cap
+(`tests/test_claude_plugins.py`). The next real feature needs guidance moved into a
+reference first.
+
 ## Verification
 
 - [x] **Live outline check** (verified live 2026-11-19: a default `/parcels/address` lookup returned `geometry` as a Polygon): with one live address lookup,
