@@ -48,7 +48,7 @@ Also: `regrid address-map ADDRESS OUT.html [--neighbours]` (one lookup, plus one
 neighbours request when asked). Never run `report` or `client-token-typeahead`.
 
 Paging: `--max-records N` on `point` (GET only), `area` and `query`, never `owner`.
-It needs an explicit integer `limit` of at least 2 in `--options`, rejects a truthy `return_count`,
+It needs an explicit positive integer `limit` in `--options`, rejects a truthy `return_count`,
 and rejects `offset_id` in `--options` (the CLI manages the cursor). It prints
 `regrid: up to K requests for N records` before the first request; K = ceil(N / limit)
 is the enforced worst case. It starts at `offset_id=0` so results come in id order

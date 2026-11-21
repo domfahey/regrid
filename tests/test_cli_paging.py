@@ -507,11 +507,35 @@ def test_printed_cap_is_enforced_maximum(monkeypatch, capsys, inclusive, total, 
         assert len(seen) == cap
 
 
-def test_limit_one_rejected_before_any_request(monkeypatch, capsys):
+def test_limit_one_pages_with_exclusive_cursor(monkeypatch, capsys):
+    seen = _counting(monkeypatch, lambda r, n: _inclusive(r, n, False))
+    assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":1}']) == 0
+    out, err = capsys.readouterr()
+    data = json.loads(out)
+    assert [f["id"] for f in data["parcels"]["features"]] == [1, 2, 3]
+    assert data["pages"] == 3 and data["complete"] is True and len(seen) == 3
+    assert [r.url.params["offset_id"] for r in seen] == ["0", "1", "2"]
+    assert "regrid: up to 3 requests for 3 records" in err
+
+
+def test_limit_one_inclusive_server_stops_incomplete(monkeypatch, capsys):
+    seen = _counting(monkeypatch, lambda r, n: _inclusive(r, n, True))
+    assert cli.main([*POINT, "--max-records", "3", "--options", '{"limit":1}']) == 0
+    out, err = capsys.readouterr()
+    data = json.loads(out)
+    assert data["complete"] is False and len(seen) <= 3
+    assert [f["id"] for f in data["parcels"]["features"]] == [1]
+    assert "regrid: paging stopped:" in err
+
+
+@pytest.mark.parametrize("limit", ["0", "-1", "true", '"1"', "1.0", "null"])
+def test_non_positive_or_non_int_limit_rejected(monkeypatch, capsys, limit):
     seen = _counting(monkeypatch, _inclusive)
-    assert cli.main([*POINT, "--max-records", "5", "--options", '{"limit":1}']) == 1
+    opts = '{"limit":' + limit + "}"
+    assert cli.main([*POINT, "--max-records", "5", "--options", opts]) == 1
     err = capsys.readouterr().err
-    assert seen == [] and "limit of at least 2" in err and "requests made: 0" in err
+    assert seen == [] and "positive count and an integer limit" in err
+    assert "requests made: 0" in err
 
 
 def test_paging_validation_surfaces_non_paging_errors(monkeypatch, capsys):

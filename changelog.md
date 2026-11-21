@@ -8,11 +8,15 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ### Fixed
 
+- CLI: `--max-records` paging now accepts `limit` 1. The old floor of 2 assumed an inclusive cursor; `offset_id` was verified live to be exclusive. A missing, zero, negative or non-integer `limit` is still rejected.
+
 - CLI: each command's `--options` help now shows an example that command accepts (the shared `{"limit":5,"return_geometry":true}` example was rejected by `address`, `apn`, `owner`, `parcel`, `parcel-path`, `usage`, `verse` and `schema`).
 
 ### Changed
 
 - CI tests Python 3.13 as well as 3.10 and 3.12.
+- Skill: `mcp-tools.md` records that POST point accepts `return_parcels=true` (verified live 2026-11-20 with one request); POST area remains unverified.
+- Tests: deep-nesting tests use 20,000 levels so they fail on every supported Python (3.13 handles 1,500).
 - Tests: the `mcp-tools.md` tools table is checked against `tools.json` (names, required arguments, which tool makes API requests), and every `return_*`, `offset_id` and `radius` named in `mcp-tools.md` and `premium.md` must exist for that endpoint in `endpoints.json`. No drift was found.
 
 ## [Regrid Research 0.9.5][regrid-research-v0.9.5] - 2026-11-19
