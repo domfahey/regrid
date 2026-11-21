@@ -112,7 +112,7 @@ Coverage includes every SDK and CLI module; XML output is written to ignored `co
 .venv/bin/regrid export parcel.json --csv parcel.csv --geojson parcel.geojson   # offline export
 ```
 
-Every API command prints `regrid: requests made: N` to stderr (JSON on stdout is unchanged); SDK users can read `RegridClient.request_count`. `--max-records N` on `point`, `area` and `query` follows `offset_id` cursors for up to N records and requires an integer `limit` of at least 2 in `--options`. Output is the first page's response with `parcels.features` replaced by the merged, de-duplicated features (other list-valued keys and FeatureCollection keys are merged; a key first seen on a later page is added, and a key whose shape changes keeps page 1's value with a `regrid: paging note` on stderr), plus `pages` and `complete`. A truthy `return_count` is rejected with `--max-records`. Paging starts at `offset_id=0`: verified live, point and area return their first page in spatial order without an `offset_id` but in ascending id order with one, so starting at 0 gives id-ordered pages with no gaps. The `offset_id` cursor is exclusive (verified live), so each page starts after the previous one and requests at most the remaining records; the printed cap is `ceil(N / limit)`: 300 records at `limit` 100 prints `up to 3 requests`. If a server repeats the cursor record anyway, repeats are de-duplicated in every merged collection, and sibling features of parcels trimmed to N (matched by `properties.ll_uuid`) are dropped. A cursor id may be a non-negative integer or a string of ASCII digits. `complete` is true only when results ended (a short page) or N records were reached; it is false if paging stops for any other reason. If a later page fails or is malformed, the partial result is printed with `"complete": false` and the command exits 1. Paging also stops with `complete: false` and `regrid: paging stopped: results not in cursor order` if a page's numeric feature ids are not strictly ascending or not all above the previous cursor (non-numeric ids are skipped by this check), so records are never skipped silently. It also stops with `complete: false` if a page has no usable cursor (`regrid: paging stopped: no cursor in response`) or adds only already-seen records (`regrid: paging stopped: cursor did not advance`). `address-map --neighbours` draws neighbouring outlines within 100 m, capped at 25 records. `regrid export RESPONSE` writes core columns to CSV and GeoJSON properties (`--all-fields` appends the rest to both; IDs are exported as given) and never overwrites without `--replace`.
+Every API command prints `regrid: requests made: N` to stderr (JSON on stdout is unchanged); SDK users can read `RegridClient.request_count`. `--max-records N` on `point`, `area` and `query` follows `offset_id` cursors for up to N records and requires a positive integer `limit` in `--options`. Output is the first page's response with `parcels.features` replaced by the merged, de-duplicated features (other list-valued keys and FeatureCollection keys are merged; a key first seen on a later page is added, and a key whose shape changes keeps page 1's value with a `regrid: paging note` on stderr), plus `pages` and `complete`. A truthy `return_count` is rejected with `--max-records`. Paging starts at `offset_id=0`: verified live, point and area return their first page in spatial order without an `offset_id` but in ascending id order with one, so starting at 0 gives id-ordered pages with no gaps. The `offset_id` cursor is exclusive (verified live), so each page starts after the previous one and requests at most the remaining records; the printed cap is `ceil(N / limit)`: 300 records at `limit` 100 prints `up to 3 requests`. If a server repeats the cursor record anyway, repeats are de-duplicated in every merged collection, and sibling features of parcels trimmed to N (matched by `properties.ll_uuid`) are dropped. A cursor id may be a non-negative integer or a string of ASCII digits. `complete` is true only when results ended (a short page) or N records were reached; it is false if paging stops for any other reason. If a later page fails or is malformed, the partial result is printed with `"complete": false` and the command exits 1. Paging also stops with `complete: false` and `regrid: paging stopped: results not in cursor order` if a page's numeric feature ids are not strictly ascending or not all above the previous cursor (non-numeric ids are skipped by this check), so records are never skipped silently. It also stops with `complete: false` if a page has no usable cursor (`regrid: paging stopped: no cursor in response`) or adds only already-seen records (`regrid: paging stopped: cursor did not advance`). `address-map --neighbours` draws neighbouring outlines within 100 m, capped at 25 records. `regrid export RESPONSE` writes core columns to CSV and GeoJSON properties (`--all-fields` appends the rest to both; IDs are exported as given) and never overwrites without `--replace`.
 
 `regrid map RESPONSE OUTPUT [--feature N] [--all-candidates] [--retrieved-at ISO] [--neighbours FILE] [--replace]` renders offline with no request (the output may not be the response or neighbours file). `regrid freshness` reuses its `/verse` cache for 30 days (`--max-age-days N`) and only for the same `--base-url`; an older cache is refetched with one request and a stderr note. `regrid address-map ADDRESS OUTPUT [--path SCOPE] [--save-response FILE] [--retrieved-at ISO] [--replace]` makes one address request, prints `regrid: requests made: N` to stderr, and saves the response next to the page unless `--save-response` is given. Pages load Leaflet and Esri imagery in the viewer's browser.
 
@@ -263,6 +263,13 @@ Invalid local arguments raise `ValueError` or `TypeError`. The client checks lim
 
 ## Verification status
 
+For Regrid Research 0.9.6 and SDK 0.4.5 (PR #31 and the release PR, patch release):
+- **Tests:** `make check` passed **1480 tests** (2 skipped) with **97.40%** SDK/CLI coverage, `make e2e` passed **58**, `claude plugin validate --strict` passed and the 27 eval fixtures validated.
+- **CI:** passed on Python 3.10, 3.12 and 3.13 and on Windows.
+- **Live (authorized, 2026-11-20):** one POST point request verified that `return_parcels` is accepted.
+- **Map render check:** the map helper is unchanged since 0.9.3, so the 0.9.3 plain-browser render check applies; see `plugins/regrid-research/evals/results/map-hosts-0.9.6.json`.
+- **Not run:** the Claude Code, Claude apps and Cowork map host checks, a live `/mcp` connection, typeahead, POST area `return_parcels`, and model and Cowork acceptance evaluations.
+
 For Regrid Research 0.9.5 (PR #28, plugin-only patch release; the SDK stays at 0.4.4, unchanged):
 - **Tests:** `make check` passed **1457 tests** (2 skipped) with **97.48%** SDK/CLI coverage, `make e2e` passed **58**, `claude plugin validate --strict` passed and the 27 eval fixtures validated.
 - **CI:** passed on Python 3.10 and 3.12 and on Windows.
@@ -359,9 +366,9 @@ Output contains only status and aggregate counts, not credentials, addresses, ow
 The [Regrid Research guide](plugins/regrid-research/README.md) covers separate
 Cowork and Claude Code packages built from one canonical research skill:
 
-- `dist/regrid-research-cowork-0.9.5.zip`: remote connector declaration and skills.
-- `dist/regrid-research-claude-code-0.9.5.zip`: native HTTP MCP connection and skills.
-- `dist/regrid-property-research-skill-0.9.5.zip`: standalone skill with references.
+- `dist/regrid-research-cowork-0.9.6.zip`: remote connector declaration and skills.
+- `dist/regrid-research-claude-code-0.9.6.zip`: native HTTP MCP connection and skills.
+- `dist/regrid-property-research-skill-0.9.6.zip`: standalone skill with references.
 
 Build with `.venv/bin/python scripts/build_claude_plugins.py`. For Cowork,
 configure `x-regrid-token` privately in the custom web connector's Request headers
@@ -376,7 +383,7 @@ records observed MCP schemas and a successful authenticated usage-only call.
 using synthetic saved responses. Neither proves Cowork import or account-specific
 header availability; those remain unverified. No credentials enter the packages.
 
-Regrid Research 0.6.0 to 0.9.5 add:
+Regrid Research 0.6.0 to 0.9.6 add:
 - **Maps:** an interactive satellite parcel map (`scripts/map.py`, also `regrid map`) and the `/regrid-research:address-map` command for the address → data → map flow. Neighbouring outlines are opt-in.
 - **Export:** CSV and GeoJSON (`map.py export`, also `regrid export`).
 - **Field catalog:** `scripts/fields.py`, with `references/fields.json`.

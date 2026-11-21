@@ -425,8 +425,6 @@ def _paged_search(
         raise _PagingError(
             "--max-records requires a positive count and an integer limit in --options"
         )
-    if limit < 2:
-        raise _PagingError("--max-records paging needs a limit of at least 2 in --options")
     if command == "point" and args.get("method") == "POST":
         raise _PagingError("--max-records is not supported for POST point searches")
     if "offset_id" in options:

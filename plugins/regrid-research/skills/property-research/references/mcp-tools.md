@@ -178,7 +178,8 @@ POST point takes no `offset_id` or `return_geometry`; POST area accepts `limit`,
 `radius`, `return_count`, `offset_id`, `return_geometry` and the premium flags. Every
 other POST (`/report`, Batch creation) stays forbidden, as do `/client_token/typeahead`
 and all DELETEs.
-Whether POST accepts `return_parcels` is unverified; GET searches set it explicitly.
+POST point accepts `return_parcels=true` (verified live 2026-11-20); POST area is
+unverified. GET searches set it explicitly.
 
 ### Response options
 

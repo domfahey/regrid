@@ -67,15 +67,16 @@ Cheap hardening (one small PR):
   `mcp-tools.md` and `premium.md` must exist for that endpoint in `references/endpoints.json`.
 - [x] **`--options` help example**: the CLI help shows `{"limit":5,...}` under `usage`,
   `verse` and `schema`, which all reject `limit`; show a valid example per command.
-- [ ] **POST `return_parcels`** (**authorization**: one request): settle whether POST
-  geometry search accepts `return_parcels`; listed as unverified in every release.
+- [x] **POST `return_parcels`** (verified live 2026-11-20 for POST point: one request,
+  `return_parcels=true` returned a `parcels` FeatureCollection; POST area still unverified):
+  settle whether POST geometry search accepts `return_parcels`.
 
 Features (when wanted):
 - [ ] **Offline field lookups for other schemas**: zoning, building, address and enhanced
   ownership fields still need a `/schemas/*` request; snapshot them like the parcel catalog.
 - [ ] **More commands**: `owner-portfolio` (count first, then page an owner search to CSV
   within a budget) and `county-freshness`.
-- [ ] **Paging `limit` floor**: `--max-records` requires `limit >= 2`, which the exclusive
+- [x] **Paging `limit` floor**: `--max-records` requires `limit >= 2`, which the exclusive
   cursor (verified live) no longer needs.
 
 Watch: `property-research/SKILL.md` is at 919 of its 950-word cap
