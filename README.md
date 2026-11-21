@@ -265,7 +265,7 @@ Invalid local arguments raise `ValueError` or `TypeError`. The client checks lim
 
 For Regrid Research 0.9.6 and SDK 0.4.5 (PR #31 and the release PR, patch release):
 - **Tests:** `make check` passed **1480 tests** (2 skipped) with **97.40%** SDK/CLI coverage, `make e2e` passed **58**, `claude plugin validate --strict` passed and the 27 eval fixtures validated.
-- **CI:** pending (Python 3.10, 3.12 and 3.13, and Windows).
+- **CI:** passed on Python 3.10, 3.12 and 3.13 and on Windows.
 - **Live (authorized, 2026-11-20):** one POST point request verified that `return_parcels` is accepted.
 - **Map render check:** the map helper is unchanged since 0.9.3, so the 0.9.3 plain-browser render check applies; see `plugins/regrid-research/evals/results/map-hosts-0.9.6.json`.
 - **Not run:** the Claude Code, Claude apps and Cowork map host checks, a live `/mcp` connection, typeahead, POST area `return_parcels`, and model and Cowork acceptance evaluations.
