@@ -263,6 +263,13 @@ Invalid local arguments raise `ValueError` or `TypeError`. The client checks lim
 
 ## Verification status
 
+For Regrid Research 0.9.6 and SDK 0.4.5 (PR #31 and the release PR, patch release):
+- **Tests:** `make check` passed **1480 tests** (2 skipped) with **97.40%** SDK/CLI coverage, `make e2e` passed **58**, `claude plugin validate --strict` passed and the 27 eval fixtures validated.
+- **CI:** pending (Python 3.10, 3.12 and 3.13, and Windows).
+- **Live (authorized, 2026-11-20):** one POST point request verified that `return_parcels` is accepted.
+- **Map render check:** the map helper is unchanged since 0.9.3, so the 0.9.3 plain-browser render check applies; see `plugins/regrid-research/evals/results/map-hosts-0.9.6.json`.
+- **Not run:** the Claude Code, Claude apps and Cowork map host checks, a live `/mcp` connection, typeahead, POST area `return_parcels`, and model and Cowork acceptance evaluations.
+
 For Regrid Research 0.9.5 (PR #28, plugin-only patch release; the SDK stays at 0.4.4, unchanged):
 - **Tests:** `make check` passed **1457 tests** (2 skipped) with **97.48%** SDK/CLI coverage, `make e2e` passed **58**, `claude plugin validate --strict` passed and the 27 eval fixtures validated.
 - **CI:** passed on Python 3.10 and 3.12 and on Windows.
@@ -359,9 +366,9 @@ Output contains only status and aggregate counts, not credentials, addresses, ow
 The [Regrid Research guide](plugins/regrid-research/README.md) covers separate
 Cowork and Claude Code packages built from one canonical research skill:
 
-- `dist/regrid-research-cowork-0.9.5.zip`: remote connector declaration and skills.
-- `dist/regrid-research-claude-code-0.9.5.zip`: native HTTP MCP connection and skills.
-- `dist/regrid-property-research-skill-0.9.5.zip`: standalone skill with references.
+- `dist/regrid-research-cowork-0.9.6.zip`: remote connector declaration and skills.
+- `dist/regrid-research-claude-code-0.9.6.zip`: native HTTP MCP connection and skills.
+- `dist/regrid-property-research-skill-0.9.6.zip`: standalone skill with references.
 
 Build with `.venv/bin/python scripts/build_claude_plugins.py`. For Cowork,
 configure `x-regrid-token` privately in the custom web connector's Request headers
@@ -376,7 +383,7 @@ records observed MCP schemas and a successful authenticated usage-only call.
 using synthetic saved responses. Neither proves Cowork import or account-specific
 header availability; those remain unverified. No credentials enter the packages.
 
-Regrid Research 0.6.0 to 0.9.5 add:
+Regrid Research 0.6.0 to 0.9.6 add:
 - **Maps:** an interactive satellite parcel map (`scripts/map.py`, also `regrid map`) and the `/regrid-research:address-map` command for the address → data → map flow. Neighbouring outlines are opt-in.
 - **Export:** CSV and GeoJSON (`map.py export`, also `regrid export`).
 - **Field catalog:** `scripts/fields.py`, with `references/fields.json`.

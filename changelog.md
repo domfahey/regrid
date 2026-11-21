@@ -2,14 +2,23 @@
 
 User-visible changes are grouped by release using the categories from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version numbering follows [Semantic Versioning](https://semver.org/); the current `0.x` API remains under development.
 
-The Python SDK/CLI and the Regrid Research plugin are versioned independently. The latest tagged releases are SDK `0.4.4` (`sdk-v0.4.4`) and Regrid Research `0.9.5` (`regrid-research-v0.9.5`); the first were SDK `0.3.0` and Regrid Research `0.8.0`. Keep pending changes under Unreleased until the next release is prepared.
+The Python SDK/CLI and the Regrid Research plugin are versioned independently. The latest tagged releases are SDK `0.4.5` (`sdk-v0.4.5`) and Regrid Research `0.9.6` (`regrid-research-v0.9.6`); the first were SDK `0.3.0` and Regrid Research `0.8.0`. Keep pending changes under Unreleased until the next release is prepared.
 
 ## Unreleased
+
+No changes yet.
+
+## [SDK 0.4.5][sdk-v0.4.5] and [Regrid Research 0.9.6][regrid-research-v0.9.6] - 2026-11-20
+
+Patch release: CLI paging and `--options` help fixes, a live-verified POST point `return_parcels` note, and more drift tests (PR #31 and this release). The map helper is unchanged since 0.9.3. Unverified at release:
+- the Claude Code, Claude apps and Cowork map host checks
+- a live `/mcp` connection, and typeahead (needs an Enterprise token)
+- whether POST area search accepts `return_parcels`
+- model and Cowork acceptance evaluations
 
 ### Fixed
 
 - CLI: `--max-records` paging now accepts `limit` 1. The old floor of 2 assumed an inclusive cursor; `offset_id` was verified live to be exclusive. A missing, zero, negative or non-integer `limit` is still rejected.
-
 - CLI: each command's `--options` help now shows an example that command accepts (the shared `{"limit":5,"return_geometry":true}` example was rejected by `address`, `apn`, `owner`, `parcel`, `parcel-path`, `usage`, `verse` and `schema`).
 
 ### Changed
@@ -338,6 +347,8 @@ Describe user-facing changes rather than copying commit logs. Add repository com
 [regrid-research-v0.9.0]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.0
 [sdk-v0.4.1]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.1
 [regrid-research-v0.9.1]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.1
+[sdk-v0.4.5]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.5
+[regrid-research-v0.9.6]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.6
 [regrid-research-v0.9.5]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.5
 [sdk-v0.4.4]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.4
 [regrid-research-v0.9.4]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.4
