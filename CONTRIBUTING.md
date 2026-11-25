@@ -22,7 +22,7 @@ make check
 `make check` runs lint, formatting checks, type checking, and mocked tests with
 at least 95% combined line/branch coverage. No credentials are needed.
 Run `make e2e` for local HTTPS tests; OpenSSL and localhost sockets are required.
-Do not run `make live` as an ordinary test: it requires your own account and may
+Do not run `make live` or `make live-full` as ordinary tests: they require your own account and may
 consume paid records. Never attach tokens, `.env`, private records, or unredacted
 HTTP logs to issues or pull requests. Use synthetic fixtures.
 
@@ -33,7 +33,9 @@ Use Conventional Commit subjects such as `fix: preserve omitted fields`.
 
 ## Plugin changes
 
-Canonical skills live under `plugins/regrid-research/skills/`. Build with
+Canonical skills live under `plugins/regrid-research/skills/`. Edit offline helpers
+under `src/regrid/offline/` and sync them with `.venv/bin/python scripts/sync_skill_helpers.py`
+rather than editing the skill copies directly. Build archives with
 `.venv/bin/python scripts/build_claude_plugins.py`; generated archives stay in
 ignored `dist/`. See the plugin's [evaluation guide](plugins/regrid-research/evals/README.md).
 Structural checks, model evaluations, and Cowork acceptance are separate gates.

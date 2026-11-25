@@ -10,7 +10,7 @@ No changes yet.
 
 ## [SDK 0.5.0][sdk-v0.5.0] and [Regrid Research 0.9.7][regrid-research-v0.9.7] - 2026-11-24
 
-Minor SDK/CLI release (`TypedRegridClient.validate_query()`, read-only `RegridClient` configuration properties, and `regrid tile --replace` overwrite protection) and plugin hardening release (PR #33 and the release PR). Unverified at release:
+Minor SDK/CLI release (`TypedRegridClient.validate_query()`, read-only `RegridClient` configuration properties, and `regrid tile --replace` overwrite protection) and plugin hardening release (PR #33 and PR #34). Unverified at release:
 - the Claude Code, Claude apps and Cowork map host checks, plus a fresh browser render after `0.9.7`'s `map.py` hardening (last plain-browser render check was `0.9.3`)
 - live Regrid API checks against `0.5.0`, a live `/mcp` connection, typeahead (needs an Enterprise token), and POST area `return_parcels`
 - model and Cowork acceptance evaluations
@@ -367,8 +367,8 @@ Unverified at release:
 
 SDK/CLI and plugin versions are independent. At release time, move only the relevant pending entries into a component-specific version heading dated `YYYY-MM-DD`; retain other pending work under Unreleased.
 
-- For an SDK/CLI release, synchronize `pyproject.toml` and `src/regrid/__init__.py`.
-- For a plugin release, update `plugins/regrid-research/.claude-plugin/plugin.json` and the documented archive names. Run `.venv/bin/python scripts/build_claude_plugins.py` to rebuild the Cowork, Claude Code, and standalone skill ZIPs in ignored `dist/`; all three archive versions derive from the plugin manifest. Validate the rebuilt artifacts and record model/Cowork acceptance separately from structural checks.
+- For an SDK/CLI release, synchronize `pyproject.toml`, `src/regrid/__init__.py`, and `tests/test_claude_plugins.py` (`test_versions()` enforces parity). Keep `[tool.hatch.build.targets.sdist]` `only-include` accurate for packaged files and inspect `tar -tzf dist/*.tar.gz` before publishing.
+- For a plugin release, update `plugins/regrid-research/.claude-plugin/plugin.json`, `plugins/regrid-research/evals/results/map-hosts-<version>.json` (pruning superseded intermediate all-`not_run` records), and the documented archive names. Run `.venv/bin/python scripts/build_claude_plugins.py` to rebuild the Cowork, Claude Code, and standalone skill ZIPs in ignored `dist/`; all three archive versions derive from the plugin manifest. Validate the rebuilt artifacts and record model/Cowork acceptance separately from structural checks.
 
 Describe user-facing changes rather than copying commit logs. Add repository comparison links when a remote and release tags exist; do not invent release dates or links.
 

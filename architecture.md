@@ -43,9 +43,9 @@ flowchart TD
     Dict --> CLI
 ```
 
-`RegridClient` inherits endpoint helpers from `EndpointsMixin`. Helpers validate options against the selected endpoint and country, serialize GeoJSON and field filters, and call `_request`. The transport applies a default search limit, injects the token for authenticated requests, and decodes JSON. Binary tile responses bypass JSON decoding.
+`RegridClient` inherits endpoint helpers from `EndpointsMixin` and exposes read-only `base_url`, `tiles_base_url`, and `timeout` properties alongside `request_count`. Helpers validate options against the selected endpoint and country, serialize GeoJSON and field filters, and call `_request`. The transport applies a default search limit, injects the token for authenticated requests, and decodes JSON. Binary tile responses bypass JSON decoding.
 
-`TypedRegridClient` owns a `RegridClient` exposed as `.raw`; both share one transport and lifetime. Its methods delegate to the raw client, then validate the response. UTFGrid can first discover its URL through TileJSON. `.to_dict()` serializes an existing model without another API call. Closing the typed client also closes `.raw`.
+`TypedRegridClient` owns a `RegridClient` exposed as `.raw`; both share one transport and lifetime. Its methods delegate to the raw client, then validate the response (`validate_query()` delegates offline query and paging validation without making a request). UTFGrid can first discover its URL through TileJSON. `.to_dict()` serializes an existing model without another API call. Closing the typed client also closes `.raw`.
 
 ## Validation and Compatibility
 

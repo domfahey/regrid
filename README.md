@@ -12,6 +12,7 @@ Processing APIs are out of scope and not implemented.
 
 ## Documentation
 
+- [Repository guidelines](AGENTS.md): module layout, coding conventions, test gates, and plugin workflow.
 - [Architecture](architecture.md): components, request flow, validation boundaries, and extension points.
 - [Contributing](CONTRIBUTING.md): setup, tests, and pull request workflow.
 - [Security policy](SECURITY.md) and [code of conduct](CODE_OF_CONDUCT.md).
@@ -37,6 +38,9 @@ make install
 The editable installation provides `.venv/bin/regrid`. Activate `.venv` to use
 `regrid` directly, or run `uv run regrid`. Public schema commands do not require
 a token. Development dependencies resolve locally; `uv.lock` is not tracked.
+The SDK is not published to PyPI; prebuilt wheels are attached to
+[GitHub Releases](https://github.com/domfahey/regrid/releases) (for example,
+`pip install regrid_sdk-0.5.0-py3-none-any.whl`).
 
 ### Optional authenticated setup
 
@@ -80,8 +84,10 @@ uv add /absolute/path/to/regrid
 | `make live-full` | Explicit live check of every read-only endpoint (about 26 requests, hard cap 30); requires token |
 | `make e2e` | Run subprocess and real local HTTPS tests |
 | `make check` | Run lint, format-check, typecheck, and the coverage-gated mocked suite |
-| `uv build` | Build wheel and source archives into `dist/` |
+| `uv build` | Build wheel and allowlisted source archives into `dist/` |
+| `.venv/bin/python scripts/build_claude_plugins.py` | Build the Cowork, Claude Code, and standalone skill ZIPs into `dist/` |
 | `.venv/bin/python scripts/sync_skill_helpers.py [--check]` | Copy `src/regrid/offline/*.py` into the skill's `scripts/` (byte-identical); `--check` fails on drift |
+| `.venv/bin/python scripts/generate_parcel_fields.py [--check]` | Regenerate `src/regrid/parcel_fields.py` from `src/regrid/data/parcel_fields.json` |
 | `.venv/bin/python scripts/generate_skill_fields.py [--check]` | Regenerate the skill's compact `references/fields.json` from the packaged field catalog |
 
 Coverage includes every SDK and CLI module; XML output is written to ignored `coverage.xml`. E2E tests are separate from `make check`: they require `openssl` and permission to bind a localhost port, generate temporary TLS keys, and verify TLS using a temporary trusted certificate. They do not contact Regrid or incur API charges. Run `make check && make e2e` for the full offline suite. `make live` is a separate, explicitly invoked service check that can incur a parcel charge. Override `PYTHON` if using a virtual environment other than `.venv`.
@@ -136,7 +142,7 @@ with RegridClient(os.environ["REGRID_TOKEN"]) as client:
         print(feature["properties"])
 ```
 
-The constructor accepts `timeout=30`, an HTTPX `transport` for testing or custom transport behavior, `default_limit=5`, and `max_limit=1000`.
+The constructor accepts `timeout=30`, an HTTPX `transport` for testing or custom transport behavior, `default_limit=5`, and `max_limit=1000`. Instances expose read-only `base_url`, `tiles_base_url`, and `timeout` properties alongside `request_count`.
 
 Address searches default to one result; other supported parcel searches default to five. The client bounds requested limits by `max_limit`. A small limit controls returned records; it does **not** prove a unique or correct match. Resolve ambiguous addresses, boundary points, and stacked parcels in your application.
 
@@ -180,7 +186,7 @@ with TypedRegridClient(os.environ["REGRID_TOKEN"]) as client:
     raw_usage = client.raw.usage()
 ```
 
-Both clients have the same endpoint arguments. `TypedRegridClient` returns parcel/count, usage, metadata, schema, typeahead, report, temporary-token, TileJSON, and UTFGrid models. Import model types from `regrid.models`. The original `RegridClient` and the CLI continue returning unchanged JSON dictionaries; adopting typed responses is opt-in.
+Both clients have the same endpoint arguments, including `validate_query()` for offline query and paging checks without sending a request. `TypedRegridClient` returns parcel/count, usage, metadata, schema, typeahead, report, temporary-token, TileJSON, and UTFGrid models. Import model types from `regrid.models`. The original `RegridClient` and the CLI continue returning unchanged JSON dictionaries; adopting typed responses is opt-in.
 
 Request validation uses strict types and endpoint-specific models with forbidden extra options. For example, `limit="5"`, `limit=True`, and `return_count="true"` are rejected rather than coerced. Numeric coordinate inputs must be finite and within range; APNs remain strings. Endpoint models are cached and reused. Invalid SDK inputs raise sanitized `ValueError` (some existing argument checks use `TypeError`).
 
@@ -263,9 +269,10 @@ Invalid local arguments raise `ValueError` or `TypeError`. The client checks lim
 
 ## Verification status
 
-For Regrid Research 0.9.7 and SDK 0.5.0 (PR #33 and the release PR):
+For Regrid Research 0.9.7 and SDK 0.5.0 (PR #33 and PR #34):
 - **Tests:** `make check` passed **1639 tests** (2 skipped) with **97.69%** SDK/CLI coverage, `make e2e` passed **56**, `claude plugin validate --strict` passed and the 27 eval fixtures validated.
 - **CI:** passed on Python 3.10, 3.12 and 3.13 and on Windows.
+- **Packaging:** `uv build` verified a 28-file allowlisted sdist (`[tool.hatch.build.targets.sdist]` `only-include`) and wheel with 0 leaked local files; all 3 plugin archives rebuilt deterministically.
 - **Map render check:** not re-rendered in a browser for `0.9.7` after `map.py` hardening (`NaN`/`Infinity` rejection, empty-path guards, `same_file_key` error handling); last plain-browser render check was `0.9.3`. See `plugins/regrid-research/evals/results/map-hosts-0.9.7.json`.
 - **Not run:** the Claude Code, Claude apps and Cowork map host checks, a fresh browser map render for `0.9.7`, live API checks against `0.5.0`, a live `/mcp` connection, typeahead, POST area `return_parcels`, and model and Cowork acceptance evaluations.
 
@@ -273,7 +280,7 @@ For earlier release verification history and retained reports (`composability-0.
 
 ## Live smoke test
 
-Set `REGRID_TOKEN` locally, then run `make live`. The default test address is `24 pennbrook dr haddonfield nj 08033`; optionally set `REGRID_LIVE_ADDRESS` to override it. An unset or blank override uses the default. `make live` and `make doctor` load your ignored `.env` through uv; exported environment values take precedence. For authenticated CLI calls use `uv run --env-file .env --no-sync regrid usage`; for SDK scripts use `uv run --env-file .env --no-sync python your_script.py`. Doctor checks configuration presence only, not token validity with Regrid. Loader errors are suppressed to avoid exposing credentials; failures return a generic diagnostic. Never paste tokens into reports or commit populated environment files.
+Set `REGRID_TOKEN` locally, then run `make live`. The default test address is `24 pennbrook dr haddonfield nj 08033`; optionally set `REGRID_LIVE_ADDRESS` to override it. An unset or blank override uses the default. `make live`, `make live-full`, and `make doctor` load your ignored `.env` through uv; exported environment values take precedence. For authenticated CLI calls use `uv run --env-file .env --no-sync regrid usage`; for SDK scripts use `uv run --env-file .env --no-sync python your_script.py`. Doctor checks configuration presence only, not token validity with Regrid. Loader errors are suppressed to avoid exposing credentials; failures return a generic diagnostic. Never paste tokens into reports or commit populated environment files.
 
 Check local configuration, then run the explicitly authenticated smoke test:
 
