@@ -65,7 +65,7 @@ HTTPX request logging can include tokens in URLs, so applications must redact lo
 
 ## Testing and Extension
 
-The [contract inventory](docs/api-coverage.md) maps all 33 supplied operations to exact SDK and CLI wire assertions. Mocked tests exercise endpoint serialization, country differences, model validation, CLI output, and errors. `make check` enforces lint, formatting, typing, and 95% combined line/branch coverage. Separate `make e2e` tests use a local HTTPS server, temporary trusted certificates, and subprocess CLI calls; they require socket access and never contact Regrid.
+The [contract inventory](docs/api-coverage.md) maps all 33 supplied operations to exact SDK and CLI wire assertions. Mocked tests exercise endpoint serialization, country differences, model validation, CLI output, and errors. `make check` enforces lint, formatting, typing, and 95% combined line/branch coverage overall and per module. Separate `make e2e` tests use a local HTTPS server, temporary trusted certificates, and subprocess CLI calls; they require socket access and never contact Regrid.
 
 For a new endpoint, add its route and exact options, extend request validation, provide an appropriate typed response and facade method, then expose the CLI command. Add mocked request/response tests and update the README and changelog. Preserve raw access for upstream responses that are not yet modeled.
 

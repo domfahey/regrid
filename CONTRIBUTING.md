@@ -20,7 +20,7 @@ make check
 ```
 
 `make check` runs lint, formatting checks, type checking, and mocked tests with
-at least 95% combined line/branch coverage. No credentials are needed.
+at least 95% combined line/branch coverage overall and per module. No credentials are needed.
 Run `make e2e` for local HTTPS tests; OpenSSL and localhost sockets are required.
 Do not run `make live` or `make live-full` as ordinary tests: they require your own account and may
 consume paid records. Never attach tokens, `.env`, private records, or unredacted

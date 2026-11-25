@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import runpy
 import subprocess
 import sys
 from pathlib import Path
@@ -244,3 +245,26 @@ def test_non_finite_catalog_values_fail_cleanly_on_output(tmp_path, capsys, argv
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err.startswith("fields:") and len(captured.err.strip().splitlines()) == 1
+
+
+def test_module_import_fallback_when_no_catalog_exists(monkeypatch):
+    real_is_file = Path.is_file
+
+    def no_catalog(self: Path) -> bool:
+        if self.name in {"fields.json", "parcel_fields.json"}:
+            return False
+        return real_is_file(self)
+
+    monkeypatch.setattr(Path, "is_file", no_catalog)
+    loaded = _load("regrid_offline_fields_fallback", ROOT / "src/regrid/offline/fields.py")
+    assert loaded.DEFAULT_CATALOG == (ROOT / "src/regrid/references/fields.json").resolve()
+
+
+def test_module_entrypoint(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["fields.py", "explain", "owner"])
+    with pytest.raises(SystemExit) as exc:
+        runpy.run_path(str(ROOT / "src/regrid/offline/fields.py"), run_name="__main__")
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == {"found": [OWNER], "unknown": []}
+    assert captured.err == ""

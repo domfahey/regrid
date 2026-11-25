@@ -1,4 +1,6 @@
 import logging
+import runpy
+import sys
 
 import httpx
 import pytest
@@ -124,3 +126,116 @@ def test_live_run_reports_geometry_presence_without_coordinates(geometry, expect
     assert sum(line.startswith(("PASS geometry", "NOTE geometry")) for line in output) == 1
     assert "75.0123" not in "\n".join(output)
     assert "39.9456" not in "\n".join(output)
+
+
+def test_empty_schema_stops_before_billable_request(capsys):
+    calls = []
+
+    def handle(request):
+        calls.append(request)
+        return httpx.Response(200, json={"schema": {}})
+
+    with RegridClient("private-token", transport=httpx.MockTransport(handle)) as client:
+        assert live.run(client, "private-address") == 1
+    assert len(calls) == 1
+    assert capsys.readouterr().out.splitlines() == ["FAIL public schema: no field definitions"]
+
+
+def test_schema_mismatch_note_and_unavailable_usage_counters(capsys):
+    def handle(request):
+        if request.url.path.endswith("/schemas/parcel"):
+            return httpx.Response(200, json={"schema": {"parcelnumb": {"type": "integer"}}})
+        if request.url.path.endswith("/usage"):
+            return httpx.Response(200, json={"usage": {}})
+        return httpx.Response(
+            200,
+            json={
+                "parcels": {
+                    "type": "FeatureCollection",
+                    "features": [{"properties": {"fields": {"parcelnumb": "00123"}}}],
+                }
+            },
+        )
+
+    with RegridClient("private-token", transport=httpx.MockTransport(handle)) as client:
+        assert live.run(client, "private-address") == 0
+    output = capsys.readouterr().out.splitlines()
+    assert "PASS public schema: 1 definitions; 1 type differences" in output
+    assert "NOTE schema differs from local catalog; typed validation may fail" in output
+    assert "PASS final usage: comparable record counters unavailable" in output
+
+
+def test_missing_parcel_properties_fails_and_still_checks_final_usage(capsys):
+    requests = []
+
+    def handle(request):
+        requests.append(request)
+        if request.url.path.endswith("/schemas/parcel"):
+            return httpx.Response(200, json={"schema": {"parcelnumb": {"type": "text"}}})
+        if request.url.path.endswith("/usage"):
+            return httpx.Response(200, json={"usage": {"cycle_usage": {"results": len(requests)}}})
+        return httpx.Response(
+            200, json={"parcels": {"type": "FeatureCollection", "features": [{"properties": None}]}}
+        )
+
+    with RegridClient("private-token", transport=httpx.MockTransport(handle)) as client:
+        assert live.run(client, "private-address") == 1
+    assert len(requests) == 4
+    assert requests[-1].url.path.endswith("/usage")
+    assert "FAIL parcel validation: missing properties or fields" in capsys.readouterr().out
+
+
+def test_main_runs_with_environment_and_suppresses_logging(monkeypatch, capsys):
+    seen_levels = []
+    seen_queries = []
+
+    def handle(request):
+        seen_levels.append(logging.root.manager.disable)
+        if request.url.path.endswith("/schemas/parcel"):
+            return httpx.Response(200, json={"schema": {"parcelnumb": {"type": "text"}}})
+        if request.url.path.endswith("/usage"):
+            return httpx.Response(200, json={"usage": {"cycle_usage": {"results": 1}}})
+        seen_queries.append(request.url.params.get("query"))
+        return httpx.Response(
+            200,
+            json={
+                "parcels": {
+                    "type": "FeatureCollection",
+                    "features": [{"properties": {"fields": {"parcelnumb": "00123"}}}],
+                }
+            },
+        )
+
+    transport = httpx.MockTransport(handle)
+    real_client = live.RegridClient
+    monkeypatch.setenv("REGRID_TOKEN", "private-token")
+    monkeypatch.setenv("REGRID_LIVE_ADDRESS", "private-address")
+    monkeypatch.setattr(
+        live, "RegridClient", lambda *a, **kw: real_client(*a, transport=transport, **kw)
+    )
+    assert live.main() == 0
+    assert seen_levels and all(level >= logging.CRITICAL for level in seen_levels)
+    assert seen_queries == ["private-address"]
+    output = capsys.readouterr().out
+    assert "private-token" not in output
+    assert "private-address" not in output
+
+
+def test_main_initialization_failure_is_generic(monkeypatch, capsys):
+    monkeypatch.setenv("REGRID_TOKEN", "private-token")
+
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("private-token")
+
+    monkeypatch.setattr(live, "RegridClient", boom)
+    assert live.main() == 1
+    assert capsys.readouterr().out.strip() == "FAIL live smoke test initialization"
+
+
+def test_module_entrypoint(monkeypatch, capsys):
+    monkeypatch.delenv("REGRID_TOKEN", raising=False)
+    monkeypatch.delitem(sys.modules, "regrid.live", raising=False)
+    with pytest.raises(SystemExit) as exc:
+        runpy.run_module("regrid.live", run_name="__main__")
+    assert exc.value.code == 2
+    assert "NOT RUN" in capsys.readouterr().out

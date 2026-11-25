@@ -1,3 +1,6 @@
+import runpy
+import sys
+
 import pytest
 
 from regrid import doctor
@@ -28,3 +31,20 @@ def test_configuration_checks(tmp_path, monkeypatch, capsys, exists, token):
     ]
     assert "secret-value" not in output
     assert "replace_with_your_regrid_api_token" not in output
+
+
+def test_module_entrypoint(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").touch()
+    monkeypatch.setenv("REGRID_TOKEN", "secret-value")
+    monkeypatch.delitem(sys.modules, "regrid.doctor", raising=False)
+    with pytest.raises(SystemExit) as exc:
+        runpy.run_module("regrid.doctor", run_name="__main__")
+    assert exc.value.code == 0
+    output = capsys.readouterr().out
+    assert output.splitlines() == [
+        "PASS .env exists",
+        "PASS REGRID_TOKEN configured",
+        FOOTER,
+    ]
+    assert "secret-value" not in output

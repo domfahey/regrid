@@ -78,7 +78,7 @@ uv add /absolute/path/to/regrid
 | `make format` | Format source and tests |
 | `make format-check` | Verify formatting without editing files |
 | `make typecheck` or `make type` | Run mypy on the SDK and CLI |
-| `make test` | Run mocked tests and require at least 95% combined line and branch coverage |
+| `make test` | Run mocked tests and require at least 95% combined line and branch coverage overall and per module |
 | `make doctor` | Check `.env` presence and a nonblank, non-placeholder effective token locally; no API calls |
 | `make live` | Explicit bounded live Regrid smoke test; requires token; uses the default test address |
 | `make live-full` | Explicit live check of every read-only endpoint (about 26 requests, hard cap 30); requires token |
