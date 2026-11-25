@@ -1,5 +1,7 @@
 import json
 import logging
+import runpy
+import sys
 from urllib.parse import urlparse
 
 import httpx
@@ -719,3 +721,126 @@ def test_string_uuid_ids_have_no_usable_cursor(capsys):
     server.respond = respond
     assert run_full(server) == 1
     assert "FAIL paging: page 1 has no usable cursor" in lines(capsys)
+
+
+def test_step_returns_false_without_failing_when_outcome_is_none(capsys):
+    transport = httpx.MockTransport(Server())
+    with (
+        RegridClient(TOKEN, transport=transport, max_limit=2, default_limit=1) as client,
+        RegridClient(live_full.BAD_TOKEN, transport=transport, max_limit=2, default_limit=1) as bad,
+    ):
+        runner = live_full.Runner(client, bad, "private-address", False, live_full.MAX_REQUESTS)
+        assert runner.step("noop", 0, lambda: None) is False
+        assert runner.failed is False
+    assert lines(capsys) == []
+
+
+def test_missing_address_properties_fails_address_step(capsys):
+    server = Server(
+        {
+            ("GET", "/parcels/address"): httpx.Response(
+                200,
+                json={"parcels": {"type": "FeatureCollection", "features": [{"properties": None}]}},
+            )
+        }
+    )
+    assert run_full(server) == 1
+    assert "FAIL address: missing properties or fields" in lines(capsys)
+
+
+@pytest.mark.parametrize(
+    ("route", "expected"),
+    [
+        (("GET", f"/parcels/{UUID}"), "FAIL parcel: expected one feature, got 0"),
+        (("GET", "/parcels/apn"), "FAIL apn: no features"),
+        (("GET", "/parcels/owner"), "FAIL owner: no features"),
+        (("POST", "/parcels/point"), "FAIL point POST: no features"),
+        (("GET", "/parcels/area"), "FAIL area GET: no features"),
+    ],
+)
+def test_empty_feature_responses_fail_individual_steps(route, expected, capsys):
+    server = Server({route: httpx.Response(200, json=collection())})
+    assert run_full(server) == 1
+    assert expected in lines(capsys)
+
+
+def test_empty_point_get_fails_point_get_step(capsys):
+    server = Server()
+    original = server.respond
+
+    def respond(request, route):
+        if route == ("GET", "/parcels/point") and request.url.params.get("radius") == "1":
+            return httpx.Response(200, json=collection())
+        return original(request, route)
+
+    server.respond = respond
+    assert run_full(server) == 1
+    assert "FAIL point GET: no features" in lines(capsys)
+
+
+def test_unusable_page_two_ids_fail_paging(capsys):
+    server = Server()
+    original = server.respond
+
+    def respond(request, route):
+        if route[1] == "/parcels/point" and request.url.params.get("radius") == "50":
+            if request.url.params.get("offset_id") == "0":
+                return httpx.Response(200, json=collection(5, 7))
+            return httpx.Response(200, json=collection("bad-cursor"))
+        return original(request, route)
+
+    server.respond = respond
+    assert run_full(server) == 1
+    assert "FAIL paging: page 2 has unusable ids" in lines(capsys)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {
+            "type": "FeatureCollection",
+            "features": [{"type": "Feature", "properties": {"path": COUNTY}}],
+        },
+        {"type": "Feature", "properties": {"canonical_path": COUNTY}},
+    ],
+    ids=["feature-collection", "single-feature"],
+)
+def test_verse_accepts_bare_feature_and_collection_shapes(payload, capsys):
+    server = Server({("GET", "/verse"): httpx.Response(200, json=payload)})
+    assert run_full(server) == 0
+    output = lines(capsys)
+    assert "PASS verse: 1 entries" in output
+    assert "NOTE verse: subject county present: true" in output
+
+
+def test_detailed_usage_missing_rows_tilejson_empty_and_typeahead_500(capsys):
+    server = Server(
+        {
+            ("GET", "/usage/detailed"): httpx.Response(
+                200, json={"usage": {"cycle_dates": {"begin": 1, "end": 2}}}
+            ),
+            ("GET", "/parcels/typeahead"): httpx.Response(500, text=TOKEN),
+        }
+    )
+    original = server.respond
+
+    def respond(request, route):
+        if request.url.host == "tiles.regrid.com" and request.url.params.get("format") == "mvt":
+            return httpx.Response(200, json={"tiles": []})
+        return original(request, route)
+
+    server.respond = respond
+    assert run_full(server, enterprise=True) == 1
+    output = lines(capsys)
+    assert "FAIL usage detailed: response has no cycle_usage rows" in output
+    assert "FAIL tilejson: no tile template" in output
+    assert "FAIL typeahead: HTTP 500" in output
+
+
+def test_module_entrypoint(monkeypatch, capsys):
+    monkeypatch.delenv("REGRID_TOKEN", raising=False)
+    monkeypatch.delitem(sys.modules, "regrid.live_full", raising=False)
+    with pytest.raises(SystemExit) as exc:
+        runpy.run_module("regrid.live_full", run_name="__main__")
+    assert exc.value.code == 2
+    assert "NOT RUN" in capsys.readouterr().out

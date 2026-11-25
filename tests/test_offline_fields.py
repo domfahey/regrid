@@ -2,6 +2,8 @@
 
 import importlib.util
 import json
+import runpy
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -244,3 +246,26 @@ def test_non_finite_catalog_values_fail_cleanly_on_output(tmp_path, capsys, argv
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err.startswith("fields:") and len(captured.err.strip().splitlines()) == 1
+
+
+def test_module_runs_with_explicit_catalog_when_no_bundled_catalog_exists(tmp_path, capsys):
+    standalone_dir = tmp_path / "pkg" / "scripts"
+    standalone_dir.mkdir(parents=True)
+    copy_path = standalone_dir / "fields.py"
+    shutil.copy2(ROOT / "src/regrid/offline/fields.py", copy_path)
+    loaded = _load("regrid_offline_fields_standalone", copy_path)
+    assert loaded.DEFAULT_CATALOG == (tmp_path / "pkg" / "references" / "fields.json").resolve()
+    assert loaded.main(["explain", "owner", "--catalog", str(SKILL_FIELDS)]) == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == {"found": [OWNER], "unknown": []}
+    assert captured.err == ""
+
+
+def test_module_entrypoint(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["fields.py", "explain", "owner"])
+    with pytest.raises(SystemExit) as exc:
+        runpy.run_path(str(ROOT / "src/regrid/offline/fields.py"), run_name="__main__")
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == {"found": [OWNER], "unknown": []}
+    assert captured.err == ""

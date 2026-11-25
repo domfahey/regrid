@@ -6,6 +6,10 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
+### Changed
+
+- Development & CI (`Makefile`, `scripts/check_module_coverage.py`): `make test` and `make check` now enforce at least 95% combined line and branch coverage for every individual module in `src/regrid` alongside the 95% overall gate; added mocked unit tests bringing `doctor.py`, `live.py`, `live_full.py`, and `offline/fields.py` above 95% coverage.
+
 ## [SDK 0.5.1][sdk-v0.5.1] and [Regrid Research 0.9.8][regrid-research-v0.9.8] - 2026-11-24
 
 Patch release following authorized live `/mcp` + SDK `0.5.0` smoke verification and real Claude CLI (`2.1.331`) offline model evaluations + targeted post-fix retests. Verified in this cycle: direct Streamable HTTP `/mcp` (`tools/list`, `list-specs`, authenticated `GET /usage`, and `POST /parcels/area` with `return_parcels=true`), SDK `make live`, and offline Claude CLI evaluations across Haiku/Sonnet/Opus (`model-eval-0.9.7-report.json` and `model-eval-0.9.7-retest-report.json`). Unverified at release:
