@@ -214,11 +214,19 @@ python3 plugins/regrid-research/evals/discovery.py compare \
   --baseline /tmp/regrid-discovery-results/haiku-existing-evidence-baseline/record.json
 ```
 
-The [0.4.0 acceptance report](results/authoring-0.4.0-report.json) records the latest
-attempt: authentication failed before model output, so no Claude trial or baseline
-comparison was completed. Historical packet reports are separate simulated-agent
-evidence, not Claude or Cowork acceptance. Preserve those reports when recording
-new trials and independent grades.
+The [0.9.7 model evaluation report](results/model-eval-0.9.7-report.json) records the
+latest offline Claude CLI evaluation (`2.1.331 (Claude Code)`, `live_calls: 0`,
+`claude-haiku-5-5`, `claude-sonnet-5-5`, and `claude-opus-5-5`) across trigger routing,
+blinded research/composition/feature packets, and the 24-trial discovery suite, with
+unedited transcripts saved alongside it and all failures/incomplete trials preserved
+before any skill edits. On the 24-trial discovery run, `run_discovery_claude.py`
+required preserving OS user/profile environment variables (`USER`, `LOGNAME`, etc.) for
+macOS Keychain OAuth access; 23/24 trials completed and `opus-structured-handoff-skill`
+hit the default USD 0.25 cap at USD 0.2644 (`error_max_budget_usd`) after reading all
+five relevant files. Earlier reports (`results/authoring-0.4.0-report.json`,
+`results/composability-0.5.0-report.json`, and 0.2.0/0.3.0 packet reports) remain
+preserved as historical records; none establish Cowork acceptance or executed helper
+runs.
 
 Saved reports pin SHA-256 hashes of the files each evaluation received. Plugin 0.5.2
 regenerated `tools.json` and `endpoints.json` and added US-only scope, so earlier

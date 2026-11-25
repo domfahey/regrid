@@ -65,12 +65,23 @@ def argv(cli: str, model: str, budget: float) -> list[str]:
 
 
 def environment() -> dict[str, str]:
-    # CLI retains its normal OAuth store, but no project/API credentials are inherited.
-    return {
-        key: value
-        for key, value in os.environ.items()
-        if key in {"HOME", "PATH", "TMPDIR", "LANG", "LC_ALL", "CLAUDE_CONFIG_DIR"}
+    # CLI retains its normal OAuth store (including macOS Keychain account lookup via USER/LOGNAME
+    # and Windows profile vars), while project/API credentials are never inherited.
+    allowed = {
+        "HOME",
+        "PATH",
+        "TMPDIR",
+        "LANG",
+        "LC_ALL",
+        "USER",
+        "LOGNAME",
+        "USERNAME",
+        "USERPROFILE",
+        "LOCALAPPDATA",
+        "APPDATA",
+        "CLAUDE_CONFIG_DIR",
     }
+    return {key: value for key, value in os.environ.items() if key in allowed}
 
 
 def text_output(value: str | bytes | None) -> str:

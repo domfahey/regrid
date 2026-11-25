@@ -1,0 +1,1369 @@
+{
+  "suite": "discovery",
+  "cli_version": "2.1.331 (Claude Code)",
+  "runner": "plugins/regrid-research/evals/run_discovery_claude.py",
+  "max_budget_usd_per_trial": 0.25,
+  "timeout_seconds_per_trial": 90,
+  "helper_execution": "unavailable_read_only",
+  "live_calls": 0,
+  "trials": [
+    {
+      "requested_model": "haiku",
+      "observed_models": [
+        "claude-haiku-5-5"
+      ],
+      "case_id": "existing-evidence",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.001148,
+      "trace_sha256": "b0bbf3884879f49a65eaca9739923c775b3ba8d3f3adcf32c5858b3f07782034",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "6f57d5eab0d1011358e09be0534102a83a442ed523f9bf20a0516bea32b7b965",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "939d0d6db5fc30daac8f0c61c531812efaa8ad7ea44a6ce94d66a1ba7478fb79",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "fd252b7e159eaacd629821b3c69f1abd463bfa836e5168c76a1f9f92d5f4837f",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "6cc1ffdba188c35906931d0fbb57756aeb22b63f8424e2b0d6c23fbf7417173e",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "236f0d739d3386a0018b50433da1c2eb698ca1ccb13ea438d9166206935853dd",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "The recorded owner of 12 Example Ave, Exampletown NJ 08033 is **Example LLC**.\n\n**Provenance** (from `data/evidence.json`, `results[0]`):\n- Provider: Regrid, evidence ID `response-1`\n- Parcel ID: `TEST_67_6`\n- Match status: `confirmed`\n- Retrieved: 2026-10-27T18:00:00Z; source refreshed: 2026-09-17\n- `source_url` is null, so there is no link to the original record.\n- The file's note says \"Synthetic example; no live property.\"\n\nSale price is null and listed under `missing_fields`.\n\n**Validation:** I read the file once and checked that the owner, parcel ID, match status, and provenance fields agree with each other. I did not run a validator, and I did not retrieve any other data or use the property-research skill."
+    },
+    {
+      "requested_model": "haiku",
+      "observed_models": [
+        "claude-haiku-5-5"
+      ],
+      "case_id": "existing-evidence",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.000771,
+      "trace_sha256": "561a2a0ff10703a2639ac17f69bb5994845da639e143e275fc1c535583226f82",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "f0583172b9b05707a371c679cda6149e648f90c27d81db84e459e668e93b73f7",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311"
+      },
+      "read_paths_relative": [
+        "data/evidence.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "**Recorded owner: Example LLC**\n\n- **Address:** 12 Example Ave, Exampletown NJ 08033 (`row-12`)\n- **Parcel:** TEST_67_6\n- **Match status:** confirmed\n- **Provenance:** Regrid, `evidence_id` response-1, from attempt `request-1`. Retrieved 2026-10-27T18:00:00Z. Source last refreshed 2026-09-17. No source URL is recorded.\n- **Caveats:** The file marks this as a synthetic example with no live property. Sale price is null.\n\n**Validation:** I read `data/evidence.json` once and checked the budget block against the attempts list (1 request, 1 record, 0 uncertain). I did not run a validator, since execution is unavailable. I did not open the skill files, since they aren't relevant to this lookup, and I did not retrieve any other data."
+    },
+    {
+      "requested_model": "haiku",
+      "observed_models": [
+        "claude-haiku-5-5"
+      ],
+      "case_id": "structured-handoff",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.007119,
+      "trace_sha256": "e4850415e374d2b57ece045e0162230c2908592ee7e9d24d3cc1beee029e1392",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "a72fe6774f5255f67959d3118b901c5f04894f471ead22785d226e5c189d2a2a",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "939d0d6db5fc30daac8f0c61c531812efaa8ad7ea44a6ce94d66a1ba7478fb79",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "fd252b7e159eaacd629821b3c69f1abd463bfa836e5168c76a1f9f92d5f4837f",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "6cc1ffdba188c35906931d0fbb57756aeb22b63f8424e2b0d6c23fbf7417173e",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "236f0d739d3386a0018b50433da1c2eb698ca1ccb13ea438d9166206935853dd",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/result.schema.json",
+        "support/workflow.py"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": {
+        "found_json_blocks": 1,
+        "jsonschema_valid": true,
+        "jsonschema_errors": [],
+        "workflow_validate_rc": 0,
+        "workflow_validate_out": "Valid handoff/checkpoint"
+      },
+      "answer": "The handoff is below. I checked it by reading it against `support/result.schema.json` and the invariants in `support/workflow.py`. I did not run the validator: this environment has only Read, Glob, and Grep, so `workflow.py validate` and `pending` were not executed. I also did not write a file, because no write tool is available. The handoff is this response.\n\n## Structured handoff: workflow `example-report-01`\n\n**Contract status:** Consistent with schema 1.0 on my read-through. No errors found.\n\n**Row `row-12`**\n\n| Field | Value as recorded |\n|---|---|\n| Requested address | `12 Example Ave, Exampletown NJ 08033` |\n| Requested parcel_id | `null` (none supplied) |\n| Requested scope | `NJ 08033` |\n| lookup_status / match_status | `success` / `confirmed` |\n| error | `null` |\n| Candidate parcel_id | `TEST_67_6` |\n| Candidate address | `12 EXAMPLE AVE, EXAMPLETOWN NJ 08033` (provider casing, kept as-is) |\n| recorded_owner | `Example LLC` |\n| sale_price | `null` (also listed in `missing_fields`) |\n| Provider | Regrid |\n| retrieved_at | `2026-10-27T18:00:00Z` |\n| source_refreshed_at | `2026-09-17` |\n| source_url | `null` |\n| evidence_id | `response-1` |\n| notes | \"Synthetic example; no live property.\" |\n\n**Ledger**\n\n- Budget: max_requests 1, max_records 1, attempted_requests 1, returned_records 1, uncertain_records 0.\n- Attempt `request-1`: covers `row-12`, state `success`, record_limit 1, returned_records 1.\n- Pending inputs: none.\n\n**Verbatim handoff (identical to the input file)**\n\n```json\n{\n  \"schema_version\": \"1.0\",\n  \"workflow_id\": \"example-report-01\",\n  \"results\": [\n    {\n      \"input_id\": \"row-12\",\n      \"requested\": {\n        \"address\": \"12 Example Ave, Exampletown NJ 08033\",\n        \"parcel_id\": null,\n        \"scope\": \"NJ 08033\"\n      },\n      \"lookup_status\": \"success\",\n      \"match_status\": \"confirmed\",\n      \"candidates\": [\n        {\n          \"parcel_id\": \"TEST_67_6\",\n          \"address\": \"12 EXAMPLE AVE, EXAMPLETOWN NJ 08033\",\n          \"facts\": {\n            \"recorded_owner\": \"Example LLC\",\n            \"sale_price\": null\n          },\n          \"provenance\": {\n            \"provider\": \"Regrid\",\n            \"retrieved_at\": \"2026-10-27T18:00:00Z\",\n            \"source_refreshed_at\": \"2026-09-17\",\n            \"source_url\": null,\n            \"evidence_id\": \"response-1\"\n          }\n        }\n      ],\n      \"missing_fields\": [\"sale_price\"],\n      \"error\": null,\n      \"notes\": [\"Synthetic example; no live property.\"]\n    }\n  ],\n  \"budget\": {\n    \"max_requests\": 1,\n    \"max_records\": 1,\n    \"attempted_requests\": 1,\n    \"returned_records\": 1,\n    \"uncertain_records\": 0\n  },\n  \"attempts\": [\n    {\n      \"attempt_id\": \"request-1\",\n      \"input_ids\": [\"row-12\"],\n      \"state\": \"success\",\n      \"record_limit\": 1,\n      \"returned_records\": 1\n    }\n  ]\n}\n```\n\n## Checks performed (by reading, not executed)\n\n- **Top-level and result keys:** exact match to the required sets. No `reconciliations` key, which is correct for 1.0.\n- **Requested identity:** matches the legacy form. Address is text, parcel_id is null, and at least one identity is present.\n- **Status rules:** `success` pairs with `confirmed`, `error` is null, and candidates are non-empty, as required.\n- **Candidate and provenance:** all keys present. Nullable provenance fields are null where the source is null.\n- **missing_fields:** `sale_price` is unique and agrees with the null value in facts.\n- **Budget and ledger:** attempted_requests (1) equals the attempt count. returned_records (1) equals the attempt's returned count. uncertain_records (0) equals the unsettled reservations.\n- **Attempt references:** `row-12` exists in results, and the attempt state is `success` with an integer count.\n\n## Points for the next analyst\n\n1. **Synthetic record.** The file says it is synthetic, and the names and address are placeholders. Do not treat this as a real property or ownership finding.\n2. **No source URL.** `source_url` is null. The only citation is `evidence_id` `response-1`.\n3. **Parcel ID not verified.** The schema says `parcel_id` should be the county APN (`parcelnumb`), not the Regrid `ll_uuid`. The file does not name the source field, so I could not confirm that `TEST_67_6` is the APN. It is not in UUID form.\n4. **Match basis not recorded.** The match is marked `confirmed`, but the file does not say how it was confirmed. The schema does not require that, so it is noted here only.\n5. **Address casing.** The candidate address differs from the request only in case. I kept the provider's form and did not normalize it."
+    },
+    {
+      "requested_model": "haiku",
+      "observed_models": [
+        "claude-haiku-5-5"
+      ],
+      "case_id": "structured-handoff",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.005842,
+      "trace_sha256": "0e45b9ff1fe2c91f8187fe0d67de1434f99918f55ca9d26b5c81f14eaa0a1efb",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "f74b5eacc12751eeb194b99b00a0e10833b61646e8a29e4013d650c8c47a8e93",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/result.schema.json",
+        "support/workflow.py"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": {
+        "found_json_blocks": 0
+      },
+      "answer": "# Property research handoff: `example-report-01` (schema 1.0)\n\n**Source:** `data/evidence.json`. The file is marked `\"Synthetic example; no live property.\"` Treat this as a test record, not a real property.\n\n## Workflow summary\n\n| Field | Value |\n|---|---|\n| schema_version | 1.0 |\n| workflow_id | example-report-01 |\n| Result rows | 1 |\n| Attempts | 1 (`request-1`, state `success`) |\n\n## Budget\n\n| Counter | Value | Ledger check |\n|---|---|---|\n| max_requests | 1 | n/a |\n| max_records | 1 | n/a |\n| attempted_requests | 1 | matches 1 attempt |\n| returned_records | 1 | matches consumed 1 |\n| uncertain_records | 0 | matches 0 uncertain |\n\n## Result: input `row-12`\n\n**Requested identity (legacy form, preserved as given)**\n- address: `12 Example Ave, Exampletown NJ 08033`\n- parcel_id: `null` (the request was made by address only)\n- scope: `NJ 08033`\n\n**Status**\n- lookup_status: `success`\n- match_status: `confirmed`\n- error: `null`\n\n**Candidate 1 (only candidate)**\n- parcel_id: `TEST_67_6`\n- address: `12 EXAMPLE AVE, EXAMPLETOWN NJ 08033` (uppercase as returned by the provider, not normalized)\n- facts.recorded_owner: `Example LLC`\n- facts.sale_price: `null`\n\n**Provenance**\n- provider: Regrid\n- retrieved_at: `2026-10-27T18:00:00Z`\n- source_refreshed_at: `2026-09-17` (date only)\n- source_url: `null` (not provided)\n- evidence_id: `response-1`\n\n**Missing fields:** `sale_price`\n\n**Notes:** `Synthetic example; no live property.`\n\n**Attempt ledger:** `request-1`, input_ids `[\"row-12\"]`, record_limit 1, returned_records 1, state success.\n\n## Open items for the next analyst\n\n1. **Synthetic data.** Nothing here describes a real parcel or owner.\n2. **Parcel ID.** The schema requires the county APN (parcelnumb), not the Regrid `ll_uuid`. The file does not show which field `TEST_67_6` came from, so confirm it before relying on it.\n3. **Missing sale price.** `sale_price` is null and listed in `missing_fields`. Do not infer a value.\n4. **Missing source URL.** `source_url` is null. The evidence is only traceable through `evidence_id` `response-1`.\n5. **Provider authenticity.** The schema does not authenticate the provider. No reconciliation receipts are present, and none are needed for this 1.0 file.\n\n## Validation performed\n\n- **Manual check against `support/result.schema.json`.** I checked the document against the 1.0 rules: required keys, the legacy `requested` form, the `success`/`confirmed` status combination, the candidate and provenance field sets, the missing-field and note types, the attempt ledger, and the budget counters. The file passes on reading.\n- **Manual check against the rules in `support/workflow.py`.** I checked the same invariants the validator enforces: unique input IDs, attempt input IDs that match result IDs, consistent status pairs, observation uniqueness (there is one observation), and budget counters that match the ledger. The file passes on reading.\n- **Not run.** I did not execute `workflow.py validate`. Python execution is unavailable in this trial, so this is a read-only review, not a validator result. Running `python3 -I support/workflow.py validate data/evidence.json` would confirm it.\n- **Not checked.** I did not verify the provider's data against Regrid, and I did not check any cross-file consistency beyond this single file.\n\nI did not write an output file, since none was requested. I did not read the skill files, because neither spreadsheets nor meeting planning applies to this task."
+    },
+    {
+      "requested_model": "haiku",
+      "observed_models": [
+        "claude-haiku-5-5"
+      ],
+      "case_id": "checkpoint-correction",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.005266,
+      "trace_sha256": "9c805612ebfebb2f76de5f6d579020bf76959f50d592ff7abe0d3613dbaebc23",
+      "files": {
+        "data/evidence.json": "bbcb8b776ea0a9681ae61de89cb50b54f41867f9887ce75e7a22c699501ab5c1",
+        "prompt.json": "deace8ac0d6bb9a0ac8aebafd74b07c4b27138ed93c23f8ac2867f984f50e786",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "939d0d6db5fc30daac8f0c61c531812efaa8ad7ea44a6ce94d66a1ba7478fb79",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "fd252b7e159eaacd629821b3c69f1abd463bfa836e5168c76a1f9f92d5f4837f",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "6cc1ffdba188c35906931d0fbb57756aeb22b63f8424e2b0d6c23fbf7417173e",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "236f0d739d3386a0018b50433da1c2eb698ca1ccb13ea438d9166206935853dd",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/workflow.py",
+        "support/result.schema.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "**The inconsistency is in `budget.attempted_requests`, which is 0 but should be 1.** The attempt ledger has one entry (`request-1`, state `success`, 1 record returned), and `workflow.py` requires `attempted_requests` to equal `len(attempts)` (line 364). The other counters already match the ledger, so only this one is wrong.\n\n**Corrected ledger-derived counters:**\n\n| Field | Stored | Ledger-derived | Status |\n|---|---|---|---|\n| `attempted_requests` | 0 | 1 (one attempt) | **Wrong** |\n| `returned_records` | 1 | 1 (settled `returned_records` sum) | OK |\n| `uncertain_records` | 0 | 0 (no pending or uncertain attempts) | OK |\n\n**Remaining budget: no further lookup is permitted.**\n- Request budget: `max_requests` is 1 and the corrected `attempted_requests` is 1. `reserve_attempt` requires `attempted_requests < max_requests` (line 518), so it fails.\n- Record budget: `max_records` is 1 and `returned_records` is 1, so no record capacity remains (line 520).\n- Even with the stored value of 0, the record budget would be exhausted. `tighten_budget` can only lower limits, so a new lookup would need a new handoff with a higher budget set by you.\n\n**Validation performed:** I only read `data/evidence.json`, `support/workflow.py`, and `support/result.schema.json`, and traced the validator's rules by hand. I did not execute `workflow.py` or any validator, so the findings above come from reading the code, not from a run. I didn't retrieve any data, write a checkpoint, or read any skill bodies, since none were needed. The rest of the document also appears to pass the schema-1.0 and runtime invariants on inspection: unique IDs, a consistent success/confirmed status pair, complete provenance, and no conflicting observations.\n\n**To fix:** correct `budget.attempted_requests` from 0 to 1 in a new handoff, not by editing the file in place. I haven't changed anything, and I'd need your go-ahead to write a corrected checkpoint."
+    },
+    {
+      "requested_model": "haiku",
+      "observed_models": [
+        "claude-haiku-5-5"
+      ],
+      "case_id": "checkpoint-correction",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.005296,
+      "trace_sha256": "9cd2e9b437d14b8ce12431f9d999a11ee6939598f4887a7f7046d99fdec24c96",
+      "files": {
+        "data/evidence.json": "bbcb8b776ea0a9681ae61de89cb50b54f41867f9887ce75e7a22c699501ab5c1",
+        "prompt.json": "508e7a24a750d6f001c13f90c0e9ca27110f689ad392c88036383ae0f9a8046a",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/workflow.py",
+        "support/result.schema.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "**Checkpoint audit: `data/evidence.json`**\n\n**Inconsistency:** `budget.attempted_requests` is `0`, but the attempt ledger has one entry (`request-1`, state `success`, input `row-12`). The validator's budget check requires `attempted_requests == len(attempts)`, so this file would fail with \"Budget does not match attempt ledger\" at `$.budget.attempted_requests`. The other two counters agree with the ledger.\n\n**Corrected counters, derived from the ledger:**\n\n| Field | Stored | Corrected | Basis |\n|---|---|---|---|\n| `attempted_requests` | 0 | **1** | one attempt in `attempts` |\n| `returned_records` | 1 | 1 | `request-1` settled with 1 returned record |\n| `uncertain_records` | 0 | 0 | no pending or uncertain attempts |\n\n**Remaining budget:** `max_requests` is 1 and `attempted_requests` would be 1, so no requests remain. `max_records` is 1 and 1 record is already returned, so no records remain either. Another lookup is not permitted. `reserve_attempt` would reject it with \"Request budget exhausted\". Row-12 is already resolved, so there is no pending input for a lookup anyway.\n\n**Validation performed:** This was a manual read of `support/workflow.py` (`_validate`, budget check, and `reserve_attempt`) checked against `support/result.schema.json`. I did not run `workflow.py validate`, because Python execution is unavailable in this trial, so I have not verified the failure by execution. The rest of the document matches schema 1.0: keys, legacy `requested` shape, candidate provenance fields, and status pairs (`success`/`confirmed` with a non-null candidate and `error: null`).\n\nI did not retrieve any data, write a checkpoint, or modify the file. The `attempted_requests` value needs correcting to 1 before this file is used as a checkpoint. I also did not read the two skill files, since neither applies to this audit."
+    },
+    {
+      "requested_model": "haiku",
+      "observed_models": [
+        "claude-haiku-5-5"
+      ],
+      "case_id": "irrelevant-request",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.001017,
+      "trace_sha256": "c635c2bf5e0d5fed26b2b2eab91dab59d189d0fc0bcd7666203a123c67b95653",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "f90652e09cc45137e8491e15805d3107f4bba31ac23d8291bf4650ea16bce51d",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "939d0d6db5fc30daac8f0c61c531812efaa8ad7ea44a6ce94d66a1ba7478fb79",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "fd252b7e159eaacd629821b3c69f1abd463bfa836e5168c76a1f9f92d5f4837f",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "6cc1ffdba188c35906931d0fbb57756aeb22b63f8424e2b0d6c23fbf7417173e",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "236f0d739d3386a0018b50433da1c2eb698ca1ccb13ea438d9166206935853dd",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "skills/planning-meetings/SKILL.md",
+        "data/evidence.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/planning-meetings/SKILL.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "**Team Planning Meeting Agenda**\n\n1. **Review progress and priorities.** Confirm what was completed since the last planning session, and agree on the top priorities for the next period.\n2. **Plan upcoming work and owners.** Break the priorities into concrete tasks, assign an owner and a due date to each, and flag any blockers or dependencies.\n3. **Next steps and open questions.** Capture decisions made, list unresolved questions with a named owner for each, and set the date of the next check-in.\n\n**Notes**\n- I used the planning-meetings skill's guidance for the structure. The task did not give the team's actual goals, so the items are generic. If you share the meeting's specific topics, I can tailor them.\n- I did not use `data/evidence.json`. It is a synthetic property-lookup record (a parcel for \"12 Example Ave\") with no connection to meeting planning, and the task said no property research was needed.\n\n**Validation**\n- I read the planning-meetings skill and `data/evidence.json` to confirm they were relevant to the task.\n- I did not run any validator or script. This environment only allows Read, Glob, and Grep, so the agenda has not been checked by a tool."
+    },
+    {
+      "requested_model": "haiku",
+      "observed_models": [
+        "claude-haiku-5-5"
+      ],
+      "case_id": "irrelevant-request",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.000995,
+      "trace_sha256": "5b147e662629bb7c02aba192b455e3b2febbf9592ded72c4df25433b80ba9e41",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "135d19287cd1e944e23ce5153c7b95d4a4bbd354a9969e47e8581e77f3c6cb56",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311"
+      },
+      "read_paths_relative": [
+        "skills/planning-meetings/SKILL.md",
+        "data/evidence.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/planning-meetings/SKILL.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "Here is a three-item agenda for a team planning meeting. I wrote it from the task description alone because the workspace has no meeting-specific material.\n\n**Team Planning Meeting Agenda**\n\n1. **Review goals and priorities for the coming period.** Confirm the team's top objectives and agree on what success looks like.\n2. **Assign owners and timelines for priority work.** Map each priority to a named owner, a deadline, and any dependencies or blockers.\n3. **Confirm next steps and follow-ups.** Recap decisions, list action items with owners, and set the date of the next check-in.\n\n**Notes**\n\n- `data/evidence.json` is a property-lookup record (a Regrid parcel match for a synthetic address). It has nothing to do with a team planning meeting, so I did not use it. Since the task said no property research is needed, I left it out.\n- I did not edit any files. The tools available here are read-only, so the agenda is only in this reply.\n- If you give me the meeting's actual topics, attendees, or length, I can tailor the three items.\n\n**Validation performed:** I read the `planning-meetings` skill, which confirmed it applies to this task, and I read `data/evidence.json` to check whether it was relevant. I did not run any validator or script, because execution isn't available in this session."
+    },
+    {
+      "requested_model": "sonnet",
+      "observed_models": [
+        "claude-sonnet-5-5"
+      ],
+      "case_id": "existing-evidence",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.039358,
+      "trace_sha256": "1923ef74528b30f9a17482d3009557c21751e4bab331728c7e9abae0d6555d3b",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "6f57d5eab0d1011358e09be0534102a83a442ed523f9bf20a0516bea32b7b965",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "939d0d6db5fc30daac8f0c61c531812efaa8ad7ea44a6ce94d66a1ba7478fb79",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "fd252b7e159eaacd629821b3c69f1abd463bfa836e5168c76a1f9f92d5f4837f",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "6cc1ffdba188c35906931d0fbb57756aeb22b63f8424e2b0d6c23fbf7417173e",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "236f0d739d3386a0018b50433da1c2eb698ca1ccb13ea438d9166206935853dd",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "skills/property-research/SKILL.md",
+        "skills/property-research/references/answers.md"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/property-research/SKILL.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/property-research/references/answers.md"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "Regrid lists **Example LLC** as the recorded owner of **12 Example Ave, Exampletown NJ 08033**. This is synthetic data, not a real property.\n\n**Where this comes from**\n- **Source:** Regrid, saved response `response-1` (from request `request-1`, input `row-12`)\n- **Parcel ID:** TEST_67_6\n- **County data last updated:** 2026-09-17\n- **Retrieved:** 2026-10-27T18:00:00Z (this is when the data was fetched, not how current it is)\n- **Source URL:** none was supplied, so none is cited\n\n**Caveats**\n- Example LLC is the owner on record. The data doesn't show who the LLC's members are.\n- Sale price isn't in the data, so it's unknown, not zero.\n\n**How I checked it (by reading the files only)**\n- I read `data/evidence.json` and the guidance in the `property-research` skill.\n- The house number, street, city, state and ZIP in the request all match the returned parcel; only the capitalisation differs. That meets the skill's rule for a confirmed match.\n- There's only one candidate parcel and nothing contradicts it.\n- The lookup succeeded with one request and one record, which stays within the budget of one.\n- I didn't run the skill's validator (`workflow.py validate`) because script execution isn't available here. I made no new requests and didn't use the network."
+    },
+    {
+      "requested_model": "sonnet",
+      "observed_models": [
+        "claude-sonnet-5-5"
+      ],
+      "case_id": "existing-evidence",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.01359,
+      "trace_sha256": "99449098e48fc10e9d00480f4232fc4e0b3dbc1b5c0578ffb18f2bf19b65908e",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "f0583172b9b05707a371c679cda6149e648f90c27d81db84e459e668e93b73f7",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311"
+      },
+      "read_paths_relative": [
+        "data/evidence.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "**Answer:** The recorded owner of 12 Example Ave, Exampletown NJ 08033 is **Example LLC**.\n\n**Where this comes from** (`data/evidence.json:16-28`):\n- **Parcel:** TEST_67_6. The returned address is \"12 EXAMPLE AVE, EXAMPLETOWN NJ 08033\", the same as the requested one apart from capitalization.\n- **Provider:** Regrid. Evidence ID `response-1`, from request `request-1`.\n- **Retrieved:** 2026-10-27T18:00:00Z. The source data was last refreshed on 2026-09-17.\n- **Source URL:** none recorded (`null`).\n\n**Caveats:**\n- The file marks this as a synthetic example, not a real property.\n- The sale price is missing (`missing_fields: [\"sale_price\"]`).\n\n**What I checked:** I read the file only and did not run any validator. The lookup and the request both say `success`, and the match is `confirmed`. There is one candidate and no error. The request budget matches what was used (1 request allowed, 1 made, 1 record returned, 0 uncertain). I didn't fetch any more data, and neither of the available skills applied to this task, so I didn't open them."
+    },
+    {
+      "requested_model": "sonnet",
+      "observed_models": [
+        "claude-sonnet-5-5"
+      ],
+      "case_id": "structured-handoff",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.133552,
+      "trace_sha256": "926f77fcc4bd71598cdf8a657e4bbb4e64e795848cd942640f96b9ea96a31a6a",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "a72fe6774f5255f67959d3118b901c5f04894f471ead22785d226e5c189d2a2a",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "939d0d6db5fc30daac8f0c61c531812efaa8ad7ea44a6ce94d66a1ba7478fb79",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "fd252b7e159eaacd629821b3c69f1abd463bfa836e5168c76a1f9f92d5f4837f",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "6cc1ffdba188c35906931d0fbb57756aeb22b63f8424e2b0d6c23fbf7417173e",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "236f0d739d3386a0018b50433da1c2eb698ca1ccb13ea438d9166206935853dd",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/result.schema.json",
+        "support/workflow.py",
+        "skills/property-research/SKILL.md",
+        "skills/property-research/references/composition.md",
+        "skills/property-research/references/answers.md"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/property-research/SKILL.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/property-research/references/composition.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/property-research/references/answers.md"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": {
+        "found_json_blocks": 1,
+        "jsonschema_valid": true,
+        "jsonschema_errors": [],
+        "workflow_validate_rc": 0,
+        "workflow_validate_out": "Valid handoff/checkpoint"
+      },
+      "answer": "The evidence file already meets the contract, so the handoff below is the same document with nothing changed. I checked it by hand against `support/result.schema.json` and the rules in `support/workflow.py`. I could not run the validator or any code here.\n\n## Handoff (schema 1.0)\n\n```json\n{\n  \"schema_version\": \"1.0\",\n  \"workflow_id\": \"example-report-01\",\n  \"results\": [\n    {\n      \"input_id\": \"row-12\",\n      \"requested\": {\n        \"address\": \"12 Example Ave, Exampletown NJ 08033\",\n        \"parcel_id\": null,\n        \"scope\": \"NJ 08033\"\n      },\n      \"lookup_status\": \"success\",\n      \"match_status\": \"confirmed\",\n      \"candidates\": [\n        {\n          \"parcel_id\": \"TEST_67_6\",\n          \"address\": \"12 EXAMPLE AVE, EXAMPLETOWN NJ 08033\",\n          \"facts\": {\n            \"recorded_owner\": \"Example LLC\",\n            \"sale_price\": null\n          },\n          \"provenance\": {\n            \"provider\": \"Regrid\",\n            \"retrieved_at\": \"2026-10-27T18:00:00Z\",\n            \"source_refreshed_at\": \"2026-09-17\",\n            \"source_url\": null,\n            \"evidence_id\": \"response-1\"\n          }\n        }\n      ],\n      \"missing_fields\": [\"sale_price\"],\n      \"error\": null,\n      \"notes\": [\"Synthetic example; no live property.\"]\n    }\n  ],\n  \"budget\": {\n    \"max_requests\": 1,\n    \"max_records\": 1,\n    \"attempted_requests\": 1,\n    \"returned_records\": 1,\n    \"uncertain_records\": 0\n  },\n  \"attempts\": [\n    {\n      \"attempt_id\": \"request-1\",\n      \"input_ids\": [\"row-12\"],\n      \"state\": \"success\",\n      \"record_limit\": 1,\n      \"returned_records\": 1\n    }\n  ]\n}\n```\n\n## Notes for the next analyst\n- **Match:** The record is a confirmed match. Once case is ignored, the house number, street, town and ZIP all agree with the request (NJ 08033). No parcel ID was supplied in the request, so the match rests on the address.\n- **Owner:** Regrid lists **Example LLC** as the recorded owner of parcel **TEST_67_6**. That is the name on the record only; it doesn't tell you who owns or controls the LLC.\n- **Missing sale price:** `sale_price` is an explicit `null` and also appears in `missing_fields`. Treat it as unknown, not zero.\n- **Dates and sources:**\n  - The county data was last refreshed on 2026-09-17.\n  - Regrid returned the record on 2026-10-27T18:00:00Z. That's when it was pulled, not how current the county data is.\n  - There's no source URL, so it stays `null` and none was made up.\n  - The evidence ID is `response-1`.\n- **Synthetic data:** The input is marked as synthetic, not a real property, so don't use it as an actual ownership answer.\n- **Budget:** The one allowed request has been used (1 of 1, with 1 of 1 records), so there's nothing left for more lookups. I made no requests and wrote no files.\n\n## Checks performed (by hand)\n- **Top-level fields:** Version 1.0 has exactly the five required fields. There is no `reconciliations` field and no attempt `kind`, which 1.0 forbids.\n- **Request:** The `requested` block is the plain address/parcel form, has an address, and all of its values are either text or null.\n- **Status:** `success` paired with `confirmed` is an allowed combination, `error` is null, and there is at least one candidate.\n- **Candidate:** It has exactly the required fields. All five provenance fields are present, with text or null values, and `provider` and `evidence_id` are filled in.\n- **Uniqueness:** The input ID, attempt ID and `missing_fields` entries are each unique. The attempt refers to `row-12`, which exists.\n- **Budget arithmetic:** 1 attempt equals `attempted_requests` (1). The finished attempt returned 1 record, matching `returned_records` (1). With no pending or uncertain attempts, `uncertain_records` is 0, as recorded.\n\nThese checks only cover structure. They can't prove the source data is true."
+    },
+    {
+      "requested_model": "sonnet",
+      "observed_models": [
+        "claude-sonnet-5-5"
+      ],
+      "case_id": "structured-handoff",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.103206,
+      "trace_sha256": "4b129391e5a183b4fdfaa3e92b30a9aa56f9ca7c75c9ec14eae1703636cd2a27",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "f74b5eacc12751eeb194b99b00a0e10833b61646e8a29e4013d650c8c47a8e93",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/result.schema.json",
+        "support/workflow.py"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": {
+        "found_json_blocks": 1,
+        "jsonschema_valid": true,
+        "jsonschema_errors": [],
+        "workflow_validate_rc": 0,
+        "workflow_validate_out": "Valid handoff/checkpoint"
+      },
+      "answer": "I've prepared the handoff below. It's identical to `data/evidence.json`, with nothing added, dropped or changed. I checked it by hand against `support/result.schema.json` and the rules in `support/workflow.py` and found no violations. I couldn't run the validator, so this hasn't been machine-checked.\n\n## Handoff (schema 1.0)\n\n```json\n{\n  \"schema_version\": \"1.0\",\n  \"workflow_id\": \"example-report-01\",\n  \"results\": [\n    {\n      \"input_id\": \"row-12\",\n      \"requested\": {\n        \"address\": \"12 Example Ave, Exampletown NJ 08033\",\n        \"parcel_id\": null,\n        \"scope\": \"NJ 08033\"\n      },\n      \"lookup_status\": \"success\",\n      \"match_status\": \"confirmed\",\n      \"candidates\": [\n        {\n          \"parcel_id\": \"TEST_67_6\",\n          \"address\": \"12 EXAMPLE AVE, EXAMPLETOWN NJ 08033\",\n          \"facts\": {\n            \"recorded_owner\": \"Example LLC\",\n            \"sale_price\": null\n          },\n          \"provenance\": {\n            \"provider\": \"Regrid\",\n            \"retrieved_at\": \"2026-10-27T18:00:00Z\",\n            \"source_refreshed_at\": \"2026-09-17\",\n            \"source_url\": null,\n            \"evidence_id\": \"response-1\"\n          }\n        }\n      ],\n      \"missing_fields\": [\"sale_price\"],\n      \"error\": null,\n      \"notes\": [\"Synthetic example; no live property.\"]\n    }\n  ],\n  \"budget\": {\n    \"max_requests\": 1,\n    \"max_records\": 1,\n    \"attempted_requests\": 1,\n    \"returned_records\": 1,\n    \"uncertain_records\": 0\n  },\n  \"attempts\": [\n    {\n      \"attempt_id\": \"request-1\",\n      \"input_ids\": [\"row-12\"],\n      \"state\": \"success\",\n      \"record_limit\": 1,\n      \"returned_records\": 1\n    }\n  ]\n}\n```\n\n## What the next analyst should know\n- **IDs to keep:** the input is `row-12`, the attempt is `request-1` and the evidence is `response-1`. The parcel ID returned was `TEST_67_6`; the original request didn't include one, so it stays `null`.\n- **Address:** the request used mixed case, and the address that came back is in uppercase. Both are kept exactly as written.\n- **Missing values:** `sale_price` is `null` and is listed in `missing_fields`, so it was missing in the data, not left out by mistake. `source_url` is also `null`, which means the only citation is `evidence_id: response-1`.\n- **Dates:** the data was retrieved on 2026-10-27T18:00:00Z, and the provider's source was last refreshed on 2026-09-17.\n- **Budget is used up:** both the one allowed request and the one allowed record have been spent. Any further lookup needs a new budget.\n- **Parcel ID needs a check:** the contract says `parcel_id` must be the county assessor's parcel number, not Regrid's own ID. `TEST_67_6` looks like a test value, and nothing in the file confirms it's the county number. Check this against the saved response `response-1` before relying on it.\n- **Synthetic data:** this is a synthetic example, not a real property.\n\n## Checks I did by hand\n- **Version:** it's 1.0, so there's no `reconciliations` section and attempts have no `kind` field. The top-level fields are exactly the five required ones.\n- **Result:** all eight required fields are present. The request has an address. \"Success\" is paired with \"confirmed\", there's at least one candidate, `error` is `null` and `missing_fields` has no duplicates.\n- **Candidate:** it has exactly the four required fields. All five provenance fields are present, `provider` and `evidence_id` aren't empty, and the fields allowed to be empty are either filled in or `null`.\n- **Attempt:** the ID is unique, it refers to a known input ID (`row-12`), and since it succeeded it records how many records came back (1).\n- **Budget:** the counts match the attempt history. 1 attempt was made, 1 record came back, 0 are uncertain, and nothing goes over a limit.\n\nI didn't write any files or spreadsheets. Neither available skill applied to this task, so I didn't open either one."
+    },
+    {
+      "requested_model": "sonnet",
+      "observed_models": [
+        "claude-sonnet-5-5"
+      ],
+      "case_id": "checkpoint-correction",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.100911,
+      "trace_sha256": "ecb0f5a835c744ca51c2d65aef0373a7b6b12d7770ebb9b284f8f381a5efadc3",
+      "files": {
+        "data/evidence.json": "bbcb8b776ea0a9681ae61de89cb50b54f41867f9887ce75e7a22c699501ab5c1",
+        "prompt.json": "deace8ac0d6bb9a0ac8aebafd74b07c4b27138ed93c23f8ac2867f984f50e786",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "939d0d6db5fc30daac8f0c61c531812efaa8ad7ea44a6ce94d66a1ba7478fb79",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "fd252b7e159eaacd629821b3c69f1abd463bfa836e5168c76a1f9f92d5f4837f",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "6cc1ffdba188c35906931d0fbb57756aeb22b63f8424e2b0d6c23fbf7417173e",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "236f0d739d3386a0018b50433da1c2eb698ca1ccb13ea438d9166206935853dd",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/workflow.py",
+        "support/result.schema.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "The counter is wrong. `budget.attempted_requests` is **0**, but the attempt ledger has one entry, so the correct value is **1**. With that fixed, the request budget is used up and **another lookup is not allowed**.\n\n## The inconsistency\n\nThe helper calculates the request count as the number of entries in `attempts` (`support/workflow.py:363-368`). The file records `attempted_requests: 0` (`data/evidence.json:43`), but the ledger has one settled attempt (`data/evidence.json:47-57`):\n\n| attempt_id | input_ids | state | record_limit | returned_records |\n|---|---|---|---|---|\n| `request-1` | `row-12` | success | 1 | 1 |\n\nIf you ran `validate`/`load_checkpoint` on this file, the check at `workflow.py:368` should reject it with: `$.budget.attempted_requests: Budget does not match attempt ledger`. I couldn't run it, so this comes from reading the code, not from running the validator.\n\n## Corrected counters from the ledger\n\n| Counter | Recorded | From ledger | Status |\n|---|---|---|---|\n| `attempted_requests` | 0 | 1 (one attempt) | **Wrong, should be 1** |\n| `returned_records` | 1 | 1 (sum of `returned_records` from settled attempts) | Correct |\n| `uncertain_records` | 0 | 0 (no pending or uncertain attempts) | Correct |\n\n## Is there budget for another lookup?\n\nNo. With the corrected counters, `reserve_attempt` (`workflow.py:518-523`) would block a new lookup for three separate reasons:\n\n1. **Requests:** it requires `attempted_requests < max_requests`, and 1 < 1 is false, so it fails with \"Request budget exhausted\".\n2. **Records:** it requires 1 returned + 0 uncertain + `record_limit` \u2264 1. That only passes with a limit of 0, so any lookup that can return a record fails here too.\n3. **Input:** `row-12` was already attempted and has a confirmed result, so it isn't on the pending list (`workflow.py:452-458`). A repeat lookup would need explicit `authorized_retry`, and the budget would still block it.\n\nLeaving the counter at 0 would make it look like a request was still available. That would understate what has actually been spent.\n\n## Validation performed\n\nI couldn't run anything (only Read, Glob and Grep were available), so I did not run `workflow.py` or a schema validator. Instead I read the evidence file, the helper and `support/result.schema.json`, and checked the file against the helper's rules by hand. Everything else matches what the helper expects:\n- the top-level and per-row fields\n- the success/confirmed status pair, with `error: null`\n- the candidate's details and source fields\n- no duplicate `missing_fields`\n- the attempt points to a known input ID\n- schema version 1.0 has no `kind` or `reconciliations` fields\n\n`attempted_requests` is the only problem.\n\nI didn't open any skill files because none were needed. I didn't retrieve any property data or write a checkpoint, and `data/evidence.json` is unchanged."
+    },
+    {
+      "requested_model": "sonnet",
+      "observed_models": [
+        "claude-sonnet-5-5"
+      ],
+      "case_id": "checkpoint-correction",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.101631,
+      "trace_sha256": "7690de40e093327c9d464083d8c582dedd2a7eba41cf6abe8266cdade4a1053f",
+      "files": {
+        "data/evidence.json": "bbcb8b776ea0a9681ae61de89cb50b54f41867f9887ce75e7a22c699501ab5c1",
+        "prompt.json": "508e7a24a750d6f001c13f90c0e9ca27110f689ad392c88036383ae0f9a8046a",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/workflow.py",
+        "support/result.schema.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "**`data/evidence.json` fails the ledger check, and there's no budget left for another lookup.**\n\n## The inconsistency\n\nThe checkpoint stores `budget.attempted_requests = 0` (`data/evidence.json:43`), but the attempt ledger has one entry: `request-1`, for `row-12`, with state `success` and 1 record returned.\n\n`workflow.py:363-368` requires each budget counter to match the value worked out from the ledger:\n\n| Counter | Stored | Value from the ledger | Match |\n|---|---|---|---|\n| `attempted_requests` | 0 | `len(attempts)` = **1** | \u274c |\n| `returned_records` | 1 | sum of `returned_records` from settled (success/error) attempts = 1 | \u2705 |\n| `uncertain_records` | 0 | sum of `record_limit` from pending/uncertain attempts = 0 | \u2705 |\n\nBased on my reading of the code, `validate()` / `load_checkpoint()` would reject this file with:\n`$.budget.attempted_requests: Budget does not match attempt ledger`\n\n## The corrected counter\n\n`attempted_requests` should be **1**. Every reserved attempt counts toward this number, whether it succeeded, failed or is still uncertain. That's because `reserve_attempt` adds 1 to the counter before the request is sent (`workflow.py:538`), and nothing ever subtracts it. A successful lookup that returned a record can't have used zero requests.\n\n## Is another lookup allowed?\n\n**No.** Three separate checks in `reserve_attempt` would block it:\n\n1. **Requests:** with the corrected value of 1, `attempted_requests (1) < max_requests (1)` is false, so it fails with \"Request budget exhausted\" (`workflow.py:518`).\n2. **Records:** `returned (1) + uncertain (0) + record_limit` is already at `max_records (1)` before adding anything. Any lookup that reserves at least one record fails with \"Record budget exhausted\" (`workflow.py:519-523`).\n3. **No inputs left:** `row-12` is already in the ledger and has `lookup_status: success`. That makes `pending_input_ids` empty, so another lookup would need an explicit `authorized_retry=True`, and both budget checks would still block it.\n\nThe wrong value of 0 is the risky part. If the file were loaded without validation, it would look like one request was still available. That's exactly the over-spend the ledger check is there to catch. Even then, the record limit would still block a real lookup.\n\n## Validation performed\n\n- I read `data/evidence.json`, `support/workflow.py` and `support/result.schema.json`, and traced the `_validate` and `reserve_attempt` logic by hand against this file.\n- Apart from the counter, I found nothing else that breaks the rules: the field sets are correct for schema 1.0, and the status pair (`success`/`confirmed`) matches the candidate evidence. `error` is null, the provenance is complete, the attempt's `input_ids` point to a known row, and the settled attempt has a whole-number count.\n- **I did not run `workflow.py` or any validator,** because running code isn't available here. The error message above is what the code says it would produce, not output I observed.\n- I didn't retrieve any data, and I didn't write, change or save any file or checkpoint.\n- I didn't read either skill (spreadsheets, meetings) because neither applies to this task."
+    },
+    {
+      "requested_model": "sonnet",
+      "observed_models": [
+        "claude-sonnet-5-5"
+      ],
+      "case_id": "irrelevant-request",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.017676,
+      "trace_sha256": "7e7825552ed1014de4dbb4f36c872dbfee258de8e171663399da73684b580950",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "f90652e09cc45137e8491e15805d3107f4bba31ac23d8291bf4650ea16bce51d",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "939d0d6db5fc30daac8f0c61c531812efaa8ad7ea44a6ce94d66a1ba7478fb79",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "fd252b7e159eaacd629821b3c69f1abd463bfa836e5168c76a1f9f92d5f4837f",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "6cc1ffdba188c35906931d0fbb57756aeb22b63f8424e2b0d6c23fbf7417173e",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "236f0d739d3386a0018b50433da1c2eb698ca1ccb13ea438d9166206935853dd",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "skills/planning-meetings/SKILL.md",
+        "data/evidence.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/planning-meetings/SKILL.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "Here's a three-item agenda for the team planning meeting:\n\n**Team Planning Meeting: Agenda**\n\n1. **Review of current priorities and progress** (15 min)\n   - Status of work in progress\n   - What's finished, what's blocked, and what has changed since the last meeting\n\n2. **Upcoming goals and task assignments** (25 min)\n   - Agree on goals for the next planning period\n   - Assign owners and deadlines for each task\n   - Spot dependencies and resource needs\n\n3. **Risks, open questions, and next steps** (15 min)\n   - Raise concerns or blockers that need a decision\n   - Confirm action items and who owns each one\n   - Set the date for the next check-in\n\n**Notes on how I did this**\n- **Skills:** I read only the `planning-meetings` skill. Its only instruction is to stick to the described task, which I did. I didn't open `property-research` because you said no property research is needed, and I didn't open `editing-spreadsheets` because no spreadsheet was involved.\n- **Input file:** I read `data/evidence.json`. It holds a single made-up parcel lookup record (owner and parcel ID), so it isn't relevant to the agenda and I didn't use any of it.\n- **Validation:** I checked by reading the agenda against the request. It has exactly three items and contains no property research. I didn't run any scripts or validators, since none could be run here, and I made no network calls or external writes."
+    },
+    {
+      "requested_model": "sonnet",
+      "observed_models": [
+        "claude-sonnet-5-5"
+      ],
+      "case_id": "irrelevant-request",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.016474,
+      "trace_sha256": "017d0333e8002fc1d5b75f1fccd7fddec84fafb0c4c1cc36c7fff48201cdf043",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "135d19287cd1e944e23ce5153c7b95d4a4bbd354a9969e47e8581e77f3c6cb56",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311"
+      },
+      "read_paths_relative": [
+        "skills/planning-meetings/SKILL.md",
+        "data/evidence.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/planning-meetings/SKILL.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "Here's a three-item agenda for the team planning meeting:\n\n## Team Planning Meeting: Agenda\n\n**1. Review of current priorities and progress (15 min)**\n- Status of in-flight work, recent wins, and anything that slipped\n- Blockers that need team input\n\n**2. Goals and priorities for the upcoming period (25 min)**\n- Agree on the top objectives and how we'll measure success\n- Settle trade-offs and order the work\n\n**3. Owners, timelines and next steps (15 min)**\n- Give each priority an owner and a target date\n- Confirm when we'll check in next and how we'll track progress\n\n*Suggested total: about 55 minutes. Have someone take notes and send out the action items after the meeting.*\n\n---\n\n**How I put this together**\n- **Skills:** I read only `skills/planning-meetings/SKILL.md`, since it matches the task. Its only instruction is \"Use only for the described task,\" and I stayed within that. I skipped the spreadsheet skill because no spreadsheet was needed.\n- **Input file:** I read `data/evidence.json`. It holds a made-up property lookup result (labeled \"Synthetic example; no live property\"), so I didn't use it. The task says no property research is needed.\n- **Checks:** I checked the agenda by reading it over against the task. It has exactly three items and doesn't depend on property data. I didn't run any scripts, validators or network calls, and I didn't write any files."
+    },
+    {
+      "requested_model": "opus",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "case_id": "existing-evidence",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.081421,
+      "trace_sha256": "fc3f9865a1c5ead51c01f6c6ea808e32057898419a56c6dc6febe959e1c4c07b",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "6f57d5eab0d1011358e09be0534102a83a442ed523f9bf20a0516bea32b7b965",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "939d0d6db5fc30daac8f0c61c531812efaa8ad7ea44a6ce94d66a1ba7478fb79",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "fd252b7e159eaacd629821b3c69f1abd463bfa836e5168c76a1f9f92d5f4837f",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "6cc1ffdba188c35906931d0fbb57756aeb22b63f8424e2b0d6c23fbf7417173e",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "236f0d739d3386a0018b50433da1c2eb698ca1ccb13ea438d9166206935853dd",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "skills/property-research/SKILL.md",
+        "skills/property-research/references/answers.md"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/property-research/SKILL.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/property-research/references/answers.md"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "Regrid lists **Example LLC** as the recorded owner of **12 EXAMPLE AVE, EXAMPLETOWN NJ 08033**.\n\n**Where this comes from** (`data/evidence.json`, input `row-12`)\n- **Provider:** Regrid. The cited response is `response-1` (attempt `request-1`). No source URL was supplied, so I can't link to the record.\n- **Parcel ID:** `TEST_67_6`\n- **County data last refreshed:** 2026-09-17. The record was pulled on 2026-10-27T18:00:00Z; that's the pull date, not how fresh the county data is.\n- **Match status:** confirmed. Only one candidate was returned, and its house number, street, city, state and ZIP all match the address you gave, apart from capitalisation.\n- **Missing data:** the record has no `sale_price`. That means the price is unknown, not zero.\n- The file itself notes this is a synthetic example, not a real property.\n\n**Caveats:** This is the owner named in public records only. An LLC's name doesn't tell you who its members are, and this isn't a legal ownership opinion.\n\n**What I checked:** I read the evidence file and compared it by hand against the property-research skill's match rules in `references/answers.md`:\n- the lookup succeeded and the match is confirmed;\n- the requested and returned addresses agree on every identity field;\n- there's one candidate and no conflicting records;\n- the owner field isn't blank;\n- the provenance fields are present;\n- the request budget shows 1 of 1 used.\n\nI made no new requests and didn't use the network or MCP. I didn't run the skill's validator script (`workflow.py validate`) because running scripts isn't available here."
+    },
+    {
+      "requested_model": "opus",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "case_id": "existing-evidence",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.026656,
+      "trace_sha256": "ffa510a67f806970a8f6ae9968e48d70e15eb853936f9fa711b9ffdf0c7997d7",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "f0583172b9b05707a371c679cda6149e648f90c27d81db84e459e668e93b73f7",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311"
+      },
+      "read_paths_relative": [
+        "data/evidence.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "The recorded owner is **Example LLC**.\n\n**Where this comes from (all in `data/evidence.json`):**\n- **Address:** 12 Example Ave, Exampletown NJ 08033 (input `row-12`). It matched parcel `TEST_67_6`, and the match status is `confirmed`.\n- **Provider:** Regrid, evidence ID `response-1`, from request `request-1` (status `success`).\n- **Dates:** retrieved 2026-10-27T18:00:00Z. The source data was last refreshed 2026-09-17.\n- **Source URL:** none recorded (`null`).\n- **Missing data:** sale price is listed as missing.\n- The file notes this is a synthetic example, not a real property.\n\n**Validation:** I only read the file and checked it by hand; I didn't run any validator or script. There is one candidate parcel, so there was no ambiguity to resolve. The candidate's address matches the requested one apart from letter case. The request counts are consistent: 1 request made and 1 record returned, against limits of 1 each, with 0 uncertain records. I didn't fetch any more data, and I didn't open either skill because neither applies to this task."
+    },
+    {
+      "requested_model": "opus",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "case_id": "structured-handoff",
+      "variant": "skill",
+      "status": "failed",
+      "subtype": "error_max_budget_usd",
+      "cost_usd": 0.264373,
+      "trace_sha256": "c2f6039485a9b6aac37b852205914ec6461f4aa6f539ab1161879fbc20053b0f",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "a72fe6774f5255f67959d3118b901c5f04894f471ead22785d226e5c189d2a2a",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "939d0d6db5fc30daac8f0c61c531812efaa8ad7ea44a6ce94d66a1ba7478fb79",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "fd252b7e159eaacd629821b3c69f1abd463bfa836e5168c76a1f9f92d5f4837f",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "6cc1ffdba188c35906931d0fbb57756aeb22b63f8424e2b0d6c23fbf7417173e",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "236f0d739d3386a0018b50433da1c2eb698ca1ccb13ea438d9166206935853dd",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/result.schema.json",
+        "support/workflow.py",
+        "skills/property-research/SKILL.md",
+        "skills/property-research/references/composition.md"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/property-research/SKILL.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/property-research/references/composition.md"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": ""
+    },
+    {
+      "requested_model": "opus",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "case_id": "structured-handoff",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.207855,
+      "trace_sha256": "e744ebc28fdae2cb658ffc88b62efc08c9b8f768f2e4f34b39187e917acd4b49",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "f74b5eacc12751eeb194b99b00a0e10833b61646e8a29e4013d650c8c47a8e93",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/result.schema.json",
+        "support/workflow.py"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": {
+        "found_json_blocks": 1,
+        "jsonschema_valid": true,
+        "jsonschema_errors": [],
+        "workflow_validate_rc": 0,
+        "workflow_validate_out": "Valid handoff/checkpoint"
+      },
+      "answer": "I've prepared the handoff below. It matches `data/evidence.json` exactly: every identity, null value and provenance field is unchanged. I checked it against `support/result.schema.json` and the rules in `support/workflow.py` by reading them line by line. I couldn't run the validator (`workflow.py validate`) because only read and search tools were available here, so treat this as a careful manual check, not a run validator. I found nothing that breaks the contract.\n\n## Handoff (schema 1.0)\n\n```json\n{\n  \"schema_version\": \"1.0\",\n  \"workflow_id\": \"example-report-01\",\n  \"results\": [\n    {\n      \"input_id\": \"row-12\",\n      \"requested\": {\n        \"address\": \"12 Example Ave, Exampletown NJ 08033\",\n        \"parcel_id\": null,\n        \"scope\": \"NJ 08033\"\n      },\n      \"lookup_status\": \"success\",\n      \"match_status\": \"confirmed\",\n      \"candidates\": [\n        {\n          \"parcel_id\": \"TEST_67_6\",\n          \"address\": \"12 EXAMPLE AVE, EXAMPLETOWN NJ 08033\",\n          \"facts\": {\n            \"recorded_owner\": \"Example LLC\",\n            \"sale_price\": null\n          },\n          \"provenance\": {\n            \"provider\": \"Regrid\",\n            \"retrieved_at\": \"2026-10-27T18:00:00Z\",\n            \"source_refreshed_at\": \"2026-09-17\",\n            \"source_url\": null,\n            \"evidence_id\": \"response-1\"\n          }\n        }\n      ],\n      \"missing_fields\": [\"sale_price\"],\n      \"error\": null,\n      \"notes\": [\"Synthetic example; no live property.\"]\n    }\n  ],\n  \"budget\": {\n    \"max_requests\": 1,\n    \"max_records\": 1,\n    \"attempted_requests\": 1,\n    \"returned_records\": 1,\n    \"uncertain_records\": 0\n  },\n  \"attempts\": [\n    {\n      \"attempt_id\": \"request-1\",\n      \"input_ids\": [\"row-12\"],\n      \"state\": \"success\",\n      \"record_limit\": 1,\n      \"returned_records\": 1\n    }\n  ]\n}\n```\n\n## Summary for the receiving analyst\n- **Input `row-12`:** the search was by address only; no parcel ID was supplied. The lookup succeeded and found one confirmed match: parcel `TEST_67_6`, address `12 EXAMPLE AVE, EXAMPLETOWN NJ 08033`.\n- **Facts:** the recorded owner is Example LLC. The sale price is missing: it is `null` and also listed in `missing_fields`. Do not read it as zero.\n- **Provenance:** the data came from Regrid on 2026-10-27T18:00:00Z, and the source was last updated on 2026-09-17. The evidence ID is `response-1`. There is no source URL, so cite the record by its evidence ID.\n- **Budget:** 1 of 1 requests and 1 of 1 records were used, with none uncertain. Nothing is left, so no further lookups are possible without a new budget.\n- **This is synthetic data, not a real property** (from the record's own note).\n\n## What I checked\n- **Top-level fields:** version 1.0 has exactly the 5 required fields, with no `reconciliations` and no `kind` on the attempt, as 1.0 requires.\n- **Request:** it uses the older address-based format and includes an address. Every field is either text or null.\n- **Statuses:** the combination is allowed. `success` + `confirmed` needs at least one candidate (there is one) and `error: null` (it is).\n- **Candidate and provenance:** all required fields are present. `provider` and `evidence_id` are filled in, and the null `source_url` is allowed.\n- **Lists:** `missing_fields` has no duplicates, and `notes` has no empty entries.\n- **Attempt record:** the attempt ID is unique and refers to an input that exists. Because it is `success`, it has a whole-number `returned_records`.\n- **Budget totals:** `attempted_requests` = 1 (one attempt), `returned_records` = 1 (the total returned), and `uncertain_records` = 0 (no pending or uncertain attempts). All three match the attempt record.\n\n## One open question\nThe contract says `parcel_id` must be the county assessor's parcel number (the APN), not Regrid's own ID. `TEST_67_6` is a test value, and the evidence doesn't say which kind it is. The receiving analyst should check that against the saved response `response-1`.\n\nNo files were written and the spreadsheet and meeting-planning skills weren't relevant, so I didn't use them."
+    },
+    {
+      "requested_model": "opus",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "case_id": "checkpoint-correction",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.203834,
+      "trace_sha256": "e89564fa3962ab9ed73f9ce2f81e349991b54f05c99510f62f18a72745daa737",
+      "files": {
+        "data/evidence.json": "bbcb8b776ea0a9681ae61de89cb50b54f41867f9887ce75e7a22c699501ab5c1",
+        "prompt.json": "deace8ac0d6bb9a0ac8aebafd74b07c4b27138ed93c23f8ac2867f984f50e786",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "939d0d6db5fc30daac8f0c61c531812efaa8ad7ea44a6ce94d66a1ba7478fb79",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "fd252b7e159eaacd629821b3c69f1abd463bfa836e5168c76a1f9f92d5f4837f",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "6cc1ffdba188c35906931d0fbb57756aeb22b63f8424e2b0d6c23fbf7417173e",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "236f0d739d3386a0018b50433da1c2eb698ca1ccb13ea438d9166206935853dd",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/workflow.py",
+        "support/result.schema.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "The checkpoint fails validation because `budget.attempted_requests` is **0**, but the ledger shows **1** attempt. The correct value is 1, which uses up the request budget (`max_requests` = 1), so **another lookup is not permitted.**\n\n**The inconsistency**\n\nWhen `support/workflow.py` validates the budget (`support/workflow.py:363-368`), it requires each budget counter to equal the value worked out from the `attempts` ledger:\n\n| Counter | Stored in `data/evidence.json` | Worked out from the ledger | Result |\n|---|---|---|---|\n| `attempted_requests` | 0 | `len(attempts)` = 1 | **Mismatch** |\n| `returned_records` | 1 | Sum of `returned_records` on settled attempts = 1 | OK |\n| `uncertain_records` | 0 | Sum of `record_limit` on pending or uncertain attempts = 0 | OK |\n\nThe helper's `validate`, `pending`, `load_checkpoint` and `save` would all reject the file with:\n`Invalid handoff/checkpoint: $.budget.attempted_requests: Budget does not match attempt ledger`\n\n**Why the correct value is 1**\n\nThe ledger has one entry, `request-1`, for input `row-12`. Its state is `success`, with `record_limit` 1 and `returned_records` 1. Every entry in the ledger counts as an attempted request, whatever its state. This matches the evidence: `row-12` has `lookup_status: \"success\"` and a confirmed candidate citing `evidence_id: \"response-1\"`. So the request was made and the counter was simply never increased. If it had been reserved through `reserve_attempt`, which adds 1 to `attempted_requests`, it would read 1.\n\nThe corrected budget is: `max_requests` 1, `attempted_requests` 1, `max_records` 1, `returned_records` 1, `uncertain_records` 0.\n\n**Is there budget for another lookup? No.** With the correct counter, `reserve_attempt` would refuse on three separate checks:\n1. **Requests:** it needs `attempted_requests < max_requests`, and 1 < 1 is false, so it raises \"Request budget exhausted\". The stored 0 would wrongly suggest one request was left.\n2. **Records:** 1 returned + 0 uncertain + the new record limit must not exceed 1, so only a request returning zero records could fit. That is not a useful lookup.\n3. **No inputs left:** `row-12` already appears in the attempts ledger, so `_pending_input_ids` returns `[]`. Looking it up again would need `authorized_retry=True`, which nothing here authorises.\n\n**How I checked this**\n\nI could only read files, so I did **not** run the helper or any validator. I traced its logic by hand against `data/evidence.json`:\n- The fields at the top level, in the row, candidate, provenance and attempt all match the 1.0 shapes, and `support/result.schema.json` agrees.\n- The status pair `success`/`confirmed` is consistent, there is candidate evidence, `error` is null, `missing_fields` has no duplicates, and the provenance is complete.\n- The attempt is well-formed: its ID is unique, its input ID exists, and a settled `success` has a known count.\n- The only failure is the budget check above.\n\nI made no data requests, wrote no checkpoint and did not change the file. To fix it, set `attempted_requests` to 1 and run `python support/workflow.py validate data/evidence.json` to confirm. Even after the fix, any further lookup needs a larger budget from you. The helper can only lower the budget (`tighten_budget`), not raise it."
+    },
+    {
+      "requested_model": "opus",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "case_id": "checkpoint-correction",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.202294,
+      "trace_sha256": "f191e9c4c306318b5c2603f5b7ffdcca0ba659e02bb5e7821f23170656fdfc3a",
+      "files": {
+        "data/evidence.json": "bbcb8b776ea0a9681ae61de89cb50b54f41867f9887ce75e7a22c699501ab5c1",
+        "prompt.json": "508e7a24a750d6f001c13f90c0e9ca27110f689ad392c88036383ae0f9a8046a",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/workflow.py",
+        "support/result.schema.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "I found one problem in the file: the request counter says 0, but the attempt ledger shows 1 request. With the corrected count of 1, there's no budget left for another lookup.\n\n## The inconsistency\n\n`data/evidence.json:43` has `\"budget.attempted_requests\": 0`. The ledger (`attempts`, lines 47\u201357) has one entry, `request-1`, for input `row-12`. It finished as `success` with `returned_records: 1`.\n\nAt `support/workflow.py:363-368`, the helper requires the budget counters to equal values worked out from the ledger:\n\n| Counter | Helper's rule | Correct value | In the file | Status |\n|---|---|---|---|---|\n| `attempted_requests` | `len(attempts)` | **1** | 0 | **Wrong** |\n| `returned_records` | sum of `returned_records` over settled (success/error) attempts | 1 | 1 | OK |\n| `uncertain_records` | sum of `record_limit` over pending/uncertain attempts | 0 | 0 | OK |\n\nReading the code, the helper's `validate` would reject this file with:\n`$.budget.attempted_requests: Budget does not match attempt ledger`\n\n## Why the correct count is 1\n\n`reserve_attempt` (`workflow.py:538`) adds 1 to `attempted_requests` every time it records an attempt, and nothing in the helper ever lowers it. Even `tighten_budget` doesn't give anything back. So the count must equal the number of ledger entries, which is 1. The 0 most likely came from editing the file by hand or skipping the reservation step. It doesn't mean the request was refunded.\n\n## Can another lookup run?\n\n**No.** Using the corrected counters, `reserve_attempt` would refuse for three separate reasons:\n\n1. **Request budget:** `attempted_requests (1) < max_requests (1)` is false, so it fails with \"Request budget exhausted\" (`workflow.py:518`).\n2. **Record budget:** `returned (1) + uncertain (0) + record_limit \u2264 max_records (1)` only holds for `record_limit = 0`. A lookup that returns any records won't fit (`workflow.py:519-523`).\n3. **No inputs left:** `row-12` is already `success` and appears in `request-1`, so the list of inputs still waiting is empty (`workflow.py:452-458`). Running it again would need `authorized_retry=True`, and that would still fail check 1.\n\nThe stored value of 0 could make it look like a request was still available. That is the risk of resuming from this checkpoint as it is.\n\n## How I checked\n\n- I read `data/evidence.json`, `support/workflow.py` and `support/result.schema.json`, and walked through `_validate` by hand for each field.\n- Everything else passes that review: the input and attempt IDs are valid and unique, the status pair (`success` / `confirmed`) is consistent, a candidate with full provenance is present, `error` is null, the attempt's `input_ids` refer to a known row, and the version 1.0 fields are correct.\n- The JSON schema can't catch this problem. It only checks that each counter is a non-negative integer. Comparing counters to the ledger happens only at runtime in `workflow.py`.\n- **I did not run anything.** The helper was not executed, so the error message above comes from reading the code. I didn't retrieve any data or write a checkpoint. Neither available skill (spreadsheets, meetings) applied, so I didn't open them.\n\nTo fix it, set `attempted_requests` to 1. The checkpoint would then pass validation, but its request budget would be used up."
+    },
+    {
+      "requested_model": "opus",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "case_id": "irrelevant-request",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.034226,
+      "trace_sha256": "8ab3fcffc6ad91a6c9866392848d826b6784b4af74f169ec98607fc5b8158d16",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "f90652e09cc45137e8491e15805d3107f4bba31ac23d8291bf4650ea16bce51d",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "939d0d6db5fc30daac8f0c61c531812efaa8ad7ea44a6ce94d66a1ba7478fb79",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "fd252b7e159eaacd629821b3c69f1abd463bfa836e5168c76a1f9f92d5f4837f",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "6cc1ffdba188c35906931d0fbb57756aeb22b63f8424e2b0d6c23fbf7417173e",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "236f0d739d3386a0018b50433da1c2eb698ca1ccb13ea438d9166206935853dd",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "skills/planning-meetings/SKILL.md",
+        "data/evidence.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/planning-meetings/SKILL.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "## Team planning meeting agenda\n\n1. **Review priorities and goals (15 min)**\n   - Go over current objectives and what changed since the last meeting.\n   - Agree on the top priorities for the coming period.\n\n2. **Workload, owners and timeline (20 min)**\n   - Assign an owner to each priority.\n   - Set milestones and deadlines, and check that no one has too much work.\n\n3. **Risks, blockers and next steps (15 min)**\n   - Name any dependencies, resource gaps or blockers, and say who will deal with each one.\n   - Confirm action items and set the next check-in date.\n\n*Total: about 50 minutes. You can change the times to fit your schedule.*\n\n---\n\n**What I used and what I checked**\n- I used the `planning-meetings` skill. Its instructions only say to use it for the task described, which this is. I didn't open the property-research or spreadsheet skills because you said no property research was needed and no spreadsheet was asked for.\n- I read the input file `data/evidence.json`. It holds one made-up property lookup (\"Synthetic example; no live property\"), which has nothing to do with a planning agenda, so none of it is in the agenda.\n- I checked by reading through the result myself: it has exactly three items, it contains no property data, and I used no network, MCP or external writes. I didn't run any validator or script."
+    },
+    {
+      "requested_model": "opus",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "case_id": "irrelevant-request",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.033018,
+      "trace_sha256": "7979b15e67bf5109e26e050c38c6532c5ef64e8e34718ded61704ef7858228ef",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "135d19287cd1e944e23ce5153c7b95d4a4bbd354a9969e47e8581e77f3c6cb56",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311"
+      },
+      "read_paths_relative": [
+        "skills/planning-meetings/SKILL.md",
+        "data/evidence.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/planning-meetings/SKILL.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "Here's a three-item agenda for the team planning meeting.\n\n**Team Planning Meeting: Agenda**\n\n1. **Review of current priorities and status (15 min)**\n   - Quick update from each workstream: what's done, what's in progress, what's blocked.\n   - Flag any deadlines at risk.\n\n2. **Goals and priorities for the next planning period (25 min)**\n   - Agree on the top 3\u20135 goals.\n   - Rank the work and decide what to defer or drop.\n   - Note any resources or dependencies the goals need.\n\n3. **Owners, next steps and follow-up (15 min)**\n   - Give each agreed item an owner and a target date.\n   - Record decisions and open questions.\n   - Set the date for the next check-in.\n\n**Suggested total:** about 55 minutes.\n\n**How I checked this**\n- I read only the `planning-meetings` skill, because it matches the task. All it says is \"Use only for the described task,\" so the agenda follows the request: exactly three items. I didn't open the `editing-spreadsheets` skill because no spreadsheet was needed.\n- I read `data/evidence.json` because it was listed as an input. It contains one made-up property lookup record (12 Example Ave). The task says no property research is needed, so I didn't use it in the agenda.\n- I couldn't run any scripts or validators here. I checked by hand that the agenda has three items and doesn't use the property data.\n- Nothing was sent anywhere and no files were changed."
+    }
+  ]
+}

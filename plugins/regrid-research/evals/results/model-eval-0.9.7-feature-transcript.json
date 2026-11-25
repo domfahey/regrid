@@ -1,0 +1,136 @@
+{
+  "results": [
+    {
+      "id": "map_single_address",
+      "match_status": "not_assessed",
+      "proposed_tool_calls": [
+        {
+          "tool": "read_file",
+          "arguments": {
+            "path": "/skills/property-research/references/map.md"
+          }
+        },
+        {
+          "tool": "read_file",
+          "arguments": {
+            "path": "/skills/property-research/references/mcp-tools.md"
+          }
+        },
+        {
+          "tool": "regrid_request",
+          "arguments": {
+            "endpoint": "address",
+            "parameters": {
+              "query": "12 Example Ave, Haddonfield NJ",
+              "limit": 1,
+              "return_parcels": true,
+              "return_stacked": false,
+              "return_zoning": false,
+              "return_matched_buildings": false,
+              "return_matched_addresses": false,
+              "return_enhanced_ownership": false
+            }
+          }
+        }
+      ],
+      "continuation_plan": "No evidence exists yet, so one bounded address lookup is needed. First read the map guide and the address endpoint section of the tool reference. Then make one /parcels/address request with limit=1 and premium and stacked flags off. Address lookups return geometry by default, so no extra request is needed for the boundary. Classify the match per answers.md. If the match is confirmed, save the response verbatim to ./RESPONSE.json and run: python3 \"/skills/property-research/scripts/map.py\" render RESPONSE.json map.html. Check area_checks and warnings in the stdout summary, then give the absolute page path and offer to open it. If the match is ambiguous, render with --all-candidates as candidates only. If it is unmatched or the request errors, do not render a map.",
+      "answer": "I'll look up 12 Example Ave, Haddonfield NJ in Regrid. This is one request for up to one record, with no premium datasets. If the parcel matches, I'll draw its boundary on a satellite map page. No lookup has run yet, so the match isn't assessed."
+    },
+    {
+      "id": "map_with_neighbours",
+      "match_status": "confirmed",
+      "proposed_tool_calls": [
+        {
+          "tool": "read_file",
+          "arguments": {
+            "path": "/skills/property-research/references/map.md"
+          }
+        },
+        {
+          "tool": "regrid_request",
+          "arguments": {
+            "endpoint": "point",
+            "parameters": {
+              "lat": 39.9005,
+              "lon": -75.0295,
+              "radius": 100,
+              "limit": 25,
+              "return_geometry": true,
+              "return_parcels": true,
+              "return_stacked": false,
+              "return_zoning": false,
+              "return_matched_buildings": false,
+              "return_matched_addresses": false,
+              "return_enhanced_ownership": false
+            }
+          }
+        }
+      ],
+      "continuation_plan": "The subject is already confirmed and saved in RESPONSE.json, so it is reused without refetching. The user asked for neighbours, there is no workflow ledger, and premium datasets stay off. Make one /parcels/point request (radius 100 m, limit 25, geometry on). Save that response verbatim to ./NEIGHBOURS.json. Then run: python3 \"/skills/property-research/scripts/map.py\" render RESPONSE.json map.html --neighbours NEIGHBOURS.json. Report any area mismatch warnings or a one-line exit-1 error as-is. Give the absolute path to map.html and offer to open it. Do not paste geometry into chat.",
+      "answer": "Confirmed match: Regrid lists **Example Restoration LLC** as the recorded owner of **12 EXAMPLE AVE**, Haddonfield (Camden County, NJ). The parcel ID is TEST_67_6 and the source was refreshed 2026-09-17. Adding the neighbouring lots costs one request for up to 25 records, so I'm making that point search around the parcel now. The satellite map will show the subject parcel plus its neighbours. The neighbour results aren't in yet."
+    },
+    {
+      "id": "export_spreadsheet",
+      "match_status": "not_assessed",
+      "proposed_tool_calls": [
+        {
+          "tool": "shell",
+          "arguments": {
+            "command": "python3 \"/skills/property-research/scripts/map.py\" export RESPONSE.json --csv parcels.csv"
+          }
+        }
+      ],
+      "continuation_plan": "Export from the saved ./RESPONSE.json with the bundled helper. This makes zero API requests. Without --replace, the helper will not overwrite an existing parcels.csv. If it reports that the file exists, ask before replacing it or choose a new name. On success, give the absolute CSV path. The CSV has the core columns: headline, path, ll_uuid, owner, parcelnumb, ll_last_refresh, ll_gisacre, ll_gissqft, lat, lon. Offer --all-fields if more columns are wanted. On failure, report the stderr line without editing RESPONSE.json.",
+      "answer": "I'll export the two saved parcels to parcels.csv without any new Regrid requests. They are 12 EXAMPLE AVE (TEST_67_6) and 14 EXAMPLE AVE (TEST_67_7), both refreshed 2026-09-17. They come from a 100 m point search capped at 2 results, so the file may not include every parcel in that radius. The search was not an address-identity check. Both lots list Example Restoration LLC as recorded owner. That is the recorded owner, not proof of who is behind the LLC. The CSV hasn't been written yet; I'll confirm the path once the export runs."
+    },
+    {
+      "id": "explain_field",
+      "match_status": "confirmed",
+      "proposed_tool_calls": [
+        {
+          "tool": "shell",
+          "arguments": {
+            "command": "python3 \"/skills/property-research/scripts/fields.py\" explain usedesc"
+          }
+        }
+      ],
+      "continuation_plan": "Look up the definition offline with fields.py. This makes no request, and the skill says not to open fields.json directly. Report the catalog description alongside this record's value. Call /schemas/parcel only if fields.py lacks the field; that would be one request.",
+      "answer": "In this record, `usedesc` is \"Single Family Residential\", paired with `usecode` \"1\". I'm checking the skill's local field catalog for the official definition, at no API cost, and will confirm it once that runs."
+    },
+    {
+      "id": "freshness_mcp_only",
+      "match_status": "confirmed",
+      "proposed_tool_calls": [],
+      "continuation_plan": "Answer from the already-retrieved parcel record. Over MCP, /verse must never be called. County pull dates (assessor and USPS data dates) need the Regrid CLI, which this host lacks. Do not label the data stale.",
+      "answer": "The parcel looked up earlier (12 EXAMPLE AVE, Haddonfield; Camden County, NJ; parcel ID TEST_67_6) shows `ll_last_refresh` = **2026-09-17**. That is the last date Regrid refreshed this county's data. Camden County's detailed pull dates, such as the assessor and USPS data dates, aren't available through this connection; they need the Regrid CLI (`regrid freshness --path /us/nj/camden`)."
+    },
+    {
+      "id": "mistyped_address",
+      "match_status": "not_assessed",
+      "proposed_tool_calls": [],
+      "continuation_plan": "The typeahead request failed with 403 Forbidden because the token lacks the Enterprise suggestions endpoint. Record that once and do not retry it. Do not guess a corrected address or run an unscoped search. Ask the user for the corrected street name, city and state (ZIP if known). Then run one scoped /parcels/address lookup with limit=1 and premium flags off.",
+      "answer": "I couldn't get address suggestions: this Regrid token isn't permitted to use the typeahead endpoint (403 Forbidden). That means nothing was searched, not that no parcel exists. Could you confirm the exact address, including street name, city, state and ZIP if you have it? For example, did you mean \"12 Example Ave, Haddonfield, NJ\"? I'll run a single lookup once you confirm."
+    },
+    {
+      "id": "geometry_absent",
+      "match_status": "confirmed",
+      "proposed_tool_calls": [
+        {
+          "tool": "shell",
+          "arguments": {
+            "command": "python3 \"/skills/property-research/scripts/map.py\" render RESPONSE.json map.html"
+          }
+        }
+      ],
+      "continuation_plan": "Run the helper on the saved ./RESPONSE.json. The host reports exit status 1 with the stderr message \"error: Parcel: response omits geometry; it was requested without boundaries\". Report that line and do not edit RESPONSE.json to make it pass. No map is produced. Make no new request unless the user authorizes one. If they do, re-fetch the saved path /us/nj/camden/haddonfield/1 via /parcels/path (one request, one record, includes boundary). Save that verbatim and render it.",
+      "answer": "The parcel is a confirmed match: Regrid lists **Example Restoration LLC** as the recorded owner of **12 EXAMPLE AVE**, Haddonfield NJ. The parcel ID is TEST_67_6 and the source was refreshed 2026-09-17. I couldn't draw the map, though. The map helper stopped with: \"error: Parcel: response omits geometry; it was requested without boundaries\". The saved lookup has no boundary data, so no map page was created. Should I re-fetch this parcel with its boundary? It costs one request for one record."
+    },
+    {
+      "id": "non_us_map",
+      "match_status": "not_assessed",
+      "proposed_tool_calls": [],
+      "continuation_plan": "Stop. The address is in Canada, and this property-research skill covers US parcels only. Do not use Canadian (/ca), Global, or Batch APIs and do not issue any request.",
+      "answer": "100 Queen Street West, Toronto, ON is in Canada. This property-research tool only covers US parcels, so I can't look it up or map it here, and I haven't made any requests. If you have a US address, I can map that."
+    }
+  ]
+}

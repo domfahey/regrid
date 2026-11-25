@@ -1,0 +1,660 @@
+{
+  "results": [
+    {
+      "id": "composition_spreadsheet",
+      "match_status": "ambiguous",
+      "proposed_tool_calls": [],
+      "continuation_plan": "No retrieval: the user prohibited new queries and the budget is 0/0. The supplied envelope is formatted into one row per input, keeping original IDs (row-001 confirmed, row-002 ambiguous, row-003 unmatched). The handoff is returned unchanged. No spreadsheet or other external artifact is created. Resolving row-002's unit 3B would need new authorization and budget plus a unit-level identifier or stacked-parcel lookup.",
+      "answer": "Prepared 3 spreadsheet-ready rows, one per input, with original IDs preserved. row-001 is a confirmed match: parcel TEST_1, recorded owner Example Holdings LLC per Regrid, source refreshed 2026-09-17, and sale_price missing. row-002 is ambiguous: only the building/common parcel COMMON_50 (recorded owner Example Association) was found, unit 3B is unresolved, and no owner is assigned to the unit. unit_owner and sale_price are missing. row-003 is unmatched: the lookup succeeded but no parcel was found, so there is no owner or freshness data. Missing values are left blank or null, not zero. No new query was made and no external spreadsheet was created. Mixed per-row statuses are summarized at the case level as ambiguous; see each row for its own status.",
+      "handoff": {
+        "schema_version": "1.0",
+        "workflow_id": "synthetic-composition-workflow",
+        "results": [
+          {
+            "input_id": "row-001",
+            "requested": {
+              "address": "12 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "success",
+            "match_status": "confirmed",
+            "candidates": [
+              {
+                "parcel_id": "TEST_1",
+                "address": "12 Example Avenue, Haddonfield NJ 08033",
+                "facts": {
+                  "recorded_owner": "Example Holdings LLC"
+                },
+                "provenance": {
+                  "provider": "Regrid",
+                  "retrieved_at": "2026-10-27T18:00:00Z",
+                  "source_refreshed_at": "2026-09-17",
+                  "source_url": null,
+                  "evidence_id": "evidence-1"
+                }
+              }
+            ],
+            "missing_fields": [
+              "sale_price"
+            ],
+            "error": null,
+            "notes": []
+          },
+          {
+            "input_id": "row-002",
+            "requested": {
+              "address": "50 Sample Court Unit 3B, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "success",
+            "match_status": "ambiguous",
+            "candidates": [
+              {
+                "parcel_id": "COMMON_50",
+                "address": "50 Sample Court, Haddonfield NJ 08033",
+                "facts": {
+                  "recorded_owner": "Example Association"
+                },
+                "provenance": {
+                  "provider": "Regrid",
+                  "retrieved_at": "2026-10-27T18:00:00Z",
+                  "source_refreshed_at": "2026-09-17",
+                  "source_url": null,
+                  "evidence_id": "evidence-common"
+                }
+              }
+            ],
+            "missing_fields": [
+              "unit_owner",
+              "sale_price"
+            ],
+            "error": null,
+            "notes": [
+              "Building/common parcel; unit 3B is unresolved."
+            ]
+          },
+          {
+            "input_id": "row-003",
+            "requested": {
+              "address": "99 Missing Road, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "success",
+            "match_status": "unmatched",
+            "candidates": [],
+            "missing_fields": [],
+            "error": null,
+            "notes": []
+          }
+        ],
+        "budget": {
+          "max_requests": 0,
+          "max_records": 0,
+          "attempted_requests": 0,
+          "returned_records": 0,
+          "uncertain_records": 0
+        },
+        "attempts": []
+      },
+      "presentation": {
+        "columns": [
+          "input_id",
+          "requested_address",
+          "lookup_status",
+          "match_status",
+          "parcel_id",
+          "matched_address",
+          "recorded_owner_for_requested_property",
+          "candidate_recorded_owner",
+          "provider",
+          "retrieved_at",
+          "source_refreshed_at",
+          "evidence_id",
+          "missing_fields",
+          "notes"
+        ],
+        "rows": [
+          {
+            "input_id": "row-001",
+            "requested_address": "12 Example Avenue, Haddonfield NJ 08033",
+            "lookup_status": "success",
+            "match_status": "confirmed",
+            "parcel_id": "TEST_1",
+            "matched_address": "12 Example Avenue, Haddonfield NJ 08033",
+            "recorded_owner_for_requested_property": "Example Holdings LLC",
+            "candidate_recorded_owner": "Example Holdings LLC",
+            "provider": "Regrid",
+            "retrieved_at": "2026-10-27T18:00:00Z",
+            "source_refreshed_at": "2026-09-17",
+            "evidence_id": "evidence-1",
+            "missing_fields": "sale_price",
+            "notes": ""
+          },
+          {
+            "input_id": "row-002",
+            "requested_address": "50 Sample Court Unit 3B, Haddonfield NJ 08033",
+            "lookup_status": "success",
+            "match_status": "ambiguous",
+            "parcel_id": "COMMON_50 (building/common candidate, not unit 3B)",
+            "matched_address": "50 Sample Court, Haddonfield NJ 08033",
+            "recorded_owner_for_requested_property": null,
+            "candidate_recorded_owner": "Example Association (common parcel only)",
+            "provider": "Regrid",
+            "retrieved_at": "2026-10-27T18:00:00Z",
+            "source_refreshed_at": "2026-09-17",
+            "evidence_id": "evidence-common",
+            "missing_fields": "unit_owner; sale_price",
+            "notes": "Building/common parcel; unit 3B is unresolved."
+          },
+          {
+            "input_id": "row-003",
+            "requested_address": "99 Missing Road, Haddonfield NJ 08033",
+            "lookup_status": "success",
+            "match_status": "unmatched",
+            "parcel_id": null,
+            "matched_address": null,
+            "recorded_owner_for_requested_property": null,
+            "candidate_recorded_owner": null,
+            "provider": null,
+            "retrieved_at": null,
+            "source_refreshed_at": null,
+            "evidence_id": null,
+            "missing_fields": "",
+            "notes": "No matching parcel found in this lookup."
+          }
+        ]
+      },
+      "proposed_writes": []
+    },
+    {
+      "id": "composition_report",
+      "match_status": "confirmed",
+      "proposed_tool_calls": [],
+      "continuation_plan": "No lookup is needed. Write a two-sentence prose summary from the supplied confirmed record and return the envelope unchanged.",
+      "answer": "Two-sentence summary written from the supplied handoff. The structured evidence is returned unchanged. No new lookup was made.",
+      "handoff": {
+        "schema_version": "1.0",
+        "workflow_id": "synthetic-composition-workflow",
+        "results": [
+          {
+            "input_id": "row-001",
+            "requested": {
+              "address": "12 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "success",
+            "match_status": "confirmed",
+            "candidates": [
+              {
+                "parcel_id": "TEST_1",
+                "address": "12 Example Avenue, Haddonfield NJ 08033",
+                "facts": {
+                  "recorded_owner": "Example Holdings LLC",
+                  "sale_price": 615000,
+                  "sale_date": "2024-12-03"
+                },
+                "provenance": {
+                  "provider": "Regrid",
+                  "retrieved_at": "2026-10-27T18:00:00Z",
+                  "source_refreshed_at": "2026-09-17",
+                  "source_url": null,
+                  "evidence_id": "evidence-1"
+                }
+              }
+            ],
+            "missing_fields": [],
+            "error": null,
+            "notes": []
+          }
+        ],
+        "budget": {
+          "max_requests": 0,
+          "max_records": 0,
+          "attempted_requests": 0,
+          "returned_records": 0,
+          "uncertain_records": 0
+        },
+        "attempts": []
+      },
+      "presentation": "12 Example Avenue in Haddonfield, NJ 08033 is a confirmed match to parcel TEST_1. Regrid shows Example Holdings LLC as its recorded owner, with a last recorded sale of $615,000 on 2024-12-03. The Regrid record was retrieved on 2026-10-27 from source data refreshed on 2026-09-17. The recorded LLC name does not identify the company's members or beneficial owners.",
+      "proposed_writes": []
+    },
+    {
+      "id": "composition_resume",
+      "match_status": "not_assessed",
+      "proposed_tool_calls": [
+        {
+          "tool": "regrid_request",
+          "arguments": {
+            "endpoint": "address",
+            "parameters": {
+              "query": "16 Example Avenue, Haddonfield NJ 08033",
+              "limit": 1,
+              "return_stacked": false,
+              "return_enhanced_ownership": false,
+              "return_matched_addresses": false,
+              "return_matched_buildings": false,
+              "return_zoning": false
+            }
+          }
+        }
+      ],
+      "continuation_plan": "1. Validate the checkpoint. Schema 1.0 is supported, IDs are unique, status pairs are valid, and the arithmetic holds: 2 attempts, 1 record returned, 1 record reserved as uncertain. 2. Keep the original budget of 4 requests and 4 records. Remaining: 2 requests and 2 available records (4 - 1 returned - 1 uncertain reservation). 3. Skip row-001, which completed successfully. Leave row-002 as error/not_assessed and do not retry it. Attempt-002 stays uncertain with its 1-record reservation, and there is no verified receipt to reconcile it. 4. Next untouched input is row-003. Reserve attempt-003 as pending for row-003 with record_limit 1. That brings attempted_requests to 3 and uncertain_records to 2. Save that pending state to /tmp/regrid-composition-resumed.json, then dispatch the single proposed address lookup. 5. After the response, record the actual outcome: success/error with the real count, or uncertain on timeout. Classify row-003's match and save the checkpoint again with --replace. 6. Then row-004 can use the last request and record if the budget still allows it. In this offline evaluation nothing has been dispatched or written.",
+      "answer": "Resuming the workflow. row-001 is completed and confirmed: parcel TEST_1, recorded owner Example Holdings LLC per Regrid, source refreshed 2026-09-17, sale_price missing. row-002 is an error with an uncertain outcome: the request timed out after dispatch. It is not treated as no-match and will not be retried. Its attempt (attempt-002) keeps its 1-record reservation. row-003 and row-004 have not been attempted. Budget is 2 of 4 requests used, 1 record returned and 1 reserved, leaving 2 requests and 2 records. The next step is one bounded address lookup for row-003 (16 Example Avenue), shown as a proposed call. No result exists yet, and it has not been counted as completed. I also propose saving a checkpoint to /tmp/regrid-composition-resumed.json with the pending reservation before dispatch, and again after the result is recorded. Neither write has occurred. The handoff below is the current, unchanged state.",
+      "handoff": {
+        "schema_version": "1.0",
+        "workflow_id": "synthetic-composition-workflow",
+        "results": [
+          {
+            "input_id": "row-001",
+            "requested": {
+              "address": "12 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "success",
+            "match_status": "confirmed",
+            "candidates": [
+              {
+                "parcel_id": "TEST_1",
+                "address": "12 Example Avenue, Haddonfield NJ 08033",
+                "facts": {
+                  "recorded_owner": "Example Holdings LLC"
+                },
+                "provenance": {
+                  "provider": "Regrid",
+                  "retrieved_at": "2026-10-27T18:00:00Z",
+                  "source_refreshed_at": "2026-09-17",
+                  "source_url": null,
+                  "evidence_id": "evidence-1"
+                }
+              }
+            ],
+            "missing_fields": [
+              "sale_price"
+            ],
+            "error": null,
+            "notes": []
+          },
+          {
+            "input_id": "row-002",
+            "requested": {
+              "address": "14 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "error",
+            "match_status": "not_assessed",
+            "candidates": [],
+            "missing_fields": [],
+            "error": {
+              "category": "transport",
+              "message": "Timeout after dispatch; outcome unknown.",
+              "outcome_uncertain": true
+            },
+            "notes": []
+          },
+          {
+            "input_id": "row-003",
+            "requested": {
+              "address": "16 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "not_attempted",
+            "match_status": "not_assessed",
+            "candidates": [],
+            "missing_fields": [],
+            "error": null,
+            "notes": []
+          },
+          {
+            "input_id": "row-004",
+            "requested": {
+              "address": "18 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "not_attempted",
+            "match_status": "not_assessed",
+            "candidates": [],
+            "missing_fields": [],
+            "error": null,
+            "notes": []
+          }
+        ],
+        "budget": {
+          "max_requests": 4,
+          "max_records": 4,
+          "attempted_requests": 2,
+          "returned_records": 1,
+          "uncertain_records": 1
+        },
+        "attempts": [
+          {
+            "attempt_id": "attempt-001",
+            "input_ids": [
+              "row-001"
+            ],
+            "state": "success",
+            "record_limit": 1,
+            "returned_records": 1
+          },
+          {
+            "attempt_id": "attempt-002",
+            "input_ids": [
+              "row-002"
+            ],
+            "state": "uncertain",
+            "record_limit": 1,
+            "returned_records": null
+          }
+        ]
+      },
+      "presentation": {
+        "completed": [
+          {
+            "input_id": "row-001",
+            "match_status": "confirmed",
+            "parcel_id": "TEST_1",
+            "recorded_owner": "Example Holdings LLC",
+            "source_refreshed_at": "2026-09-17"
+          }
+        ],
+        "failed": [
+          {
+            "input_id": "row-002",
+            "lookup_status": "error",
+            "match_status": "not_assessed",
+            "error": "transport: Timeout after dispatch; outcome unknown.",
+            "retry": "not retried (uncertain, reservation kept)"
+          }
+        ],
+        "unattempted": [
+          "row-003",
+          "row-004"
+        ],
+        "uncertain_attempts": [
+          "attempt-002"
+        ],
+        "remaining_allowance": {
+          "requests": 2,
+          "records": 2
+        },
+        "next_action": "Reserve attempt-003 for row-003, checkpoint it, then dispatch one address lookup with limit 1."
+      },
+      "proposed_writes": [
+        {
+          "type": "checkpoint",
+          "path": "/tmp/regrid-composition-resumed.json",
+          "stage": "before_dispatch",
+          "mode": "atomic save after validation (create; use --replace on later updates)",
+          "description": "Current envelope plus a pending reservation for row-003. Not yet written.",
+          "budget": {
+            "max_requests": 4,
+            "max_records": 4,
+            "attempted_requests": 3,
+            "returned_records": 1,
+            "uncertain_records": 2
+          },
+          "appended_attempt": {
+            "attempt_id": "attempt-003",
+            "input_ids": [
+              "row-003"
+            ],
+            "state": "pending",
+            "record_limit": 1,
+            "returned_records": null
+          }
+        },
+        {
+          "type": "checkpoint",
+          "path": "/tmp/regrid-composition-resumed.json",
+          "stage": "after_response",
+          "mode": "atomic save with --replace (explicit checkpoint update)",
+          "description": "After the row-003 response, record attempt-003's actual state and returned count (or uncertain on timeout), set row-003's result, validate, and save. Contents depend on the real result; nothing is fabricated here."
+        }
+      ]
+    },
+    {
+      "id": "composition_shared_budget",
+      "match_status": "not_assessed",
+      "proposed_tool_calls": [
+        {
+          "tool": "regrid_request",
+          "arguments": {
+            "endpoint": "address",
+            "parameters": {
+              "query": "16 Example Avenue, Haddonfield NJ 08033",
+              "limit": 1,
+              "return_stacked": false,
+              "return_enhanced_ownership": false,
+              "return_matched_addresses": false,
+              "return_matched_buildings": false,
+              "return_zoning": false
+            }
+          }
+        }
+      ],
+      "continuation_plan": "Stage 2 uses the same shared ledger, whose cap is fixed at 3 requests and 3 records. Stage 1 used 2 requests and returned 2 records, leaving 1 request and 1 record. Reserve attempt-003 (pending, record_limit 1) for row-003 and dispatch the one proposed lookup. Record the actual outcome; on timeout, mark it uncertain, keep the reservation, and do not retry. That exhausts the workflow budget. row-004 stays not_attempted and needs new user authorization that raises the cap before any lookup. The cap is not increased here and consumption is not reset.",
+      "answer": "Stage 2 can research only one of the two rows within the 3-request, 3-record cap. Stage 1 already used 2 requests and 2 records, so 1 request and 1 record remain. The next action is one bounded address lookup for row-003 (16 Example Avenue), shown as a proposed call. It has not run and has no result yet. row-004 (18 Example Avenue) cannot be looked up without your authorization to raise the workflow cap. Current state: row-001 is confirmed (TEST_1, Example Holdings LLC). row-002 is confirmed (TEST_2, Second Example LLC). Both rows show source refresh date 2026-09-17. row-003 and row-004 have not been attempted. The handoff below is the current, unchanged ledger.",
+      "handoff": {
+        "schema_version": "1.0",
+        "workflow_id": "synthetic-composition-workflow",
+        "results": [
+          {
+            "input_id": "row-001",
+            "requested": {
+              "address": "12 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "success",
+            "match_status": "confirmed",
+            "candidates": [
+              {
+                "parcel_id": "TEST_1",
+                "address": "12 Example Avenue, Haddonfield NJ 08033",
+                "facts": {
+                  "recorded_owner": "Example Holdings LLC"
+                },
+                "provenance": {
+                  "provider": "Regrid",
+                  "retrieved_at": "2026-10-27T18:00:00Z",
+                  "source_refreshed_at": "2026-09-17",
+                  "source_url": null,
+                  "evidence_id": "evidence-1"
+                }
+              }
+            ],
+            "missing_fields": [
+              "sale_price"
+            ],
+            "error": null,
+            "notes": []
+          },
+          {
+            "input_id": "row-002",
+            "requested": {
+              "address": "14 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "success",
+            "match_status": "confirmed",
+            "candidates": [
+              {
+                "parcel_id": "TEST_2",
+                "address": "14 Example Avenue, Haddonfield NJ 08033",
+                "facts": {
+                  "recorded_owner": "Second Example LLC"
+                },
+                "provenance": {
+                  "provider": "Regrid",
+                  "retrieved_at": "2026-10-27T18:00:00Z",
+                  "source_refreshed_at": "2026-09-17",
+                  "source_url": null,
+                  "evidence_id": "evidence-2"
+                }
+              }
+            ],
+            "missing_fields": [],
+            "error": null,
+            "notes": []
+          },
+          {
+            "input_id": "row-003",
+            "requested": {
+              "address": "16 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "not_attempted",
+            "match_status": "not_assessed",
+            "candidates": [],
+            "missing_fields": [],
+            "error": null,
+            "notes": []
+          },
+          {
+            "input_id": "row-004",
+            "requested": {
+              "address": "18 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "not_attempted",
+            "match_status": "not_assessed",
+            "candidates": [],
+            "missing_fields": [],
+            "error": null,
+            "notes": []
+          }
+        ],
+        "budget": {
+          "max_requests": 3,
+          "max_records": 3,
+          "attempted_requests": 2,
+          "returned_records": 2,
+          "uncertain_records": 0
+        },
+        "attempts": [
+          {
+            "attempt_id": "attempt-001",
+            "input_ids": [
+              "row-001"
+            ],
+            "state": "success",
+            "record_limit": 1,
+            "returned_records": 1
+          },
+          {
+            "attempt_id": "attempt-002",
+            "input_ids": [
+              "row-002"
+            ],
+            "state": "success",
+            "record_limit": 1,
+            "returned_records": 1
+          }
+        ]
+      },
+      "presentation": {
+        "remaining_allowance": {
+          "requests": 1,
+          "records": 1
+        },
+        "next_action": "Reserve attempt-003 (row-003, record_limit 1), then dispatch one address lookup with limit 1.",
+        "blocked": [
+          {
+            "input_id": "row-004",
+            "reason": "Workflow cap of 3 requests and 3 records would be exhausted after row-003; new authorization is required."
+          }
+        ]
+      },
+      "proposed_writes": []
+    },
+    {
+      "id": "composition_conflicting_sources",
+      "match_status": "confirmed",
+      "proposed_tool_calls": [],
+      "continuation_plan": "No live lookup is authorized and none is proposed. Both observations stay as separate candidates with their own providers, dates, and evidence IDs. Parcel identity is confirmed, since both observations name TEST_1 at the same address, but the ownership answer is reported as a conflict. No LLC membership is inferred and nothing is written to the CRM. Resolving the conflict would need the user to adjudicate the sources or authorize a refresh.",
+      "answer": "Both observations identify the same parcel, TEST_1 at 12 Example Avenue, Haddonfield NJ 08033, so the parcel identity is confirmed. However, they disagree about the recorded owner, so I can't state a single owner. Regrid (evidence regrid-observation, source refreshed 2026-09-17) lists Example Holdings LLC. The supplied county extract (evidence county-observation, source refreshed 2026-10-20) lists Different Example LLC. The county extract has the later source refresh date, which may reflect a more recent change. That has not been verified, and no source has been adjudicated, so neither record was overwritten. Both are recorded owners only. The LLC names do not identify their members, and none were inferred. Nothing was written to your CRM.",
+      "handoff": {
+        "schema_version": "1.0",
+        "workflow_id": "synthetic-composition-workflow",
+        "results": [
+          {
+            "input_id": "row-001",
+            "requested": {
+              "address": "12 Example Avenue, Haddonfield NJ 08033",
+              "parcel_id": null,
+              "scope": "Haddonfield NJ 08033"
+            },
+            "lookup_status": "success",
+            "match_status": "confirmed",
+            "candidates": [
+              {
+                "parcel_id": "TEST_1",
+                "address": "12 Example Avenue, Haddonfield NJ 08033",
+                "facts": {
+                  "recorded_owner": "Example Holdings LLC"
+                },
+                "provenance": {
+                  "provider": "Regrid",
+                  "retrieved_at": "2026-10-27T18:00:00Z",
+                  "source_refreshed_at": "2026-09-17",
+                  "source_url": null,
+                  "evidence_id": "regrid-observation"
+                }
+              },
+              {
+                "parcel_id": "TEST_1",
+                "address": "12 Example Avenue, Haddonfield NJ 08033",
+                "facts": {
+                  "recorded_owner": "Different Example LLC"
+                },
+                "provenance": {
+                  "provider": "Supplied county extract",
+                  "retrieved_at": "2026-10-27T18:00:00Z",
+                  "source_refreshed_at": "2026-10-20",
+                  "source_url": null,
+                  "evidence_id": "county-observation"
+                }
+              }
+            ],
+            "missing_fields": [],
+            "error": null,
+            "notes": [
+              "Two supplied observations disagree about the recorded owner; no source adjudication has been performed."
+            ]
+          }
+        ],
+        "budget": {
+          "max_requests": 0,
+          "max_records": 0,
+          "attempted_requests": 0,
+          "returned_records": 0,
+          "uncertain_records": 0
+        },
+        "attempts": []
+      },
+      "presentation": "Parcel TEST_1 (12 Example Avenue, Haddonfield NJ 08033) is a confirmed identity with conflicting recorded owners. Regrid shows Example Holdings LLC (source refreshed 2026-09-17). The supplied county extract shows Different Example LLC (source refreshed 2026-10-20). Both observations are kept, neither is overwritten, no LLC members are inferred, and no CRM write was made or proposed.",
+      "proposed_writes": []
+    },
+    {
+      "id": "composition_optional_skill_missing",
+      "match_status": "confirmed",
+      "proposed_tool_calls": [],
+      "continuation_plan": "Answer directly in plain language from the supplied confirmed record. Install nothing, contact no service, and do not claim the spreadsheet or report skills ran.",
+      "answer": "Regrid lists **Example Holdings LLC** as the recorded owner of **12 Example Avenue, Haddonfield NJ 08033** (parcel TEST_1, confirmed match). The last recorded sale was $615,000 on December 3, 2024. The record was retrieved 2026-10-27 from source data refreshed 2026-09-17. The LLC name doesn't tell us who its members are. I answered from the supplied record only; nothing was installed and Regrid wasn't contacted.",
+      "handoff": null,
+      "presentation": "Regrid lists Example Holdings LLC as the recorded owner of 12 Example Avenue, Haddonfield NJ 08033 (parcel TEST_1). The last sale was $615,000 on 2024-12-03, and the source data was refreshed 2026-09-17.",
+      "proposed_writes": []
+    }
+  ]
+}

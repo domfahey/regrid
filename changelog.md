@@ -9,6 +9,11 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 ### Changed
 
 - Skill (`mcp-tools.md`): updated the `POST /parcels/area` example and notes to include `return_parcels=true` and recorded the 2026-11-24 authorized live direct `/mcp` check (`tools/list`, `list-specs`, `GET /usage`, and `POST /parcels/area` with `return_parcels=true`) plus SDK `0.5.0` `make live` verification.
+- Evals (`plugins/regrid-research/evals/results/`): recorded the 2026-11-24 offline real Claude CLI (`2.1.331`) evaluation report (`model-eval-0.9.7-report.json`) and unedited transcripts across trigger routing (Haiku/Sonnet), blinded research/composition/feature packets (Sonnet), and the 24-trial Haiku/Sonnet/Opus discovery suite (`live_calls: 0`), preserving all failures and incomplete trials prior to skill changes.
+
+### Fixed
+
+- Evals (`run_discovery_claude.py`): preserved OS user/profile environment variables (`USER`, `LOGNAME`, `USERNAME`, `USERPROFILE`, `LOCALAPPDATA`, `APPDATA`) in the child process allowlist while continuing to strip API and project credentials, fixing macOS Keychain OAuth authentication for Claude CLI discovery runs.
 
 ## [SDK 0.5.0][sdk-v0.5.0] and [Regrid Research 0.9.7][regrid-research-v0.9.7] - 2026-11-24
 

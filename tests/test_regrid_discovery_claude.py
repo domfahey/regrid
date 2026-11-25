@@ -343,3 +343,15 @@ def test_subprocess_calls_use_utf8_replace_and_lf_trace(tmp_path, monkeypatch):
     for _, kwargs in open_calls:
         assert kwargs.get("encoding") == "utf-8"
         assert kwargs.get("newline") == "\n"
+
+
+def test_environment_preserves_os_identity_vars_but_strips_credentials(monkeypatch):
+    monkeypatch.setenv("USER", "tester")
+    monkeypatch.setenv("LOGNAME", "tester")
+    monkeypatch.setenv("REGRID_TOKEN", "rg_secret_token_never_forward")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-never-forward")
+    env = runner.environment()
+    assert env.get("USER") == "tester"
+    assert env.get("LOGNAME") == "tester"
+    assert "REGRID_TOKEN" not in env
+    assert "ANTHROPIC_API_KEY" not in env

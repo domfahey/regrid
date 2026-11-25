@@ -206,11 +206,19 @@ Status for 0.9.7:
   `tools/list` (`tools.json` parity), `list-specs`, authenticated `GET /usage`, and
   `POST /parcels/area` with `return_parcels=true` (`limit=1`, returning `area` + 1
   parcel feature with geometry and fields); `make live` also passed on SDK `0.5.0`.
+- Graded offline model evaluations (`2026-11-24`, authorized, `live_calls: 0`,
+  Claude CLI `2.1.331`; see `evals/results/model-eval-0.9.7-report.json` — recorded
+  with failures before any skill edits):
+  - Research packet (`claude-sonnet-5-5`): `13/13` cases passed (`40/40` criteria, `0` critical failures).
+  - Composition packet (`claude-sonnet-5-5`): `5/6` cases passed (`22/23` criteria, `5/5` handoffs schema- and `workflow.py`-valid; `composition_report` wrote 4 sentences instead of 2).
+  - Feature packet (`claude-sonnet-5-5`): `7/8` cases passed (`34/36` criteria; `freshness_mcp_only` failed by presenting parcel `ll_last_refresh` as county-wide refresh).
+  - Trigger routing (`claude-haiku-5-5` and `claude-sonnet-5-5`): `16/17` each (`trigger_13` Toronto routed to `none` instead of `property-research`).
+  - 24-trial filesystem discovery (`run_discovery_claude.py`, Haiku/Sonnet/Opus): `23/24` completed, `1` budget-capped (`opus-structured-handoff-skill` hit USD 0.25 at USD 0.2644), `0` critical failures / `0` outside reads; independent rubric grades — Skill: Haiku `1/4`, Sonnet `3/4`, Opus `2/4` (`1` FAIL, `1` INCOMPLETE); Baseline: Haiku `3/4`, Sonnet `4/4`, Opus `4/4` (all three models skipped `SKILL.md` on `checkpoint-correction` when `support/workflow.py` was staged in `task_dependencies`).
 - Earlier live checks (authorized, `2026-11-19` / `2026-11-20`): `make live-full`
   checked every read-only endpoint (26 requests) and one POST point request
   verified `return_parcels=true`.
 - Not run: Claude Code, Claude apps and Cowork host UI/map checks (and host MCP
-  connector import); a fresh browser map render for `0.9.7`; and model or Cowork
+  connector import); a fresh plain-browser map render for `0.9.7`; and Cowork
   acceptance.
 
 Earlier verification logs (0.2.0 to 0.5.0) live in the repository's
