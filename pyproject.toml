@@ -32,6 +32,15 @@ dev = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/regrid"]
 
+[tool.hatch.build.targets.sdist]
+only-include = [
+    "src/regrid",
+    "pyproject.toml",
+    "README.md",
+    "LICENSE",
+    "changelog.md",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["e2e: subprocess and real local HTTPS integration tests"]

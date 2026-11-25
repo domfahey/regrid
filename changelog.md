@@ -22,6 +22,8 @@ Minor SDK/CLI release (`TypedRegridClient.validate_query()`, read-only `RegridCl
 
 ### Changed
 
+- **Breaking CLI defaults (from `0.4.5`):** `regrid tile --output` now refuses to overwrite an existing file and exits `1` unless `--replace` is passed (previously it silently overwrote and exited `0`); `fields[...][order]` is now rejected whenever `offset_id` paging or `--max-records` is used; empty-string path flags (`--csv ""`, `--geojson ""`, `--save-response ""`, `--cache ""`, `--neighbours ""`, `--catalog ""`, and empty `map`/`export`/`address-map`/`tile`/`freshness` paths) now fail cleanly instead of falling back or resolving `.`.
+- Packaging: `pyproject.toml` now declares an explicit `[tool.hatch.build.targets.sdist]` `only-include` allowlist (`src/regrid`, `pyproject.toml`, `README.md`, `LICENSE`, `changelog.md`) so untracked local or `.git/info/exclude` files outside `src/regrid` cannot be bundled into source distributions.
 - Plugin docs, evals, and CI: tightened `SKILL.md` (to 786 words) and `batch.md`; aligned `return_parcels=true` (keeping `POST /parcels/area` explicitly unverified), exact per-command CLI `--options` keys, and ambiguous `address-map` handling across skill references; expanded `evals/run.py validate --suite all` to check `composability-regressions.json`, `composability-rubric.json`, and `discovery-rubric.json` plus Canadian routes on all suites (enforced even under `python -O`); added data-issue and legal-ownership exclusion prompts to `trigger-cases.json`; reduced redundant validation/JSON serialization passes in `workflow.py`; pinned `uv==0.13.9`, gated duplicate lint/type/build steps to Python 3.12, and added plugin/discovery/eval tests to Windows CI; pruned superseded planning docs and intermediate `not_run` map-host records.
 
 ### Fixed
@@ -376,14 +378,14 @@ Describe user-facing changes rather than copying commit logs. Add repository com
 [regrid-research-v0.9.0]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.0
 [sdk-v0.4.1]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.1
 [regrid-research-v0.9.1]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.1
-[sdk-v0.5.0]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.5.0
-[regrid-research-v0.9.7]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.7
-[sdk-v0.4.5]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.5
-[regrid-research-v0.9.6]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.6
-[regrid-research-v0.9.5]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.5
-[sdk-v0.4.4]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.4
-[regrid-research-v0.9.4]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.4
-[sdk-v0.4.3]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.3
-[regrid-research-v0.9.3]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.3
 [sdk-v0.4.2]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.2
 [regrid-research-v0.9.2]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.2
+[sdk-v0.4.3]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.3
+[regrid-research-v0.9.3]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.3
+[sdk-v0.4.4]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.4
+[regrid-research-v0.9.4]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.4
+[regrid-research-v0.9.5]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.5
+[sdk-v0.4.5]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.5
+[regrid-research-v0.9.6]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.6
+[sdk-v0.5.0]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.5.0
+[regrid-research-v0.9.7]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.7
