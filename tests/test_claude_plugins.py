@@ -208,9 +208,9 @@ def _load_pyproject() -> dict:
 def test_versions():
     assert (
         json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))["version"]
-        == "0.9.7"
+        == "0.9.8"
     )
-    assert regrid.__version__ == "0.5.0"
+    assert regrid.__version__ == "0.5.1"
     pyproject = _load_pyproject()
     assert pyproject["project"]["version"] == regrid.__version__
 
