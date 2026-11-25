@@ -268,7 +268,8 @@ def test_bad_output(requests, tmp_path, capsys):
     assert cli.main(["tile", "10", "0", "0", "--output", str(tmp_path)]) == 1
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert captured.err == "regrid: Invalid input or output file\nregrid: requests made: 0\n"
+    assert captured.err == "regrid: Output path is a directory\nregrid: requests made: 0\n"
+    assert str(tmp_path) not in captured.err
     assert tmp_path.is_dir()
     assert list(tmp_path.iterdir()) == []
     assert not requests
@@ -277,10 +278,12 @@ def test_bad_output(requests, tmp_path, capsys):
 @pytest.mark.parametrize("target", ["", "missing"])
 def test_tile_empty_or_missing_parent_output_makes_no_request(requests, tmp_path, capsys, target):
     output = "" if target == "" else str(tmp_path / "missing" / "tile.mvt")
+    expected = "Output path cannot be empty" if target == "" else "Output directory does not exist"
     assert cli.main(["tile", "10", "0", "0", "--output", output]) == 1
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert captured.err == "regrid: Invalid input or output file\nregrid: requests made: 0\n"
+    assert captured.err == f"regrid: {expected}\nregrid: requests made: 0\n"
+    assert str(tmp_path) not in captured.err
     assert not requests
 
 
@@ -290,7 +293,11 @@ def test_tile_existing_output_requires_replace(requests, tmp_path, capsys):
     assert cli.main(["tile", "10", "0", "0", "--format", "png", "--output", str(dest)]) == 1
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert captured.err == "regrid: Invalid input or output file\nregrid: requests made: 0\n"
+    assert (
+        captured.err
+        == "regrid: Output file exists; pass --replace to overwrite it\nregrid: requests made: 0\n"
+    )
+    assert str(dest) not in captured.err
     assert not requests
     assert dest.read_bytes() == b"keep"
 
@@ -315,7 +322,11 @@ def test_tile_replace_does_not_write_through_symlink(requests, tmp_path, capsys)
     assert cli.main(["tile", "10", "0", "0", "--output", str(link)]) == 1
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert captured.err == "regrid: Invalid input or output file\nregrid: requests made: 0\n"
+    assert (
+        captured.err
+        == "regrid: Output file exists; pass --replace to overwrite it\nregrid: requests made: 0\n"
+    )
+    assert str(link) not in captured.err
     assert not requests
     assert link.is_symlink()
     assert target.read_bytes() == b"keep"
@@ -328,6 +339,23 @@ def test_tile_replace_does_not_write_through_symlink(requests, tmp_path, capsys)
     assert not link.is_symlink()
     assert link.read_bytes() == TILE_BYTES
     assert target.read_bytes() == b"keep"
+
+
+def test_tile_atomic_write_map_error_surfaces_safe_message(requests, monkeypatch, tmp_path, capsys):
+    dest = tmp_path / "tile.mvt"
+
+    def fail_write(*args, **kwargs):
+        raise cli.parcel_map.MapError(cli.parcel_map.EXISTS)
+
+    monkeypatch.setattr(cli.parcel_map, "write_atomic_bytes", fail_write)
+    assert cli.main(["tile", "10", "0", "0", "--output", str(dest)]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert (
+        captured.err
+        == "regrid: Output file exists; pass --replace to overwrite it\nregrid: requests made: 1\n"
+    )
+    assert str(dest) not in captured.err
 
 
 @pytest.mark.parametrize("response", [httpx.Response(403), httpx.Response(200, text="broken")])

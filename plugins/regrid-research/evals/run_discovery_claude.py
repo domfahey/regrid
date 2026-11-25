@@ -15,12 +15,17 @@ import time
 from pathlib import Path
 from typing import Any
 
-try:
-    import discovery
-except ImportError:
-    _discovery_spec = importlib.util.spec_from_file_location(
-        "discovery", Path(__file__).resolve().with_name("discovery.py")
-    )
+_DISCOVERY_PATH = Path(__file__).resolve().with_name("discovery.py")
+_existing_discovery = sys.modules.get("discovery")
+_existing_file = getattr(_existing_discovery, "__file__", None)
+if (
+    _existing_discovery is not None
+    and _existing_file
+    and Path(_existing_file).resolve() == _DISCOVERY_PATH
+):
+    discovery = _existing_discovery
+else:
+    _discovery_spec = importlib.util.spec_from_file_location("discovery", _DISCOVERY_PATH)
     assert _discovery_spec and _discovery_spec.loader
     discovery = importlib.util.module_from_spec(_discovery_spec)
     sys.modules["discovery"] = discovery
@@ -140,6 +145,8 @@ def run_trial(
                 cwd=workspace,
                 env=environment(),
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 capture_output=True,
                 timeout=timeout,
                 check=False,
@@ -192,7 +199,8 @@ def run_trial(
             "grading_status": "not_graded",
             "scope": "CLI navigation trial; not Cowork acceptance or executed helper validation",
         }
-        (destination / "trace.jsonl").write_text(raw, encoding="utf-8")
+        with (destination / "trace.jsonl").open("w", encoding="utf-8", newline="\n") as handle:
+            handle.write(raw)
         (destination / "stderr.txt").write_text(stderr, encoding="utf-8")
         (destination / "record.json").write_text(
             json.dumps(report, indent=2) + "\n", encoding="utf-8"
@@ -212,6 +220,8 @@ def run_suite(
         version_result = subprocess.run(
             [cli, "--version"],
             text=True,
+            encoding="utf-8",
+            errors="replace",
             capture_output=True,
             timeout=10,
             check=False,

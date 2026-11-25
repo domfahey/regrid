@@ -215,6 +215,12 @@ def test_packet_research_suite_keeps_placeholder(monkeypatch, capsys):
         ("?path=/ca/on/x", True),
         ("https://x.test/api/v2/parcels/path?limit=1&path=/ca/on/x", True),
         ("state2=ca&limit=1", False),
+        ("/ca", True),
+        ("/ca/", True),
+        ("%2Fca", True),
+        ("/us/ca", False),
+        ("?country=%63a", True),
+        ("?%70ath=/ca/on/toronto", True),
     ],
 )
 def test_canadian_route_detection(value, expected):
@@ -314,6 +320,37 @@ def test_geometry_absent_fixture_uses_the_real_map_error_text():
         ({"command": 'regrid address "123 Main St, Los Angeles/CA/90001"'}, False),
         ({"args": ["address", "123 Main St, Los Angeles/CA/90001"]}, False),
         ({"command": "regrid address 123-Main/CA/90001"}, False),
+        # Hardened CLI JSON flags, schema with options, -c subshell, and non-str queryString values
+        ({"command": 'regrid address "1 Main" --options \'{"country": "ca"}\''}, True),
+        ({"command": 'regrid address "1 Main" --options=\'{"country": "ca"}\''}, True),
+        ({"command": 'regrid parcel-path --fields \'{"path": "/ca/on/toronto"}\''}, True),
+        ({"command": 'regrid area --geojson=\'{"path": "/ca/on/x"}\''}, True),
+        ({"command": 'regrid address "1 Main" --options \'{"path": "/us/ca/la"}\''}, False),
+        ({"command": "regrid schema --options '{}' ca"}, True),
+        ({"command": "regrid schema --options='{}' ca"}, True),
+        ({"command": "regrid schema --options '{}' parcel"}, False),
+        ({"command": 'bash -c "regrid address foo --country ca"'}, True),
+        ({"command": "bash -c \"regrid address '123 Main St, Los Angeles/CA/90001'\""}, False),
+        (
+            {
+                "harRequest": {
+                    "method": "GET",
+                    "url": "https://app.regrid.com/api/v2/parcels/path",
+                    "queryString": [{"name": "path", "value": ["/ca/on/toronto"]}],
+                }
+            },
+            True,
+        ),
+        (
+            {
+                "harRequest": {
+                    "method": "GET",
+                    "url": "https://app.regrid.com/api/v2/parcels/address",
+                    "queryString": [{"name": "country", "value": ["ca"]}],
+                }
+            },
+            True,
+        ),
     ],
 )
 def test_canadian_route_detection_encoded_empty_schema_and_free_text(arguments, expected):
@@ -530,3 +567,43 @@ def test_validate_all_checks_composability_and_discovery_rubrics(tmp_path, monke
     (tmp_path / "discovery-rubric.json").write_text(json.dumps(disc), encoding="utf-8")
     with pytest.raises(AssertionError):
         run.load_cases("all")
+
+
+def test_load_cases_allows_non_dict_json_result(tmp_path, monkeypatch):
+    data = _load("feature-cases.json")
+    case = data["cases"][0]
+    case["tool_history"] = [
+        {
+            "tool": case["available_tools"][0]["name"],
+            "arguments": {"endpoint": "usage", "parameters": {}},
+            "result": {
+                "isError": False,
+                "content": [{"type": "text", "text": '["parcels", "other"]'}],
+            },
+        }
+    ]
+    _write(tmp_path, monkeypatch, cases=data)
+    loaded = run.load_cases("feature")
+    assert len(loaded) == 8
+
+
+def test_validate_enforces_checks_under_python_optimize(tmp_path):
+    import subprocess
+    import sys
+
+    _copy_all_eval_files(tmp_path)
+    triggers = _load("trigger-cases.json")
+    triggers["cases"][0]["expected_skill"] = "invalid-skill"
+    (tmp_path / "trigger-cases.json").write_text(json.dumps(triggers), encoding="utf-8")
+
+    script = (
+        "import importlib.util, pathlib\n"
+        f"spec = importlib.util.spec_from_file_location('r', {str(EVALS / 'run.py')!r})\n"
+        "m = importlib.util.module_from_spec(spec)\n"
+        "spec.loader.exec_module(m)\n"
+        f"m.ROOT = pathlib.Path({str(tmp_path)!r})\n"
+        "m.load_cases('all')\n"
+    )
+    proc = subprocess.run([sys.executable, "-O", "-c", script], text=True, capture_output=True)
+    assert proc.returncode != 0
+    assert "AssertionError" in proc.stderr

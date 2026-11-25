@@ -180,12 +180,10 @@ def test_deeply_nested_catalog_is_a_clean_error(tmp_path, capsys):
     assert err.startswith("fields:") and len(err.strip().splitlines()) == 1
 
 
-@pytest.mark.parametrize("depth", [1_500, 20_000])
 @pytest.mark.parametrize("argv", [["search", "deep"], ["explain", "deep"]])
-def test_deep_description_fails_cleanly_on_output(tmp_path, capsys, argv, depth):
-    # 1,500 parses in json.loads on Python 3.12/3.13 and hits json.dumps RecursionError;
-    # 20,000 exceeds the ~10k C-stack limit on every Python version including 3.10.
-    nested = "[" * depth + "]" * depth
+def test_deep_description_fails_cleanly_on_output(tmp_path, capsys, argv):
+    # 20,000 exceeds the ~10k C-stack limit on every Python version including 3.10 and 3.13.
+    nested = "[" * 20_000 + "]" * 20_000
     path = tmp_path / "deep.json"
     path.write_text(
         '{"fields": [{"name": "deep", "datatype": "text", "tier": "standard", "category": "Deep",'
@@ -196,6 +194,32 @@ def test_deep_description_fails_cleanly_on_output(tmp_path, capsys, argv, depth)
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err.startswith("fields:") and len(captured.err.strip().splitlines()) == 1
+
+
+@pytest.mark.parametrize("argv", [["search", "deep"], ["explain", "deep"]])
+def test_deep_description_fails_cleanly_in_json_dumps(monkeypatch, capsys, argv):
+    deep: list = []
+    for _ in range(20_000):
+        deep = [deep]
+    record = {
+        "name": "deep",
+        "datatype": "text",
+        "tier": "standard",
+        "category": "Deep",
+        "description": deep,
+    }
+    monkeypatch.setattr(fields, "load_catalog", lambda _path: [record])
+    assert fields.main(argv) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err.startswith("fields:") and len(captured.err.strip().splitlines()) == 1
+
+
+def test_main_rejects_empty_catalog_path(capsys):
+    assert fields.main(["explain", "owner", "--catalog", ""]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == "fields: Catalog path cannot be empty\n"
 
 
 def test_main_does_not_catch_oserror_from_json_dumps(monkeypatch):

@@ -239,3 +239,39 @@ def test_stage_optional_execution_limit(tmp_path):
     packet = json.loads(prompt_path.read_text(encoding="utf-8"))
     assert packet["execution_limit"] == limit
     assert manifest["files"]["prompt.json"] == hashlib.sha256(prompt_path.read_bytes()).hexdigest()
+
+
+def test_metadata_rejects_horizontal_rules_without_frontmatter(tmp_path):
+    bad = tmp_path / "SKILL.md"
+    bad.write_text("# Heading\n\n---\nname: fake\ndescription: fake\n---\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="Missing YAML frontmatter"):
+        discovery.metadata(bad)
+
+
+def test_stage_normalizes_relative_paths_with_as_posix(tmp_path, monkeypatch):
+    real_relative_to = Path.relative_to
+
+    class WindowsLikeRel:
+        def __init__(self, rel: Path):
+            self._posix = rel.as_posix()
+
+        def as_posix(self) -> str:
+            return self._posix
+
+        def __str__(self) -> str:
+            return self._posix.replace("/", "\\")
+
+    def windows_relative_to(self, *other):
+        rel = real_relative_to(self, *other)
+        if tmp_path in self.parents or self == tmp_path:
+            return WindowsLikeRel(rel)
+        return rel
+
+    monkeypatch.setattr(Path, "relative_to", windows_relative_to)
+    destination = tmp_path / "trial"
+    manifest = discovery.stage("structured-handoff", "skill", destination)
+    packet = json.loads((destination / "prompt.json").read_text(encoding="utf-8"))
+    assert all("\\" not in item["path"] for item in packet["available_skills"])
+    assert "data/evidence.json" in manifest["files"]
+    assert "support/workflow.py" in manifest["files"]
+    assert all("\\" not in key for key in manifest["files"])

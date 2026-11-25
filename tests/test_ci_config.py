@@ -15,6 +15,10 @@ WINDOWS_TESTS = (
     "test_offline_freshness.py",
     "test_cli_offline.py",
     "test_cli_freshness.py",
+    "test_claude_plugins.py",
+    "test_regrid_discovery.py",
+    "test_regrid_discovery_claude.py",
+    "test_regrid_feature_evals.py",
 )
 
 

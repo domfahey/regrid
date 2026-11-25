@@ -65,6 +65,22 @@ def _json(value: Any) -> str:
     raise ValueError("Invalid Regrid JSON request")
 
 
+def _plain_json(value: Any) -> Any:
+    def convert(item: Any) -> Any:
+        if isinstance(item, Mapping):
+            return {key: convert(val) for key, val in item.items()}
+        if isinstance(item, (list, tuple)):
+            return [convert(val) for val in item]
+        return item
+
+    try:
+        return convert(value)
+    except RecursionError:
+        pass
+    # Raise outside the except block: __context__ would retain the raw input.
+    raise ValueError("Invalid Regrid GeoJSON request")
+
+
 def _geometry(value: Mapping[str, Any] | str) -> dict[str, Any]:
     if isinstance(value, str):
         valid = True
@@ -76,7 +92,7 @@ def _geometry(value: Mapping[str, Any] | str) -> dict[str, Any]:
         if not valid:
             raise ValueError("Invalid Regrid GeoJSON request")
     if isinstance(value, Mapping):
-        value = dict(value)
+        value = _plain_json(value)
     return safe_validate(GeometryInput, {"geojson": value}).geojson
 
 

@@ -12,7 +12,6 @@ TILE = b"\x00\xffmock-tile\x80"
 @pytest.fixture
 def server(regrid_server):
     regrid_server.route("/api/v2/parcels/address", json={"ok": True})
-    regrid_server.route("/api/v2/schemas/parcel", json={"ok": True})
     regrid_server.route("/api/v1/parcels/10/0/0.mvt", body=TILE)
     return regrid_server
 

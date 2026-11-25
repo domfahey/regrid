@@ -45,6 +45,8 @@ def read_json(path: Path) -> Any:
 
 def metadata(path: Path) -> dict[str, str]:
     text = path.read_text(encoding="utf-8")
+    if not (text.startswith("---\n") or text.startswith("---\r\n")):
+        raise ValueError("Missing YAML frontmatter")
     parts = text.split("---", 2)
     if len(parts) < 3:
         raise ValueError("Missing YAML frontmatter")
@@ -95,7 +97,7 @@ def stage(
             encoding="utf-8",
         )
         catalog.append(
-            {"name": name, "description": description, "path": str(path.relative_to(output))}
+            {"name": name, "description": description, "path": path.relative_to(output).as_posix()}
         )
     data = output / "data"
     data.mkdir()
@@ -122,7 +124,7 @@ def stage(
         packet["task_dependencies"] = ["support/result.schema.json", "support/workflow.py"]
     (output / "prompt.json").write_text(json.dumps(packet, indent=2) + "\n", encoding="utf-8")
     hashes = {
-        str(p.relative_to(output)): hashlib.sha256(p.read_bytes()).hexdigest()
+        p.relative_to(output).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in sorted(output.rglob("*"))
         if p.is_file()
     }

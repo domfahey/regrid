@@ -51,3 +51,7 @@ jobs:
           tests/test_offline_fields.py
           tests/test_offline_freshness.py
           tests/test_cli_freshness.py
+          tests/test_claude_plugins.py
+          tests/test_regrid_discovery.py
+          tests/test_regrid_discovery_claude.py
+          tests/test_regrid_feature_evals.py

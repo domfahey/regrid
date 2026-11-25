@@ -100,7 +100,7 @@ Coverage includes every SDK and CLI module; XML output is written to ignored `co
 .venv/bin/regrid usage --detailed
 .venv/bin/regrid tilejson --format mvt
 .venv/bin/regrid grid 15 8828 12121
-.venv/bin/regrid tile 15 8828 12121 --format png --retina --output parcel.png
+.venv/bin/regrid tile 15 8828 12121 --format png --retina --output parcel.png [--replace]
 .venv/bin/regrid map response.json parcel.html          # offline satellite map of a saved response
 .venv/bin/regrid address-map "123 Main St, Dallas, TX" parcel.html   # one request, saves parcel.json
 .venv/bin/regrid address-map "123 Main St, Dallas, TX" parcel.html --neighbours   # opt-in: one extra request, up to 25 records
@@ -120,7 +120,7 @@ Every API endpoint method has a CLI command: `point`, `area`, `address`, `apn`, 
 
 Use `--country ca` where Canadian endpoints are supported. `--options` accepts an object or `@file` containing JSON for supported SDK keyword parameters. `--fields` and `--geojson` also accept JSON or `@file`. Report details accept structured `--details` or plain `--details-text`; `report` submits an external data issue. The `client-token-typeahead` command intentionally prints the newly generated temporary token in its JSON response, so handle that output as a credential.
 
-Global `--timeout`, `--base-url`, and `--tiles-base-url` options go before the command. Override service URLs only for trusted services; authenticated requests send your token to that destination. JSON goes to stdout, errors to stderr; exit codes are 0 for success, 1 for SDK/input/output failures, and 2 for argument parsing errors. Tile downloads require `--output` and write raw bytes to that file.
+Global `--timeout`, `--base-url`, and `--tiles-base-url` options go before the command. Override service URLs only for trusted services; authenticated requests send your token to that destination. JSON goes to stdout, errors to stderr; exit codes are 0 for success, 1 for SDK/input/output failures, and 2 for argument parsing errors. Tile downloads (`regrid tile ... --output FILE [--replace]`) check `--output` before requesting, write raw bytes to that file, and refuse to overwrite existing files unless `--replace` is given.
 
 ## Usage
 
@@ -208,7 +208,7 @@ print(PARCEL_FIELDS["ll_gisacre"].coverage_column)  # ll_gisacre_pct
 
 `ParcelFields` is also importable from `regrid.parcel_fields`. Accessing `.typed_fields` validates known US fields strictly and raises sanitized `RegridDecodeError` if they are malformed. Dates use ISO `YYYY-MM-DD`; timestamps require a time zone. Date, timestamp, and UUID strings retain their original spelling; identifiers retain leading zeros. Unknown attributes and missing/null distinctions survive `.to_dict()`. Ordinary typed responses and raw dictionaries remain usable without this additional validation. The US catalog is not a Canadian field schema.
 
-Enable query checks explicitly with `client.query(filters, validate_fields=True)` or CLI `query --validate-fields`. Checks cover catalog queryability, documented operators, operand shapes/types, and incompatible ordering with pagination. `allow_unknown_fields=True` (CLI `--allow-unknown-fields`) permits fields with unknown queryability, including future additions; it does not bypass checks on known queryable fields or explicitly nonqueryable fields. Existing queries retain their prior behavior by default, including the four-field maximum. Catalog flags are local and never sent to Regrid.
+Enable query checks explicitly with `client.query(filters, validate_fields=True)` or CLI `query --validate-fields`. Checks cover catalog queryability, documented operators, operand shapes/types, and incompatible ordering with pagination (`order` filters with `offset_id` paging or `--max-records` are rejected even without `validate_fields=True` / `--validate-fields`). `allow_unknown_fields=True` (CLI `--allow-unknown-fields`) permits fields with unknown queryability, including future additions; it does not bypass checks on known queryable fields or explicitly nonqueryable fields. Existing queries retain their prior behavior by default, including the four-field maximum. Catalog flags are local and never sent to Regrid.
 
 The catalog is packaged with the library, so imports and validation never fetch metadata. After editing `src/regrid/data/parcel_fields.json`, run `.venv/bin/python scripts/generate_parcel_fields.py`; `--check` verifies reproducibility and is exercised by the test suite. See [field interpretation and follow-ups](docs/parcel-schema-guidance.md) for standardized alternatives, area/value distinctions, and coverage-report guidance.
 

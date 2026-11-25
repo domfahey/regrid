@@ -297,3 +297,49 @@ def test_run_trial_includes_trace_sha256_and_is_directly_comparable(tmp_path, mo
     assert comparison["comparison_status"] == "comparable"
     assert comparison["case_id"] == "existing-evidence"
     assert comparison["model"] == "haiku"
+
+
+def test_run_discovery_claude_ignores_shadowing_discovery_on_sys_path(tmp_path, monkeypatch):
+    (tmp_path / "discovery.py").write_text('raise RuntimeError("shadowed")\n', encoding="utf-8")
+    monkeypatch.delitem(sys.modules, "discovery", raising=False)
+    monkeypatch.setattr(
+        sys, "path", [str(tmp_path), *[e for e in sys.path if Path(e).resolve() != ROOT]]
+    )
+    monkeypatch.chdir(tmp_path)
+    fresh_spec = importlib.util.spec_from_file_location(
+        "shadow_safe_run_discovery_claude", ROOT / "run_discovery_claude.py"
+    )
+    assert fresh_spec and fresh_spec.loader
+    fresh_module = importlib.util.module_from_spec(fresh_spec)
+    fresh_spec.loader.exec_module(fresh_module)
+    assert Path(fresh_module.discovery.__file__).resolve() == (ROOT / "discovery.py").resolve()
+
+
+def test_subprocess_calls_use_utf8_replace_and_lf_trace(tmp_path, monkeypatch):
+    sub_kwargs = []
+    open_calls = []
+    real_open = Path.open
+
+    def fake_run(command, **kwargs):
+        sub_kwargs.append((command[-1] == "--version", kwargs))
+        if command[-1] == "--version":
+            return SimpleNamespace(stdout="2.test", returncode=0)
+        return SimpleNamespace(stdout=success_trace(), stderr="", returncode=0)
+
+    def spy_open(self, *args, **kwargs):
+        if self.name == "trace.jsonl":
+            open_calls.append((args, kwargs))
+        return real_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(Path, "open", spy_open)
+    report = runner.run_suite(tmp_path / "results")
+    assert report["runs"][0]["status"] == "completed"
+    assert len(sub_kwargs) == EXPECTED_RUNS + 1
+    for _, kwargs in sub_kwargs:
+        assert kwargs.get("encoding") == "utf-8"
+        assert kwargs.get("errors") == "replace"
+    assert len(open_calls) == EXPECTED_RUNS
+    for _, kwargs in open_calls:
+        assert kwargs.get("encoding") == "utf-8"
+        assert kwargs.get("newline") == "\n"

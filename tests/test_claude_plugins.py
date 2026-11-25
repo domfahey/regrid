@@ -339,8 +339,14 @@ def test_mcp_tools_has_toc_and_dated_facts_only_in_history():
     assert "plus return_stacked=false and the same four false premium flags" in " ".join(
         text.split()
     )
-    assert "POST point and POST area with `return_parcels=true`" in history
-    assert "over MCP remains unverified" in history
+    assert "POST point accepts `return_parcels=true`; POST area remains unverified." in " ".join(
+        head.split()
+    )
+    normalized_history = " ".join(history.split())
+    assert "POST point accepts `return_parcels=true`" in normalized_history
+    assert "POST area `return_parcels` and POST geometry search over MCP remain unverified" in (
+        normalized_history
+    )
 
 
 def test_setup_declares_property_research_dependency():

@@ -289,11 +289,58 @@ def test_main_treats_deeply_nested_verse_as_clean_error(tmp_path, capsys):
     assert err.startswith("freshness:") and len(err.strip().splitlines()) == 1
 
 
-def test_main_rejects_nan_in_result(tmp_path, monkeypatch):
+def test_main_rejects_nan_in_result(tmp_path, monkeypatch, capsys):
     verse = tmp_path / "v.json"
     verse.write_text(json.dumps(VERSE), encoding="utf-8")
     monkeypatch.setattr(
         freshness, "county_dates", lambda _doc, path: {"path": path, "bad": float("nan")}
     )
-    with pytest.raises(ValueError, match="Out of range float values are not JSON compliant"):
-        freshness.main(["county", str(verse), "--path", "/us/nj/camden"])
+    assert freshness.main(["county", str(verse), "--path", "/us/nj/camden"]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert (
+        captured.err.startswith("freshness:")
+        and len(captured.err.strip().splitlines()) == 1
+        and "Traceback" not in captured.err
+    )
+
+
+def test_main_handles_nan_in_verse_file(tmp_path, capsys):
+    verse = tmp_path / "v.json"
+    verse.write_text(
+        '{"verse": {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": '
+        '{"path": "/us/nj/camden", "county": "Camden", "state": "NJ", '
+        '"last_refresh": NaN, "extra": NaN}}]}}',
+        encoding="utf-8",
+    )
+    assert freshness.main(["county", str(verse), "--path", "/us/nj/camden"]) == 0
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    assert json.loads(captured.out) == {
+        "path": "/us/nj/camden",
+        "county": "Camden",
+        "state": "NJ",
+        "last_refresh": None,
+        "assessor_data_date": None,
+        "usps_data_date": None,
+    }
+
+
+def test_main_treats_deeply_nested_result_as_clean_error(tmp_path, monkeypatch, capsys):
+    verse = tmp_path / "v.json"
+    verse.write_text(json.dumps(VERSE), encoding="utf-8")
+    deep: list = []
+    for _ in range(20_000):
+        deep = [deep]
+    monkeypatch.setattr(freshness, "county_dates", lambda _doc, path: {"path": path, "deep": deep})
+    assert freshness.main(["county", str(verse), "--path", "/us/nj/camden"]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err.startswith("freshness:") and len(captured.err.strip().splitlines()) == 1
+
+
+def test_main_rejects_empty_verse_path(capsys):
+    assert freshness.main(["county", "", "--path", "/us/nj/camden"]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == "freshness: Verse path cannot be empty\n"

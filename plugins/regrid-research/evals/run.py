@@ -14,10 +14,16 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parent
 
 
+def _check(condition: bool, message: str = "") -> None:
+    if not condition:
+        raise AssertionError(message)
+
+
 @functools.lru_cache(maxsize=1)
 def _workflow_module():
     path = Path(__file__).resolve().parents[1] / "skills/property-research/scripts/workflow.py"
     spec = importlib.util.spec_from_file_location("regrid_eval_workflow", path)
+    _check(bool(spec and spec.loader), f"Unable to load workflow module from {path}")
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -31,6 +37,8 @@ def validate_handoff(document: dict) -> None:
 _CLI_ROUTE_PREFIXES = ("/", "http://", "https://", "%2f", "?")
 _CLI_ROUTE_FLAGS = {"--path", "--url", "--endpoint", "parcel-path"}
 _CLI_PATH_KEYS = {"path", "url", "endpoint"}
+_CLI_JSON_FLAGS = {"--options", "--fields", "--geojson"}
+_CLI_JSON_KEYS = {"options", "fields", "geojson"}
 
 
 def _split_command(value: str) -> list[str]:
@@ -41,7 +49,10 @@ def _split_command(value: str) -> list[str]:
 
 
 def _has_canadian_segment(path: str) -> bool:
-    parts = [p for p in unquote(path).strip().lower().split("/") if p]
+    decoded = unquote(path).strip().lower()
+    parts = [p for p in decoded.split("/") if p]
+    if decoded.startswith("/") and parts == ["ca"]:
+        return True
     for i, part in enumerate(parts):
         if part != "ca" or (i and parts[i - 1] == "us"):
             continue
@@ -57,14 +68,22 @@ def _has_canadian_path_text(text: str) -> bool:
     for chunk in re.split(r"[?&#]", text):
         key, sep, value = chunk.partition("=")
         if sep:
-            param = key.strip().lower().lstrip("-")
-            if param == "country" and value.strip().lower() == "ca":
+            param = unquote(key).strip().lower().lstrip("-")
+            if param == "country" and unquote(value).strip().lower() == "ca":
                 return True
             if param != "path":
                 continue
         if _has_canadian_segment(value if sep else chunk):
             return True
     return False
+
+
+def _json_has_canadian_value(raw: str) -> bool:
+    try:
+        decoded = json.loads(raw)
+    except ValueError:
+        return False
+    return _has_canadian_value(decoded)
 
 
 def _command_is_canadian(tokens: list[str]) -> bool:
@@ -75,13 +94,31 @@ def _command_is_canadian(tokens: list[str]) -> bool:
             return True
         if low.startswith("--country=") and low.split("=", 1)[1].strip() == "ca":
             return True
-        if low == "schema" and nxt is not None and nxt.strip().lower() == "ca":
+        if low == "schema":
+            j = i + 1
+            while j < len(tokens):
+                arg = tokens[j].strip().lower()
+                if arg == "--":
+                    j += 1
+                    continue
+                if arg.startswith("-"):
+                    j += 1 if "=" in arg else 2
+                    continue
+                if arg == "ca":
+                    return True
+                break
+        if low == "-c" and nxt is not None and _command_is_canadian(_split_command(nxt)):
             return True
         if low in _CLI_ROUTE_FLAGS and nxt is not None and _has_canadian_path_text(nxt):
             return True
+        if low in _CLI_JSON_FLAGS and nxt is not None and _json_has_canadian_value(nxt):
+            return True
         if "=" in token:
             key, _, val = token.partition("=")
-            if key.strip().lower().lstrip("-") in _CLI_PATH_KEYS and _has_canadian_path_text(val):
+            norm_key = key.strip().lower().lstrip("-")
+            if norm_key in _CLI_PATH_KEYS and _has_canadian_path_text(val):
+                return True
+            if norm_key in _CLI_JSON_KEYS and _json_has_canadian_value(val):
                 return True
         if not any(ch.isspace() for ch in token) and low.startswith(_CLI_ROUTE_PREFIXES):
             if _has_canadian_path_text(token):
@@ -117,6 +154,8 @@ def _has_canadian_value(value: object, key: str = "") -> bool:
                             return True
                         if qname == "country" and qval.strip().lower() == "ca":
                             return True
+                    elif _has_canadian_value(qval, qname):
+                        return True
                 elif _has_canadian_value(item, key):
                     return True
             return False
@@ -137,40 +176,46 @@ def _is_canadian_route(arguments: dict) -> bool:
 def load_cases(suite: str = "research") -> list[dict]:
     if suite == "all":
         cases = load_cases("research") + load_cases("composition") + load_cases("feature")
-        assert len({case["id"] for case in cases}) == len(cases)
+        _check(len({case["id"] for case in cases}) == len(cases), "Duplicate case ID across suites")
         load_composability_cases()
         load_discovery_rubric()
         return cases
     prefix = {"composition": "composition-", "feature": "feature-"}.get(suite, "")
     data = json.loads((ROOT / f"{prefix}cases.json").read_text(encoding="utf-8"))
     rubric = json.loads((ROOT / f"{prefix}rubric.json").read_text(encoding="utf-8"))
-    assert data["schema_version"] == rubric["schema_version"] == 1
-    assert data["synthetic"] is True
+    _check(data["schema_version"] == rubric["schema_version"] == 1, "Invalid schema_version")
+    _check(data["synthetic"] is True, "Fixture must be synthetic")
     cases = data["cases"]
     ids = [case["id"] for case in cases]
-    assert len(ids) == len(set(ids))
-    assert set(ids) == set(rubric["criteria"])
+    _check(len(ids) == len(set(ids)), "Duplicate case IDs")
+    _check(set(ids) == set(rubric["criteria"]), "Case IDs must match rubric criteria")
     for case in cases:
-        assert case["user_request"] and case["context"]
-        assert rubric["criteria"][case["id"]]
+        _check(bool(case["user_request"] and case["context"]), "Missing user_request or context")
+        _check(bool(rubric["criteria"][case["id"]]), "Empty rubric criteria")
         names = {tool["name"] for tool in case["available_tools"]}
-        assert names or case.get("supplied_evidence")
+        _check(bool(names or case.get("supplied_evidence")), "Missing tools or supplied_evidence")
         if suite == "composition":
             validate_handoff(case["supplied_evidence"])
         if suite == "feature":
-            assert case["us_only"] is True
-            assert names
+            _check(case["us_only"] is True, "Feature case must set us_only=true")
+            _check(bool(names), "Feature case must define available_tools")
         for event in case["tool_history"]:
-            assert event["tool"] in names
-            assert isinstance(event["arguments"], dict)
-            assert isinstance(event["result"]["isError"], bool)
-            assert event["result"]["content"]
-            assert not _is_canadian_route(event["arguments"])
+            _check(event["tool"] in names, "Tool history event must reference available tool")
+            _check(isinstance(event["arguments"], dict), "Tool arguments must be an object")
+            _check(isinstance(event["result"]["isError"], bool), "isError must be boolean")
+            _check(bool(event["result"]["content"]), "Result content must be non-empty")
+            _check(not _is_canadian_route(event["arguments"]), "Canadian routes are forbidden")
             if not event["result"]["isError"]:
                 result = json.loads(event["result"]["content"][0]["text"])
-                if "parcels" in result:
-                    assert result["parcels"]["type"] == "FeatureCollection"
-                    assert isinstance(result["parcels"]["features"], list)
+                if isinstance(result, dict) and "parcels" in result:
+                    _check(
+                        result["parcels"]["type"] == "FeatureCollection",
+                        "Parcels must be a FeatureCollection",
+                    )
+                    _check(
+                        isinstance(result["parcels"]["features"], list),
+                        "Parcels features must be a list",
+                    )
     if suite == "feature":
         load_trigger_cases()
     return cases
@@ -179,46 +224,57 @@ def load_cases(suite: str = "research") -> list[dict]:
 def load_composability_cases() -> list[dict]:
     data = json.loads((ROOT / "composability-regressions.json").read_text(encoding="utf-8"))
     rubric = json.loads((ROOT / "composability-rubric.json").read_text(encoding="utf-8"))
-    assert data["schema_version"] == rubric["schema_version"] == 1
-    assert data["synthetic"] is True
+    _check(data["schema_version"] == rubric["schema_version"] == 1, "Invalid schema_version")
+    _check(data["synthetic"] is True, "Fixture must be synthetic")
     cases = data["cases"]
     ids = [case["id"] for case in cases]
-    assert len(ids) == len(set(ids))
-    assert set(ids) == set(rubric["criteria"])
+    _check(len(ids) == len(set(ids)), "Duplicate case IDs")
+    _check(set(ids) == set(rubric["criteria"]), "Case IDs must match rubric criteria")
     for case in cases:
-        assert case["user_request"] and case["context"]
+        _check(bool(case["user_request"] and case["context"]), "Missing user_request or context")
         criteria = rubric["criteria"][case["id"]]
-        assert (
+        _check(
             isinstance(criteria, list)
-            and criteria
-            and all(isinstance(item, str) and item.strip() for item in criteria)
+            and bool(criteria)
+            and all(isinstance(item, str) and bool(item.strip()) for item in criteria),
+            "Invalid rubric criteria list",
         )
         names = {tool["name"] for tool in case["available_tools"]}
-        assert names or case.get("supplied_evidence")
+        _check(bool(names or case.get("supplied_evidence")), "Missing tools or supplied_evidence")
         for event in case["tool_history"]:
-            assert event["tool"] in names
-            assert isinstance(event["arguments"], dict)
-            assert isinstance(event["result"]["isError"], bool)
+            _check(event["tool"] in names, "Tool history event must reference available tool")
+            _check(isinstance(event["arguments"], dict), "Tool arguments must be an object")
+            _check(isinstance(event["result"]["isError"], bool), "isError must be boolean")
             if "content" in event["result"]:
-                assert event["result"]["content"]
+                _check(bool(event["result"]["content"]), "Result content must be non-empty")
             else:
-                assert isinstance(event["result"].get("message"), str)
-                assert event["result"]["message"].strip()
-            assert not _is_canadian_route(event["arguments"])
+                _check(
+                    isinstance(event["result"].get("message"), str),
+                    "Result message must be a string",
+                )
+                _check(bool(event["result"]["message"].strip()), "Result message must be non-empty")
+            _check(not _is_canadian_route(event["arguments"]), "Canadian routes are forbidden")
     return cases
 
 
 def load_discovery_rubric() -> dict:
     cases = json.loads((ROOT / "discovery-cases.json").read_text(encoding="utf-8"))
     rubric = json.loads((ROOT / "discovery-rubric.json").read_text(encoding="utf-8"))
-    assert isinstance(rubric.get("grading"), str) and rubric["grading"].strip()
-    assert isinstance(rubric.get("critical_failures"), list) and rubric["critical_failures"]
+    _check(
+        isinstance(rubric.get("grading"), str) and bool(rubric["grading"].strip()),
+        "Discovery rubric grading must be a non-empty string",
+    )
+    _check(
+        isinstance(rubric.get("critical_failures"), list) and bool(rubric["critical_failures"]),
+        "Discovery rubric critical_failures must be non-empty",
+    )
     for case in cases:
         criteria = rubric.get(case["id"])
-        assert (
+        _check(
             isinstance(criteria, list)
-            and criteria
-            and all(isinstance(item, str) and item.strip() for item in criteria)
+            and bool(criteria)
+            and all(isinstance(item, str) and bool(item.strip()) for item in criteria),
+            f"Invalid discovery criteria for {case['id']}",
         )
     return rubric
 
@@ -228,13 +284,16 @@ TRIGGER_LABELS = {"property-research", "setup", "none"}
 
 def load_trigger_cases() -> list[dict]:
     data = json.loads((ROOT / "trigger-cases.json").read_text(encoding="utf-8"))
-    assert data["schema_version"] == 1
-    assert data["synthetic"] is True
+    _check(data["schema_version"] == 1, "Invalid schema_version")
+    _check(data["synthetic"] is True, "Fixture must be synthetic")
     cases = data["cases"]
     for key in ("id", "prompt"):
         values = [case[key] for case in cases]
-        assert all(values) and len(values) == len(set(values))
-    assert all(case["expected_skill"] in TRIGGER_LABELS for case in cases)
+        _check(all(values) and len(values) == len(set(values)), f"Invalid or duplicate {key}")
+    _check(
+        all(case["expected_skill"] in TRIGGER_LABELS for case in cases),
+        "Unknown expected_skill label",
+    )
     return cases
 
 

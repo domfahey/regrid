@@ -382,6 +382,48 @@ def test_return_count_with_max_records_rejected(monkeypatch, capsys):
     assert "requests made: 0" in err
 
 
+def test_paging_option_with_max_records_rejected(monkeypatch, capsys):
+    seen = install(monkeypatch, [feats(1, 2)])
+    argv = ["query", "--fields", '{"geoid":{"eq":"48113"}}']
+    assert cli.main([*argv, "--max-records", "4", "--options", '{"limit":5,"paging":false}']) == 1
+    err = capsys.readouterr().err
+    assert seen == []
+    assert err == "regrid: Invalid Regrid request parameters\nregrid: requests made: 0\n"
+
+
+def test_mid_paging_error_drops_unserializable_partial(monkeypatch, capsys):
+    seen = []
+
+    def handle(request):
+        seen.append(request)
+        if len(seen) == 2:
+            return httpx.Response(500, text="boom")
+        return httpx.Response(200, json={"parcels": {"type": "FeatureCollection", "features": []}})
+
+    monkeypatch.setenv("REGRID_TOKEN", "secret")
+    monkeypatch.setattr(
+        RegridClient,
+        "_decode",
+        staticmethod(
+            lambda response: {
+                "parcels": {
+                    "type": "FeatureCollection",
+                    "features": [{"type": "Feature", "id": 1, "properties": {"x": float("nan")}}],
+                }
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        cli, "RegridClient", lambda **kw: RegridClient(**kw, transport=httpx.MockTransport(handle))
+    )
+    code = cli.main([*POINT, "--max-records", "4", "--options", '{"limit":1}'])
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "HTTP 500" in err
+    assert err.rstrip().splitlines()[-1] == "regrid: requests made: 2"
+
+
 def test_duplicate_ids_within_page_deduplicated(monkeypatch, capsys):
     install(monkeypatch, [feats(1, 1)])
     assert cli.main([*POINT, "--max-records", "4", "--options", '{"limit":2}']) == 0

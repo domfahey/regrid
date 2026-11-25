@@ -605,8 +605,9 @@ def run(
     bad = (
         RegridClient(
             BAD_TOKEN,
-            base_url=client._base_url,
-            tiles_base_url=client._tiles_base_url,
+            base_url=client.base_url,
+            tiles_base_url=client.tiles_base_url,
+            timeout=client.timeout,
             max_limit=2,
             default_limit=1,
         )

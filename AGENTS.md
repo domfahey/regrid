@@ -34,7 +34,7 @@ Preserve dictionary responses and CLI JSON compatibility. CLI commands that call
 
 Use pytest with `test_*.py` files and `test_*` functions. Add regression tests for behavior changes, especially request serialization, validation, and credential redaction. Use `httpx.MockTransport`; ordinary tests must not contact Regrid.
 
-`make test` requires at least 95% combined line and branch coverage for `src/regrid`. `src/regrid/offline/` counts toward coverage. The skill-only `workflow.py` is tested but excluded. Windows CI runs the offline helper tests and the offline and freshness CLI tests (not `test_cli.py`, paging or address-map), so mark POSIX-only assertions with `skipif(os.name == "nt")`. Mark HTTPS integration tests `e2e`; they run separately. Report blocked tests explicitly rather than treating them as passed.
+`make test` requires at least 95% combined line and branch coverage for `src/regrid`. `src/regrid/offline/` counts toward coverage. The skill-only `workflow.py` is tested but excluded. Windows CI runs the offline helper, plugin, discovery, eval, and offline/freshness CLI tests (not `test_cli.py`, paging or address-map), so mark POSIX-only assertions with `skipif(os.name == "nt")`. Mark HTTPS integration tests `e2e`; they run separately. Report blocked tests explicitly rather than treating them as passed.
 
 ## Plugin Changes
 

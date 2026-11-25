@@ -328,8 +328,11 @@ def test_verse_wrapper_with_feature_type_still_requires_properties():
     assert VerseResponse.model_validate(wrapped).verse is not None
 
 
-def test_unused_generic_feature_models_are_not_defined():
-    import regrid.models as models
+def test_generic_feature_models_remain_importable():
+    from regrid.models import Feature, FeatureCollection
 
-    assert not hasattr(models, "Feature")
-    assert not hasattr(models, "FeatureCollection")
+    collection = FeatureCollection.model_validate(
+        {"type": "FeatureCollection", "features": [{"type": "Feature", "id": 1, "properties": {}}]}
+    )
+    assert len(collection.features) == 1
+    assert isinstance(collection.features[0], Feature)

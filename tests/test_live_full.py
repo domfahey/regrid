@@ -620,6 +620,53 @@ def test_run_preserves_custom_base_urls_for_bad_client(monkeypatch, capsys):
     assert "PASS bad token: rejected with HTTP 401" in lines(capsys)
 
 
+def test_run_forwards_public_client_settings_without_private_attrs(monkeypatch, capsys):
+    server = Server()
+    transport = httpx.MockTransport(server)
+    real = live_full.RegridClient
+    calls = []
+
+    def fake_client(*args, **kwargs):
+        bad = real(*args, transport=transport, **kwargs)
+        calls.append(kwargs)
+        return bad
+
+    class PublicSettingsView:
+        def __init__(self, inner):
+            self._inner = inner
+
+        def __getattr__(self, name):
+            if name in {"_base_url", "_tiles_base_url", "_timeout"}:
+                raise AssertionError(f"accessed private attribute {name}")
+            return getattr(self._inner, name)
+
+    monkeypatch.setattr(live_full, "RegridClient", fake_client)
+    with real(
+        TOKEN,
+        base_url="https://staging.example/api/v2",
+        tiles_base_url="https://tiles.staging.example",
+        timeout=12.5,
+        transport=transport,
+        max_limit=2,
+        default_limit=1,
+    ) as client:
+        assert client.base_url == "https://staging.example/api/v2"
+        assert client.tiles_base_url == "https://tiles.staging.example"
+        assert client.timeout == 12.5
+        with pytest.raises(AttributeError):
+            client.base_url = "https://other.example"  # type: ignore[misc]
+        with pytest.raises(AttributeError):
+            client.tiles_base_url = "https://other.example"  # type: ignore[misc]
+        with pytest.raises(AttributeError):
+            client.timeout = 1.0  # type: ignore[misc]
+        live_full.run(PublicSettingsView(client), "private-address")  # type: ignore[arg-type]
+    assert len(calls) == 1
+    assert calls[0]["base_url"] == "https://staging.example/api/v2"
+    assert calls[0]["tiles_base_url"] == "https://tiles.staging.example"
+    assert calls[0]["timeout"] == 12.5
+    assert "PASS bad token: rejected with HTTP 401" in lines(capsys)
+
+
 def test_by_path_skips_when_subject_lacks_ll_uuid(capsys):
     subject = json.loads(json.dumps(SUBJECT))
     del subject["properties"]["ll_uuid"]

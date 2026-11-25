@@ -411,6 +411,28 @@ def test_query_accepts_mapping_proxy_geojson(recording_client):
     }
 
 
+def test_nested_mapping_proxy_geojson_accepted_by_query_point_and_area(recording_client):
+    client, requests = recording_client
+    feature = MappingProxyType(
+        {
+            "type": "Feature",
+            "geometry": MappingProxyType({"type": "Point", "coordinates": (-75.0, 39.9)}),
+            "properties": MappingProxyType({"nested": (MappingProxyType({"ok": True}),)}),
+        }
+    )
+    expected = {
+        "type": "Feature",
+        "geometry": {"type": "Point", "coordinates": [-75.0, 39.9]},
+        "properties": {"nested": [{"ok": True}]},
+    }
+    client.query({"geoid": {"eq": "48113"}}, geojson=feature)
+    client.point(geojson=feature)
+    client.area(geojson=feature)
+    assert len(requests) == 3
+    for req in requests:
+        assert json.loads(req.url.params["geojson"]) == expected
+
+
 def test_parcel_endpoints_validate_country_once_per_request(recording_client, monkeypatch):
     import regrid.endpoints as endpoints_mod
 

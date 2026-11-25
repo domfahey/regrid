@@ -170,6 +170,13 @@ def test_export_rejects_empty_output_path(tmp_path, capsys, flag):
     assert capsys.readouterr().err == "regrid: Output path cannot be empty\n"
 
 
+def test_export_rejects_empty_response_path(tmp_path, capsys):
+    out = tmp_path / "o.csv"
+    assert cli.main(["export", "", "--csv", str(out)]) == 1
+    assert capsys.readouterr().err == "regrid: Response path cannot be empty\n"
+    assert not out.exists()
+
+
 def test_map_rejects_empty_path_options(tmp_path, capsys):
     response = write_response(tmp_path / "r.json", good_feature())
     out = tmp_path / "m.html"

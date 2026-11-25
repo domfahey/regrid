@@ -20,7 +20,7 @@ import sys
 import unicodedata
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 R = 6378137.0
 SQFT_PER_SQM = 10.763910416709722
@@ -40,6 +40,22 @@ OUTSIDE_US = "Geometry lies outside the United States"
 
 class MapError(ValueError):
     """A diagnostic containing only fixed invariants."""
+
+
+def _reject_non_finite(_token: str) -> NoReturn:
+    raise MapError("Response contains a value that is not JSON (NaN or Infinity)")
+
+
+def _load_json(path: Path, invalid_message: str) -> Any:
+    try:
+        return json.loads(
+            Path(path).read_text(encoding="utf-8"),
+            parse_constant=_reject_non_finite,
+        )
+    except MapError:
+        raise
+    except (ValueError, RecursionError) as exc:
+        raise MapError(invalid_message) from exc
 
 
 def load_features(document: object) -> list[dict]:
@@ -377,10 +393,7 @@ def _neighbour_data(feature: object) -> tuple[dict[str, Any], list[str]]:
 
 def load_neighbours(path: Path, subject_ids: set[str]) -> tuple[list[dict[str, Any]], list[str]]:
     """Drawable neighbour outlines and a warning for each skipped entry."""
-    try:
-        document = json.loads(Path(path).read_text(encoding="utf-8"))
-    except (ValueError, RecursionError) as exc:
-        raise MapError("Neighbours file is not valid JSON") from exc
+    document = _load_json(path, "Neighbours file is not valid JSON")
     parcels = document.get("parcels") if isinstance(document, dict) else None
     features = parcels.get("features") if isinstance(parcels, dict) else None
     if not isinstance(features, list):
@@ -509,12 +522,13 @@ __WARNINGS__<div id="banners"></div>
 
 def _json_for_script(value: object) -> str:
     """JSON safe to embed in a script element: <, > and & never appear literally."""
-    return (
-        json.dumps(value, ensure_ascii=True)
-        .replace("<", "\\u003c")
-        .replace(">", "\\u003e")
-        .replace("&", "\\u0026")
-    )
+    try:
+        dumped = json.dumps(value, ensure_ascii=True, allow_nan=False)
+    except ValueError as error:
+        raise MapError("Map output contains a value that is not JSON (NaN or Infinity)") from error
+    except RecursionError as error:
+        raise MapError(_TOO_DEEP_ERROR) from error
+    return dumped.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
 
 
 def render_html(
@@ -643,10 +657,7 @@ def render(
         raise MapError("Output directory does not exist")
     if Path(output_path).is_dir():
         raise MapError("Output path is a directory")
-    try:
-        document = json.loads(Path(response_path).read_text(encoding="utf-8"))
-    except (ValueError, RecursionError) as exc:
-        raise MapError("Response file is not valid JSON") from exc
+    document = _load_json(response_path, "Response file is not valid JSON")
     features = load_features(document)
     if not all(isinstance(feature, dict) for feature in features):
         raise MapError("Expected a Regrid parcel response with parcels.features")
@@ -790,10 +801,7 @@ def export(
             raise MapError("Output path is a directory")
         if same_file_key(target) == same_file_key(response_path):
             raise MapError("Output must not be the response file")
-    try:
-        document = json.loads(Path(response_path).read_text(encoding="utf-8"))
-    except (ValueError, RecursionError) as exc:
-        raise MapError("Response file is not valid JSON") from exc
+    document = _load_json(response_path, "Response file is not valid JSON")
     features = load_features(document)
     for number, feature in enumerate(features):
         if not isinstance(feature, dict):
@@ -859,42 +867,53 @@ def export(
     }
 
 
+def _require_path(value: str, label: str) -> Path:
+    if value == "":
+        raise MapError(f"{label} path cannot be empty")
+    return Path(value)
+
+
+def _optional_path(value: str | None, label: str) -> Path | None:
+    return None if value is None else _require_path(value, label)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     cmd = commands.add_parser("render", help="render a saved parcel response as a satellite map")
-    cmd.add_argument("response", type=Path)
-    cmd.add_argument("output", type=Path)
+    cmd.add_argument("response")
+    cmd.add_argument("output")
     cmd.add_argument("--feature", type=int, metavar="N", help="zero-based feature index")
     cmd.add_argument("--all-candidates", action="store_true")
     cmd.add_argument("--retrieved-at", metavar="ISO")
     cmd.add_argument("--replace", action="store_true")
-    cmd.add_argument("--neighbours", type=Path, metavar="FILE", help="neighbouring parcels")
+    cmd.add_argument("--neighbours", metavar="FILE", help="neighbouring parcels")
     exp = commands.add_parser("export", help="export a saved parcel response to CSV and/or GeoJSON")
-    exp.add_argument("response", type=Path)
-    exp.add_argument("--csv", type=Path, metavar="FILE")
-    exp.add_argument("--geojson", type=Path, metavar="FILE")
+    exp.add_argument("response")
+    exp.add_argument("--csv", metavar="FILE")
+    exp.add_argument("--geojson", metavar="FILE")
     exp.add_argument("--all-fields", action="store_true")
     exp.add_argument("--replace", action="store_true")
     args = parser.parse_args(argv)
     try:
+        response_path = _require_path(args.response, "Response")
         if args.command == "export":
             summary = export(
-                args.response,
-                csv_path=args.csv,
-                geojson_path=args.geojson,
+                response_path,
+                csv_path=_optional_path(args.csv, "CSV"),
+                geojson_path=_optional_path(args.geojson, "GeoJSON"),
                 all_fields=args.all_fields,
                 replace=args.replace,
             )
         else:
             summary = render(
-                args.response,
-                args.output,
+                response_path,
+                _require_path(args.output, "Output"),
                 index=args.feature,
                 all_candidates=args.all_candidates,
                 retrieved_at=args.retrieved_at,
                 replace=args.replace,
-                neighbours_path=args.neighbours,
+                neighbours_path=_optional_path(args.neighbours, "Neighbours"),
             )
     except (MapError, OSError, ValueError, RecursionError) as exc:
         message = " ".join(str(exc).split()) or type(exc).__name__

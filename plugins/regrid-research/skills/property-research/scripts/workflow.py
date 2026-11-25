@@ -91,6 +91,27 @@ def _validate_request(request: Any, version: str) -> None:
         raise ValidationError("Invalid requested query type")
 
 
+def _check_nesting(value: Any, max_depth: int = 100) -> None:
+    """Reject deeply nested containers iteratively before deepcopy or json.dumps."""
+    stack: list[tuple[Any, int]] = [(value, 0)]
+    while stack:
+        current, depth = stack.pop()
+        if isinstance(current, dict):
+            next_depth = depth + 1
+            if next_depth > max_depth:
+                raise ValidationError("$: Handoff nesting exceeds checkpoint limit")
+            for item in current.values():
+                if isinstance(item, (dict, list)):
+                    stack.append((item, next_depth))
+        elif isinstance(current, list):
+            next_depth = depth + 1
+            if next_depth > max_depth:
+                raise ValidationError("$: Handoff nesting exceeds checkpoint limit")
+            for item in current:
+                if isinstance(item, (dict, list)):
+                    stack.append((item, next_depth))
+
+
 def validate(document: Document) -> None:
     """Check identity, evidence, status, and ledger invariants without changing data."""
     _validate(document, check_budget=True)
@@ -112,6 +133,7 @@ def _validate(document: Document, *, check_budget: bool, check_json: bool = True
         | ({"reconciliations"} if version == "1.1" else set()),
         "Invalid handoff fields",
     )
+    _check_nesting(document)
     serialized: str | None = None
     if check_json:
         try:
@@ -596,7 +618,13 @@ def _write_checkpoint(data: str, path: Path, *, replace: bool) -> None:
         if replace:
             os.replace(temporary, path)
         else:
-            os.link(temporary, path)
+            try:
+                os.link(temporary, path)
+            except FileExistsError:
+                raise
+            except OSError:
+                with open(path, "xb") as handle:
+                    handle.write(data.encode("utf-8"))
     finally:
         if temporary is not None:
             Path(temporary).unlink(missing_ok=True)
@@ -665,9 +693,6 @@ def main() -> int:
             return 1
         except ValidationError as exc:
             print(f"Cannot save checkpoint: {exc}")
-            return 1
-        except RecursionError:
-            print("Cannot save checkpoint: $: Handoff nesting exceeds checkpoint limit")
             return 1
         except OSError:
             print("Cannot write checkpoint; check the destination parent exists and is writable")

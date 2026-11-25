@@ -526,7 +526,7 @@ def test_render_rejects_invalid_json_and_non_object_features(tmp_path):
                     [-75.03, 39.9],
                     [-75.02, 39.9],
                     [-75.02, 39.91],
-                    [float("nan"), 39.9],
+                    ["nan", 39.9],
                     [-75.03, 39.9],
                 ]
             ],
@@ -1340,7 +1340,7 @@ def test_export_geojson_recursion_error_is_map_error(tmp_path, monkeypatch):
     deep = _deep_list()
     response = write_response(tmp_path / "r.json", good_feature())
     doc = json.loads(response.read_text(encoding="utf-8"))
-    monkeypatch.setattr(parcel_map.json, "loads", lambda _s: doc)
+    monkeypatch.setattr(parcel_map.json, "loads", lambda _s, **_kwargs: doc)
     doc["parcels"]["features"][0]["properties"]["headline"] = deep
     gj = tmp_path / "o.geojson"
     with pytest.raises(MapError, match="^Response or input is nested too deeply$"):
@@ -1371,3 +1371,72 @@ def test_main_catches_recursion_error_and_writes_utf8_non_nan_summary(
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err.startswith("error: ") and captured.err.count("\n") == 1
+
+
+def test_main_rejects_empty_neighbours_path(tmp_path, capsys):
+    response = write_response(tmp_path / "r.json", good_feature())
+    out = tmp_path / "out.html"
+    assert parcel_map.main(["render", str(response), str(out), "--neighbours", ""]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == "error: Neighbours path cannot be empty\n"
+    assert not out.exists()
+
+
+@pytest.mark.parametrize(
+    ("subcommand", "expected_err"),
+    [
+        ("render_empty_response", "error: Response path cannot be empty\n"),
+        ("render_empty_output", "error: Output path cannot be empty\n"),
+        ("export_empty_response", "error: Response path cannot be empty\n"),
+        ("export_empty_csv", "error: CSV path cannot be empty\n"),
+        ("export_empty_geojson", "error: GeoJSON path cannot be empty\n"),
+    ],
+)
+def test_main_rejects_empty_cli_paths(tmp_path, capsys, subcommand, expected_err):
+    response = write_response(tmp_path / "r.json", good_feature())
+    out = tmp_path / "out.html"
+    csv_out = tmp_path / "out.csv"
+    gj_out = tmp_path / "out.geojson"
+    argv_map = {
+        "render_empty_response": ["render", "", str(out)],
+        "render_empty_output": ["render", str(response), ""],
+        "export_empty_response": ["export", "", "--csv", str(csv_out)],
+        "export_empty_csv": ["export", str(response), "--csv", ""],
+        "export_empty_geojson": ["export", str(response), "--geojson", ""],
+    }
+    assert parcel_map.main(argv_map[subcommand]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == expected_err
+    assert not out.exists() and not csv_out.exists() and not gj_out.exists()
+
+
+@pytest.mark.parametrize("field_location", ["headline", "owner"])
+def test_render_rejects_nan_in_text_fields(tmp_path, field_location):
+    item = good_feature()
+    if field_location == "headline":
+        item["properties"]["headline"] = float("nan")
+    else:
+        item["properties"]["fields"]["owner"] = float("nan")
+    response = write_response(tmp_path / "r.json", item)
+    out = tmp_path / "m.html"
+    with pytest.raises(MapError, match="NaN or Infinity"):
+        parcel_map.render(response, out)
+    assert not out.exists()
+
+
+def test_render_skips_neighbours_with_nan_instead_of_rendering_nan(tmp_path):
+    response = write_response(tmp_path / "r.json", good_feature())
+    near = write_response(tmp_path / "n.json", _other(square(lon=-75.0289), owner=float("nan")))
+    out = tmp_path / "m.html"
+    summary = parcel_map.render(response, out, neighbours_path=near)
+    assert summary["neighbours"] == 0
+    assert any("NaN or Infinity" in warning for warning in summary["warnings"])
+
+
+def test_json_for_script_rejects_nan_and_deep_nesting():
+    with pytest.raises(MapError, match="NaN or Infinity"):
+        parcel_map._json_for_script({"bad": float("nan")})
+    with pytest.raises(MapError, match="^Response or input is nested too deeply$"):
+        parcel_map._json_for_script(_deep_list())

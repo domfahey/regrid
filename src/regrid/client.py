@@ -73,6 +73,7 @@ class RegridClient(EndpointsMixin):
         self._token = settings.token
         self._base_url = settings.base_url
         self._tiles_base_url = settings.tiles_base_url
+        self._timeout = settings.timeout
         self.request_count = 0
         self._http = httpx.Client(
             timeout=settings.timeout,
@@ -80,6 +81,21 @@ class RegridClient(EndpointsMixin):
             follow_redirects=False,
             event_hooks={"request": [self._count_request]},
         )
+
+    @property
+    def base_url(self) -> str:
+        """Configured API base URL."""
+        return self._base_url
+
+    @property
+    def tiles_base_url(self) -> str:
+        """Configured tileserver base URL."""
+        return self._tiles_base_url
+
+    @property
+    def timeout(self) -> float:
+        """Configured request timeout in seconds."""
+        return self._timeout
 
     def _count_request(self, request: httpx.Request) -> None:
         # Fires as httpx is about to send, so requests rejected before sending count 0.

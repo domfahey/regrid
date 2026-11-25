@@ -446,21 +446,24 @@ def _deeply_nested_doc(depth: int = 1500):
     return doc
 
 
-def test_validate_rejects_excessive_nesting():
-    doc = _deeply_nested_doc(1500)
+@pytest.mark.parametrize("depth", [500, 1500])
+def test_validate_rejects_excessive_nesting(depth):
+    doc = _deeply_nested_doc(depth)
     with pytest.raises(workflow.ValidationError, match="nesting|finite JSON"):
         workflow.validate(doc)
 
 
-def test_save_checkpoint_rejects_excessive_nesting_with_validation_error(tmp_path):
-    doc = _deeply_nested_doc(1500)
+@pytest.mark.parametrize("depth", [500, 1500])
+def test_save_checkpoint_rejects_excessive_nesting_with_validation_error(tmp_path, depth):
+    doc = _deeply_nested_doc(depth)
     dest = tmp_path / "out.json"
-    with pytest.raises(workflow.ValidationError):
+    with pytest.raises(workflow.ValidationError, match="nesting"):
         workflow.save_checkpoint(doc, dest, requested=True)
     assert not dest.exists()
 
 
-def test_cli_save_rejects_excessive_nesting_without_traceback(tmp_path):
+@pytest.mark.parametrize("depth", [500, 1500])
+def test_cli_save_rejects_excessive_nesting_without_traceback(tmp_path, depth):
     import subprocess
     import sys
 
@@ -473,7 +476,7 @@ def test_cli_save_rejects_excessive_nesting_without_traceback(tmp_path):
     source = tmp_path / "deep.json"
     dest = tmp_path / "out.json"
     # Build JSON text directly so Python 3.10's json.dumps does not fail in test setup.
-    nested_json = "[" * 1500 + '"leaf"' + "]" * 1500
+    nested_json = "[" * depth + '"leaf"' + "]" * depth
     source.write_text(json.dumps(doc).replace('"__DEEP__"', nested_json, 1), encoding="utf-8")
     proc = subprocess.run(
         [sys.executable, str(SCRIPT), "save", str(source), str(dest)],
@@ -486,6 +489,53 @@ def test_cli_save_rejects_excessive_nesting_without_traceback(tmp_path):
     assert "Traceback" not in proc.stdout
     assert "Traceback" not in proc.stderr
     assert not dest.exists()
+
+
+def test_deep_nesting_cannot_reach_reserve_attempt_or_upgrade_workflow():
+    doc = _deeply_nested_doc(500)
+    with pytest.raises(workflow.ValidationError, match="nesting"):
+        workflow.upgrade_workflow(doc)
+    pending_doc = workflow.new_workflow("deep-pending", [request()], 1, 1)
+    pending_doc["results"][0]["candidates"] = [
+        {
+            "parcel_id": None,
+            "address": None,
+            "facts": {"nested": [[["leaf"]]]},
+            "provenance": {
+                "provider": "Regrid",
+                "retrieved_at": "2026-10-27T18:00:00Z",
+                "source_refreshed_at": None,
+                "source_url": None,
+                "evidence_id": "e-1",
+            },
+        }
+    ]
+    nested: list = ["leaf"]
+    for _ in range(500):
+        nested = [nested]
+    pending_doc["results"][0]["candidates"][0]["facts"]["nested"] = nested
+    with pytest.raises(workflow.ValidationError, match="nesting"):
+        workflow.reserve_attempt(pending_doc, ["input-000001"], 1)
+
+
+def test_save_checkpoint_falls_back_when_os_link_unsupported(tmp_path, monkeypatch):
+    import errno
+
+    def unsupported_link(src, dst):
+        raise OSError(errno.ENOTSUP, "hard links not supported")
+
+    monkeypatch.setattr(workflow.os, "link", unsupported_link)
+    dest = tmp_path / "checkpoint.json"
+    doc = state()
+    workflow.save_checkpoint(doc, dest, requested=True)
+    assert workflow.load_checkpoint(dest) == doc
+    assert list(tmp_path.iterdir()) == [dest]
+
+    original = dest.read_bytes()
+    with pytest.raises(FileExistsError):
+        workflow.save_checkpoint(doc, dest, requested=True)
+    assert dest.read_bytes() == original
+    assert list(tmp_path.iterdir()) == [dest]
 
 
 def test_upgrade_workflow_on_1_1_validates_once(monkeypatch):

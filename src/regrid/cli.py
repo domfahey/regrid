@@ -66,6 +66,8 @@ def _run_map(args: dict[str, Any]) -> None:
 
 
 def _run_export(args: dict[str, Any]) -> None:
+    if not args["response"]:
+        raise ValueError("Response path cannot be empty")
     if args["csv"] is not None and not args["csv"]:
         raise ValueError("Output path cannot be empty")
     if args["geojson"] is not None and not args["geojson"]:
@@ -387,6 +389,8 @@ def _validate_paging(
     client: RegridClient, command: str, args: dict[str, Any], options: dict[str, Any]
 ) -> None:
     """Run page 2's validation up front so it cannot fail after page 1 is billed."""
+    if "paging" in options:
+        raise _PagingError("Invalid Regrid request parameters")
     if options.get("return_count"):
         raise _PagingError("--max-records conflicts with return_count")
     try:
@@ -898,14 +902,14 @@ def main(argv: list[str] | None = None) -> int:
         output_path: Path | None = None
         if output is not None:
             if not output:
-                raise ValueError("Output path cannot be empty")
+                raise parcel_map.MapError("Output path cannot be empty")
             output_path = Path(output)
             if not output_path.parent.is_dir():
-                raise ValueError("Output directory does not exist")
+                raise parcel_map.MapError("Output directory does not exist")
             if output_path.is_dir():
-                raise ValueError(f"{output_path} is a directory")
+                raise parcel_map.MapError("Output path is a directory")
             if not replace and os.path.lexists(output_path):
-                raise ValueError(f"{output_path} exists; pass --replace to overwrite it")
+                raise parcel_map.MapError(parcel_map.EXISTS)
         options = _object(args.pop("options", "{}"))
         for name in ("geojson", "fields", "details", "metadata"):
             if args.get(name) is not None:
@@ -932,7 +936,7 @@ def main(argv: list[str] | None = None) -> int:
     except (RegridError, ValueError, TypeError, OSError, RecursionError) as exc:
         # SDK messages are sanitized; local messages may contain supplied option names/paths.
         generic = "Invalid input or output file"
-        if isinstance(exc, (RegridError, _PagingError, RecursionError)):
+        if isinstance(exc, (RegridError, _PagingError, parcel_map.MapError, RecursionError)):
             message = _error_message(exc, os_error=generic, type_error=generic)
         else:
             message = generic
