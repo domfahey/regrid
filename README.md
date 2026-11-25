@@ -273,8 +273,9 @@ For Regrid Research 0.9.7 and SDK 0.5.0 (PR #33 and PR #34):
 - **Tests:** `make check` passed **1639 tests** (2 skipped) with **97.69%** SDK/CLI coverage, `make e2e` passed **56**, `claude plugin validate --strict` passed and the 27 eval fixtures validated.
 - **CI:** passed on Python 3.10, 3.12 and 3.13 and on Windows.
 - **Packaging:** `uv build` verified a 28-file allowlisted sdist (`[tool.hatch.build.targets.sdist]` `only-include`) and wheel with 0 leaked local files; all 3 plugin archives rebuilt deterministically.
+- **Live (authorized, 2026-11-24):** `make live` passed on SDK `0.5.0` (169 schema definitions, 0 type differences, geometry present, observed delta 1); direct Streamable HTTP `/mcp` against `https://support.regrid.com/mcp` with `x-regrid-token` verified `tools/list` (`tools.json` parity), `list-specs`, authenticated `GET /usage`, and `POST /parcels/area` with `return_parcels=true` (`limit=1`, returning `area` + 1 parcel feature with geometry and fields).
 - **Map render check:** not re-rendered in a browser for `0.9.7` after `map.py` hardening (`NaN`/`Infinity` rejection, empty-path guards, `same_file_key` error handling); last plain-browser render check was `0.9.3`. See `plugins/regrid-research/evals/results/map-hosts-0.9.7.json`.
-- **Not run:** the Claude Code, Claude apps and Cowork map host checks, a fresh browser map render for `0.9.7`, live API checks against `0.5.0`, a live `/mcp` connection, typeahead, POST area `return_parcels`, and model and Cowork acceptance evaluations.
+- **Not run:** the Claude Code, Claude apps and Cowork host UI/map checks, a fresh browser map render for `0.9.7`, typeahead (needs an Enterprise token), and model and Cowork acceptance evaluations.
 
 For earlier release verification history and retained reports (`composability-0.5.0-report.json`, `authoring-0.4.0-report.json`, `final-report.json`, `forward-report.json`), see [changelog.md](changelog.md) and [plugins/regrid-research/evals/README.md](plugins/regrid-research/evals/README.md#historical-verification).
 

@@ -169,9 +169,7 @@ def test_drifted_handles_unknown_endpoint_path_without_keyerror() -> None:
     assert _drifted(bad_doc) == ["return_geometry not on ['/parcels/nonexistent']"]
 
 
-def test_post_area_example_omits_unverified_return_parcels_and_disables_stacked_and_premium() -> (
-    None
-):
+def test_post_area_example_sets_return_parcels_and_disables_stacked_and_premium() -> None:
     section = DOC.split("### Large geometry (POST search)", 1)[1].split("\n### ", 1)[0]
     match = re.search(r"```json\n(.*?)\n```", section, re.S)
     assert match is not None, "POST /parcels/area JSON example missing"
@@ -180,7 +178,7 @@ def test_post_area_example_omits_unverified_return_parcels_and_disables_stacked_
     assert har["method"] == "POST"
     assert har["url"] == "https://app.regrid.com/api/v2/parcels/area"
     query = {item["name"]: item["value"] for item in har["queryString"]}
-    assert "return_parcels" not in query
+    assert query.get("return_parcels") == "true"
     assert query.get("return_stacked") == "false"
     for flag in (
         "return_zoning",
@@ -190,4 +188,4 @@ def test_post_area_example_omits_unverified_return_parcels_and_disables_stacked_
     ):
         assert query.get(flag) == "false", flag
     normalized = " ".join(section.split())
-    assert "POST point accepts `return_parcels=true`; POST area remains unverified." in normalized
+    assert "Both POST point and POST area accept `return_parcels=true`" in normalized

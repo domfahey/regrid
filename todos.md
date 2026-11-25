@@ -12,47 +12,44 @@ features/polish (`P2`–`P3`).
 
 ### P0 — Unverified core behavior (highest risk)
 
-1. [ ] **Live `/mcp` connection & SDK `0.5.0` smoke check** (**authorization**: credentialed, may incur parcel charges):
-   exercise the plugin's real transport (`https://support.regrid.com/mcp`) end to end,
-   including POST geometry search over MCP and whether `POST /parcels/area` accepts
-   `return_parcels=true` (live checks so far used SDK/CLI only on `0.4.4`/`0.4.5` and
-   verified `return_parcels` on POST point only). Optionally re-run `make live` / `make live-full`
-   against SDK `0.5.0` to verify the `live_full.py` fixes and `regrid tile --replace`.
-2. [ ] **Model evaluations** (**authorization**: model-billed):
+1. [ ] **Model evaluations** (**authorization**: model-billed):
    run the discovery (`run_discovery_claude.py`), feature, and composition evals in
    `plugins/regrid-research/evals/` against a real Claude model and grade against rubrics.
    Release checks validate fixture structure only (`27` synthetic fixtures); no real model
    behavior check has run since `0.5.0`.
 
-### P1 — Map verification after `0.9.7` `map.py` hardening
+### P1 — Map & host verification after `0.9.7` `map.py` hardening
 
-3. [ ] **Synthetic plain-browser map render check for `0.9.7`** *(zero API cost, unblocked)*:
+2. [ ] **Synthetic plain-browser map render check for `0.9.7`** *(zero API cost, unblocked)*:
    render a synthetic US response + neighbours via `regrid map --neighbours` and confirm
    Leaflet, Esri imagery, outlines, info panel, attribution, and clean console in a local
    browser. Unlike `0.9.4`–`0.9.6`, `0.9.7` modified `map.py` on the `render()` path
    (`_load_json`, `_check_and_prune`, `_json_for_script`), so the `0.9.3` browser baseline
    no longer covers identical code.
-4. [ ] **Map in the real hosts** *(manual host apps)*:
-   open `/regrid-research:address-map` once each in Claude Code, the Claude apps, and Cowork
-   to confirm that `unpkg.com` (Leaflet) and Esri imagery load under each host's CSP/sandbox,
-   and record `verified` or `failed` in `plugins/regrid-research/evals/results/map-hosts-0.9.7.json`
-   (all three hosts remain `not_run`).
+3. [ ] **Real-host plugin & map checks** *(manual host apps; **authorization** for live lookup)*:
+   verify plugin loading, MCP host connector auth, and `/regrid-research:address-map` once
+   each in Claude Code, the Claude apps, and Cowork (confirming `unpkg.com` Leaflet and Esri
+   imagery load under each host's CSP/sandbox), and record `verified` or `failed` in
+   `plugins/regrid-research/evals/results/map-hosts-0.9.7.json` (all three hosts remain
+   `not_run`). Direct Streamable HTTP `/mcp` transport (`GET /usage` + `POST /parcels/area`
+   `return_parcels=true`) and SDK `0.5.0` `make live` were verified on 2026-11-24; host UI
+   import and Cowork header support remain unverified.
 
 ### P2 — Optional feature additions (when wanted)
 
-5. [ ] **`owner-portfolio` command** (**decision**):
+4. [ ] **`owner-portfolio` command** (**decision**):
    count matching parcels first, then page results to CSV within an agreed budget.
    *Constraint:* `/parcels/owner` supports neither `return_count` nor `offset_id` paging, so
    this command must use `/parcels/query` with `fields[owner][ilike]` (queryable in
    `parcel_fields.json`) plus a geographic scope (`path` or `geojson`). Confirm whether
    substring matching via `/parcels/query` (`owner` is partially standardized) matches the
    intended workflow before building.
-6. [ ] **Offline field catalogs for non-parcel schemas**:
+5. [ ] **Offline field catalogs for non-parcel schemas**:
    snapshot `/schemas/zoning` (26 fields), `/schemas/building` (19 fields), `/schemas/address`
    (37 fields), and `/schemas/enhanced_ownership` (60 fields) alongside `parcel_fields.json`
    so `fields.py` / `regrid fields` can answer addon field questions without spending a
    `/schemas/*` request (4 public schema fetches at snapshot time; no parcel charges).
-7. [ ] **`county-freshness` command** (**decision**):
+6. [ ] **`county-freshness` command** (**decision**):
    wrap county freshness lookup as a plugin command.
    *Constraint:* `/verse` is CLI-only (`regrid freshness`) and forbidden over MCP, while
    `plugins/regrid-research/commands/` ships in both Claude Code and Cowork archives. Decide
@@ -61,9 +58,19 @@ features/polish (`P2`–`P3`).
 
 ### P3 — Optional directory polish
 
-8. [ ] **Plugin icon (`ICON_MISSING` warning)** *(only if submitting to Claude's plugin directory)*:
+7. [ ] **Plugin icon (`ICON_MISSING` warning)** *(only if submitting to Claude's plugin directory)*:
    add a square PNG (512–2048 px, <2 MB) at `plugins/regrid-research/.claude-plugin/icon.png`
    to clear the non-blocking `ICON_MISSING` warning from `claude plugin validate --strict`.
+
+## Recently completed
+
+- [x] **Live `/mcp` connection & SDK `0.5.0` smoke check** (2026-11-24, authorized):
+  `make live` passed on SDK `0.5.0` (169 schema definitions, 0 type differences, geometry
+  present, observed delta 1); direct Streamable HTTP `/mcp` against
+  `https://support.regrid.com/mcp` with `x-regrid-token` verified `tools/list` (`tools.json`
+  parity), `list-specs`, authenticated `GET /usage`, and `POST /parcels/area` with
+  `return_parcels=true` (`limit=1`, returning `area` + 1 parcel feature with geometry and
+  fields). Claude Code / Cowork host UI import remains tracked in P1 #3.
 
 ## Watch
 

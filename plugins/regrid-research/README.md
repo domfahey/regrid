@@ -201,12 +201,17 @@ Status for 0.9.7:
   with synthetic data (imagery, outlines, info panel and Esri credit shown; no
   console errors). Not re-rendered in a browser for `0.9.7` after `map.py`
   hardening; see `evals/results/map-hosts-0.9.7.json`.
+- Passed (live, authorized, `2026-11-24`): direct Streamable HTTP `/mcp` check
+  against `https://support.regrid.com/mcp` (`x-regrid-token` header) verified
+  `tools/list` (`tools.json` parity), `list-specs`, authenticated `GET /usage`, and
+  `POST /parcels/area` with `return_parcels=true` (`limit=1`, returning `area` + 1
+  parcel feature with geometry and fields); `make live` also passed on SDK `0.5.0`.
 - Earlier live checks (authorized, `2026-11-19` / `2026-11-20`): `make live-full`
   checked every read-only endpoint (26 requests) and one POST point request
-  verified `return_parcels=true`; not re-run for `0.9.7`.
-- Not run: Claude Code, Claude apps and Cowork host checks of the map page and
-  command; a fresh browser map render for `0.9.7`; a live `/mcp` connection; and
-  model or Cowork acceptance.
+  verified `return_parcels=true`.
+- Not run: Claude Code, Claude apps and Cowork host UI/map checks (and host MCP
+  connector import); a fresh browser map render for `0.9.7`; and model or Cowork
+  acceptance.
 
 Earlier verification logs (0.2.0 to 0.5.0) live in the repository's
 [evals README](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/README.md#historical-verification).

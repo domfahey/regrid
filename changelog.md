@@ -6,7 +6,9 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
-No changes yet.
+### Changed
+
+- Skill (`mcp-tools.md`): updated the `POST /parcels/area` example and notes to include `return_parcels=true` and recorded the 2026-11-24 authorized live direct `/mcp` check (`tools/list`, `list-specs`, `GET /usage`, and `POST /parcels/area` with `return_parcels=true`) plus SDK `0.5.0` `make live` verification.
 
 ## [SDK 0.5.0][sdk-v0.5.0] and [Regrid Research 0.9.7][regrid-research-v0.9.7] - 2026-11-24
 

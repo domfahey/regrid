@@ -158,6 +158,7 @@ parameters, and `{"geojson": <geometry>}` as the body (the shape the SDK sends):
     "url": "https://app.regrid.com/api/v2/parcels/area",
     "queryString": [
       {"name":"limit","value":"5"},
+      {"name":"return_parcels","value":"true"},
       {"name":"return_stacked","value":"false"},
       {"name":"return_zoning","value":"false"},
       {"name":"return_matched_buildings","value":"false"},
@@ -177,8 +178,8 @@ Point or MultiPoint GeoJSON in the body, plus return_stacked=false and the same 
 false premium flags. POST point takes no `offset_id` or `return_geometry`; POST area
 accepts `limit`, `radius`, `return_count`, `offset_id`, `return_geometry` and the
 premium flags. Every other POST (`/report`, Batch creation) stays forbidden, as do
-`/client_token/typeahead` and all DELETEs. POST point accepts `return_parcels=true`;
-POST area remains unverified. GET searches set it explicitly.
+`/client_token/typeahead` and all DELETEs. Both POST point and POST area accept
+`return_parcels=true` (verified live), and GET searches set it explicitly.
 
 ### Response options
 
@@ -281,8 +282,14 @@ Dated observations, not instructions; the live schema takes precedence.
   `usage` and no MCP error; no parcels were retrieved. This verifies direct MCP header
   forwarding, not Claude/Cowork import or credential storage.
 - The address example above is schema-verified but has not been executed through MCP.
-- November 20, 2026: a live SDK check verified POST point accepts `return_parcels=true`;
-  POST area `return_parcels` and POST geometry search over MCP remain unverified.
+- November 20, 2026: a live SDK check verified POST point accepts `return_parcels=true`.
+- November 24, 2026 at `https://support.regrid.com/mcp`: direct Streamable HTTP MCP check
+  (Regrid Support `2.3.1`, protocol `2025-03-26`, `x-regrid-token` header) confirmed
+  `tools/list` matches `tools.json`, `list-specs` returns the three `(reference)` titles,
+  `execute-request` `GET /usage` succeeded with `usage`, and `execute-request`
+  `POST /parcels/area` with `return_parcels=true` and `limit=1` succeeded with `area` and
+  1 parcel feature (with geometry and fields). Verifies direct MCP transport and header
+  forwarding, not Claude Code/Cowork host UI import or credential storage.
 
 Sources: live MCP initialization, tools/list, the discovery calls above, and the usage
 call; [Regrid MCP docs](https://support.regrid.com/docs/mcp-server).
