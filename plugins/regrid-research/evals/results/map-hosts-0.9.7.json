@@ -1,0 +1,9 @@
+{
+  "plugin_version": "0.9.7",
+  "hosts": {
+    "claude_code": "not_run",
+    "claude_apps": "not_run",
+    "cowork": "not_run"
+  },
+  "notes": "Not re-rendered in a browser for 0.9.7: `scripts/map.py` and `src/regrid/offline/map.py` were hardened for non-finite JSON, empty paths, and `same_file_key` resolution errors (the HTML/Leaflet template is unchanged apart from `allow_nan=False` in `_json_for_script`), and `commands/address-map.md` added ambiguous multi-parcel guidance. The last plain-browser render check was on 0.9.3 (map-hosts-0.9.3.json). claude_code, claude_apps and cowork hosts: not run (need the user's apps)."
+}

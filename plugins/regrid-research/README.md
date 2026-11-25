@@ -14,9 +14,9 @@ its references. Setup is separate from research; choose only one connection.
 
 | Package in `dist/` | Use |
 | --- | --- |
-| `regrid-research-cowork-0.9.6.zip` | Cowork plugin with a remote HTTP connector declaration; credentials configured in Claude |
-| `regrid-research-claude-code-0.9.6.zip` | Claude Code plugin with a native HTTP MCP server and environment placeholder |
-| `regrid-property-research-skill-0.9.6.zip` | Standalone research skill for an already configured Regrid connector |
+| `regrid-research-cowork-0.9.7.zip` | Cowork plugin with a remote HTTP connector declaration; credentials configured in Claude |
+| `regrid-research-claude-code-0.9.7.zip` | Claude Code plugin with a native HTTP MCP server and environment placeholder |
+| `regrid-property-research-skill-0.9.7.zip` | Standalone research skill for an already configured Regrid connector |
 
 The two plugin packages also ship the `/regrid-research:address-map <US street
 address>` command: one address request (plus one optional neighbours request), the
@@ -28,7 +28,7 @@ per host rather than enabling both. Earlier archive versions are superseded.
 
 ## Connect in Cowork
 
-Upload `regrid-research-cowork-0.9.6.zip` under Customize > Plugins > Add > Upload
+Upload `regrid-research-cowork-0.9.7.zip` under Customize > Plugins > Add > Upload
 plugin. Its connector declaration contains only the remote URL, not a local
 process or credential. Add/connect Regrid from the plugin's Connectors tab, or
 configure the same URL through Customize > Connectors:
@@ -43,7 +43,7 @@ configure the same URL through Customize > Connectors:
    without retrieving parcels; public documentation access alone does not verify auth.
 6. Run `/regrid-research:setup`, then ask who owns a specific address once
    authenticated access is verified. If using the standalone skill instead of
-   the plugin, upload `regrid-property-research-skill-0.9.6.zip` through Claude's
+   the plugin, upload `regrid-property-research-skill-0.9.7.zip` through Claude's
    skill interface and ask for the same lookup with your connected Regrid tools.
 
 **Request-header authentication is a limited beta.** If the section is absent,
@@ -65,7 +65,7 @@ been verified in this account.
 
 ## Connect in Claude Code
 
-`regrid-research-claude-code-0.9.6.zip` contains the research and setup skills plus a native
+`regrid-research-claude-code-0.9.7.zip` contains the research and setup skills plus a native
 HTTP MCP server (`"type": "http"`) for the Regrid MCP URL with the
 `x-regrid-token: ${REGRID_TOKEN}` header, which Claude Code expands from the host
 environment. No Node/npx or helper process is needed, and the token never appears in
@@ -193,19 +193,20 @@ stay in the SDK but the skill does not use them).
 
 ## Validation and acceptance
 
-Status for 0.9.6:
+Status for 0.9.7:
 
 - Passed: structural validation (`claude plugin validate --strict`), packaging
-  tests, and the offline `make check` suite.
-- Passed: the satellite map rendered in a plain browser with synthetic data
-  (imagery, outlines, info panel and Esri credit shown; no console errors);
-  see `evals/results/map-hosts-0.9.6.json`.
-- Passed (live, authorized, 2026-11-19): `make live-full` checked every read-only
-  endpoint (26 requests): searches, lookups, POST geometry search, `/verse`, detailed
-  usage, tiles and a bad-token 401. A default address lookup includes the parcel
-  `geometry`, and paging from `offset_id=0` returns ordered pages.
+  tests, eval fixture/rubric validation, and the offline `make check` suite.
+- Earlier browser check (`0.9.3`): the satellite map rendered in a plain browser
+  with synthetic data (imagery, outlines, info panel and Esri credit shown; no
+  console errors). Not re-rendered in a browser for `0.9.7` after `map.py`
+  hardening; see `evals/results/map-hosts-0.9.7.json`.
+- Earlier live checks (authorized, `2026-11-19` / `2026-11-20`): `make live-full`
+  checked every read-only endpoint (26 requests) and one POST point request
+  verified `return_parcels=true`; not re-run for `0.9.7`.
 - Not run: Claude Code, Claude apps and Cowork host checks of the map page and
-  command; a live `/mcp` connection; and model or Cowork acceptance.
+  command; a fresh browser map render for `0.9.7`; a live `/mcp` connection; and
+  model or Cowork acceptance.
 
 Earlier verification logs (0.2.0 to 0.5.0) live in the repository's
 [evals README](https://github.com/domfahey/regrid/blob/main/plugins/regrid-research/evals/README.md#historical-verification).

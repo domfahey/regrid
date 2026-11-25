@@ -2,9 +2,18 @@
 
 User-visible changes are grouped by release using the categories from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version numbering follows [Semantic Versioning](https://semver.org/); the current `0.x` API remains under development.
 
-The Python SDK/CLI and the Regrid Research plugin are versioned independently. The latest tagged releases are SDK `0.4.5` (`sdk-v0.4.5`) and Regrid Research `0.9.6` (`regrid-research-v0.9.6`); the first were SDK `0.3.0` and Regrid Research `0.8.0`. Keep pending changes under Unreleased until the next release is prepared.
+The Python SDK/CLI and the Regrid Research plugin are versioned independently. The latest tagged releases are SDK `0.5.0` (`sdk-v0.5.0`) and Regrid Research `0.9.7` (`regrid-research-v0.9.7`); the first were SDK `0.3.0` and Regrid Research `0.8.0`. Keep pending changes under Unreleased until the next release is prepared.
 
 ## Unreleased
+
+No changes yet.
+
+## [SDK 0.5.0][sdk-v0.5.0] and [Regrid Research 0.9.7][regrid-research-v0.9.7] - 2026-11-24
+
+Minor SDK/CLI release (`TypedRegridClient.validate_query()`, read-only `RegridClient` configuration properties, and `regrid tile --replace` overwrite protection) and plugin hardening release (PR #33 and the release PR). Unverified at release:
+- the Claude Code, Claude apps and Cowork map host checks, plus a fresh browser render after `0.9.7`'s `map.py` hardening (last plain-browser render check was `0.9.3`)
+- live Regrid API checks against `0.5.0`, a live `/mcp` connection, typeahead (needs an Enterprise token), and POST area `return_parcels`
+- model and Cowork acceptance evaluations
 
 ### Added
 
@@ -26,7 +35,7 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 - CLI `address-map`: `--neighbours` no longer sends a second `/parcels/point` request when `/parcels/address` returns multiple parcels (which `render()` rejects), and directory paths such as `.` or `/` now report `<target> is a directory` instead of a raw `pathlib` empty-name error.
 - Offline helpers (`fields.py`, `freshness.py`): `fields.py` and `freshness.py` now serialize CLI output with `allow_nan=False` inside their error handlers (no unhandled tracebacks), and `freshness.county_path()` rejects whitespace-only state or county segments before making a `/verse` request.
 - `regrid.live_full`: `run()` now forwards `client.base_url`, `client.tiles_base_url`, and `client.timeout` to its default `bad_client`, and `by_path()` requires `ll_uuid` on the subject before comparing parcel IDs.
-- Plugin helper, docs, and evals: `workflow.py` enforces an iterative nesting depth limit (100, below `copy.deepcopy()`'s Python recursion limit on every Python 3.10–3.13 runtime) and falls back to exclusive create (`"xb"`) when `os.link` is unsupported; `evals/run.py`'s Canadian-route guard inspects HAR `queryString`, `country`, standalone `/ca`, percent-encoded query params, `--options`/`--fields`/`--geojson` JSON, `schema` with flags, and `-c` commands without false-positiving on California addresses; `discovery.py` and `run_discovery_claude.py` use POSIX path keys, strict frontmatter checks, UTF-8 subprocess decoding, LF `trace.jsonl` hashing, and sibling module loading; `cli.md` documents `regrid grid`'s two-request default when `--metadata` is omitted; `mcp-tools.md` keeps dated observations in `## Observed history`; `scripts/build_claude_plugins.py` applies dotfile/secret filtering to `commands/`.
+- Plugin helper, docs, and evals: `workflow.py` enforces an iterative nesting depth limit (100, below `copy.deepcopy()`'s Python recursion limit on every Python 3.10–3.13 runtime) and falls back to exclusive create (`"xb"`) when `os.link` is unsupported; `evals/run.py`'s Canadian-route guard inspects HAR `queryString`, `country`, standalone `/ca`, percent-encoded query params, `--options`/`--fields`/`--geojson` JSON, `schema` with flags, and `-c` commands without false-positiving on California addresses; `discovery.py` and `run_discovery_claude.py` use POSIX path keys, strict frontmatter checks, UTF-8 subprocess decoding, raw-byte `trace.jsonl` hashing (with LF output in `run_discovery_claude.py`), and sibling module loading; `cli.md` documents `regrid grid`'s two-request default when `--metadata` is omitted; `mcp-tools.md` keeps dated observations in `## Observed history`; `scripts/build_claude_plugins.py` applies dotfile/secret filtering to `commands/`.
 
 ## [SDK 0.4.5][sdk-v0.4.5] and [Regrid Research 0.9.6][regrid-research-v0.9.6] - 2026-11-20
 
@@ -367,6 +376,8 @@ Describe user-facing changes rather than copying commit logs. Add repository com
 [regrid-research-v0.9.0]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.0
 [sdk-v0.4.1]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.1
 [regrid-research-v0.9.1]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.1
+[sdk-v0.5.0]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.5.0
+[regrid-research-v0.9.7]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.7
 [sdk-v0.4.5]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.4.5
 [regrid-research-v0.9.6]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.6
 [regrid-research-v0.9.5]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.5

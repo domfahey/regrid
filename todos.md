@@ -5,7 +5,7 @@ changelog entry and a plugin version bump. Items marked **decision** need the ow
 answer before building; items marked **authorization** need explicit permission for a
 billable or credentialed call.
 
-## Open (Regrid Research 0.9.6 / SDK 0.4.5)
+## Open (Regrid Research 0.9.7 / SDK 0.5.0)
 
 Needs the owner (billable, credentialed, or host apps):
 - [ ] **Model evaluations** (**authorization**: model-billed): run the discovery, feature
@@ -15,8 +15,8 @@ Needs the owner (billable, credentialed, or host apps):
 - [ ] **Map in the real hosts**: open `/regrid-research:address-map` once each in Claude
   Code, the Claude apps and Cowork to confirm that unpkg (Leaflet) and the Esri imagery
   load in those hosts' pages, and record `verified` or `failed` in
-  `evals/results/map-hosts-0.9.6.json` (map render was verified in a plain browser on
-  `0.9.3`; all three host checks remain `not_run`).
+  `evals/results/map-hosts-0.9.7.json` (last plain-browser render check was on `0.9.3`
+  prior to `0.9.7`'s `map.py` hardening; all three host checks remain `not_run`).
 - [ ] **Live `/mcp` connection** (**authorization**): exercise the plugin's real path,
   Regrid's MCP server, end to end, including POST geometry search over MCP and POST area
   `return_parcels` (live checks so far used the SDK and CLI, and verified `return_parcels`
@@ -30,8 +30,8 @@ Features (when wanted):
   search to CSV within a budget) and `county-freshness`.
 
 Watch:
-- Keep `property-research/SKILL.md` under its 950-word cap (`tests/test_claude_plugins.py`);
-  the next real feature needs guidance moved into a reference first.
+- Keep `property-research/SKILL.md` under its 950-word cap (`tests/test_claude_plugins.py`,
+  currently ~786 words); move verbose guidance into references when adding features.
 
 ## Not doing (left out on purpose)
 
