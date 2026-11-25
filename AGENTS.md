@@ -43,7 +43,7 @@ handoff compatibility and shared request accounting; changes to the schema and
 helper must agree. The SDK and plugin have independent versions.
 
 - Build archives: `.venv/bin/python scripts/build_claude_plugins.py`.
-- Focused checks: `.venv/bin/python -m pytest tests/test_claude_plugins.py tests/test_regrid_workflow.py tests/test_regrid_workflow_composition.py tests/test_regrid_map.py tests/test_skill_helper_sync.py tests/test_cli_docs.py tests/test_offline_fields.py tests/test_offline_freshness.py tests/test_cli_offline.py tests/test_cli_freshness.py`.
+- Focused checks: `.venv/bin/python -m pytest tests/test_claude_plugins.py tests/test_regrid_workflow.py tests/test_regrid_workflow_composition.py tests/test_regrid_map.py tests/test_skill_helper_sync.py tests/test_cli_docs.py tests/test_mcp_docs.py tests/test_regrid_feature_evals.py tests/test_regrid_discovery.py tests/test_regrid_discovery_claude.py tests/test_offline_fields.py tests/test_offline_freshness.py tests/test_cli_offline.py tests/test_cli_freshness.py`.
 - Plugin commands live in `plugins/regrid-research/commands/`. They ship in the Claude Code and Cowork archives, not the standalone skill. `references/cli.md`'s command map is checked against the real CLI parser.
 - Validate packet fixtures: `.venv/bin/python plugins/regrid-research/evals/run.py validate --suite all`.
 - Validate plugin structure, when Claude CLI is installed: `claude plugin validate ./plugins/regrid-research --strict`.

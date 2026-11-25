@@ -11,6 +11,7 @@ import httpx
 import pytest
 
 from regrid.cli import _parser
+from regrid.client import RegridClient
 
 CLI_MD = (
     Path(__file__).resolve().parents[1]
@@ -74,7 +75,8 @@ def test_documented_invocation_parses(argv: list[str]) -> None:
     _parser().parse_args(argv)
 
 
-_OFFLINE = {"fields", "map", "export", "address-map", "report", "client-token-typeahead"}
+_OFFLINE = {"fields", "map", "export"}
+_SKIP_EXECUTION = {"address-map", "report", "client-token-typeahead"}
 
 
 @pytest.mark.parametrize("argv", _invocations(), ids=lambda argv: " ".join(argv)[:60])
@@ -82,10 +84,11 @@ def test_documented_invocation_executes(
     argv: list[str], monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture
 ) -> None:
     from regrid import cli
-    from regrid.client import RegridClient
 
     if argv[0] in _OFFLINE:
         pytest.skip("offline command makes no request")
+    if argv[0] in _SKIP_EXECUTION:
+        pytest.skip("multi-step or write command tested in dedicated suites")
     monkeypatch.setenv("REGRID_TOKEN", "test")
     monkeypatch.chdir(tmp_path)
     (tmp_path / "out.file").write_text(
@@ -180,9 +183,7 @@ def _options_bullets() -> list[tuple[list[str], list[str], str]]:
     return out
 
 
-def _probe_client() -> object:
-    from regrid.client import RegridClient
-
+def _probe_client() -> RegridClient:
     return RegridClient(
         "test", transport=httpx.MockTransport(lambda request: httpx.Response(200, json={}))
     )
@@ -201,19 +202,18 @@ def _recorded_allowed(monkeypatch: pytest.MonkeyPatch) -> dict[str, set[str]]:
 
     monkeypatch.setattr(endpoints, "_options", spy)
     client = _probe_client()
-    point = {"lat": 39.9, "lon": -75.1}
     calls = {
-        "point": lambda: client.point(**point),  # type: ignore[attr-defined]
-        "area": lambda: client.area({"type": "Point", "coordinates": [-75.1, 39.9]}),  # type: ignore[attr-defined]
-        "address": lambda: client.address("1 Main St"),  # type: ignore[attr-defined]
-        "apn": lambda: client.apn("123"),  # type: ignore[attr-defined]
-        "owner": lambda: client.owner("Smith"),  # type: ignore[attr-defined]
-        "query": lambda: client.query({"owner": {"ilike": "smith"}}),  # type: ignore[attr-defined]
-        "parcel": lambda: client.parcel("00000000-0000-4000-8000-000000000000"),  # type: ignore[attr-defined]
-        "parcel-path": lambda: client.parcel_path("/us/nj/camden/camden"),  # type: ignore[attr-defined]
-        "verse": lambda: client.verse(),  # type: ignore[attr-defined]
-        "usage": lambda: client.usage(),  # type: ignore[attr-defined]
-        "schema": lambda: client.schema("parcel"),  # type: ignore[attr-defined]
+        "point": lambda: client.point(lat=39.9, lon=-75.1),
+        "area": lambda: client.area({"type": "Point", "coordinates": [-75.1, 39.9]}),
+        "address": lambda: client.address("1 Main St"),
+        "apn": lambda: client.apn("123"),
+        "owner": lambda: client.owner("Smith"),
+        "query": lambda: client.query({"owner": {"ilike": "smith"}}),
+        "parcel": lambda: client.parcel("00000000-0000-4000-8000-000000000000"),
+        "parcel-path": lambda: client.parcel_path("/us/nj/camden/camden"),
+        "verse": lambda: client.verse(),
+        "usage": lambda: client.usage(),
+        "schema": lambda: client.schema("parcel"),
     }
     recorded: dict[str, set[str]] = {}
     for command, call in calls.items():
@@ -253,6 +253,34 @@ def test_documented_options_keys_are_accepted(monkeypatch: pytest.MonkeyPatch) -
         if "return flags" in body:
             for command in commands:
                 assert flags <= recorded[command], command
+
+
+def test_documented_options_sets_are_exact_for_parcel_commands(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from regrid.endpoints import _parcel_options
+
+    recorded = _recorded_allowed(monkeypatch)
+    documented = _documented()
+    flags = _parcel_options("us")
+    return_flag_commands = {
+        command
+        for commands, _, body in _options_bullets()
+        if "return flags" in body
+        for command in commands
+    }
+    assert return_flag_commands == {
+        "address",
+        "apn",
+        "owner",
+        "point",
+        "area",
+        "query",
+        "parcel",
+        "parcel-path",
+    }
+    for command in sorted(return_flag_commands):
+        assert documented[command] | flags == recorded[command], command
 
 
 def test_documented_options_sets_are_exact_for_verse_usage_schema(

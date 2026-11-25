@@ -19,11 +19,12 @@ its references. Setup is separate from research; choose only one connection.
 | `regrid-property-research-skill-0.9.6.zip` | Standalone research skill for an already configured Regrid connector |
 
 The two plugin packages also ship the `/regrid-research:address-map <US street
-address>` command: one address request, the saved response rendered as a satellite
-map and summarised. The standalone skill archive has no commands.
+address>` command: one address request (plus one optional neighbours request), the
+saved response rendered as a satellite map and summarised. The standalone skill
+archive has no commands.
 
 The two plugin packages have the same plugin name and skills; install one variant
-per host rather than enabling both. Archives through `0.4.0` are superseded.
+per host rather than enabling both. Earlier archive versions are superseded.
 
 ## Connect in Cowork
 
@@ -183,7 +184,7 @@ skill reports each parcel's `ll_last_refresh` instead.
 | Option | Where | Notes |
 | --- | --- | --- |
 | Premium dataset flags (`return_zoning` and the like) | Address, APN, owner, point, area, query, Regrid ID (`/parcels/{ll_uuid}`), `/parcels/path` | Only with the user's authorization ([premium datasets](skills/property-research/references/premium.md)) |
-| `return_count`, `return_geometry`, `offset_id` | Point, area and query only | `return_count` counts before pulling; MCP research may page with `offset_id` within the agreed budget; the CLI form is `--max-records` |
+| `return_count`, `return_geometry`, `offset_id` | Point, area and query (and `return_geometry` on `/verse`) | `return_count` counts before pulling; POST `/parcels/point` omits `offset_id` and `return_geometry`; MCP research may page with `offset_id` within the agreed budget; the CLI form is `--max-records` |
 
 **Offered by the server but deliberately not used:** POST `/report` (files a data
 issue with Regrid), `/client_token/typeahead` (creates a temporary token), the Global
@@ -254,5 +255,4 @@ References checked October 27, 2026:
 - [Installing plugins](https://claude.com/docs/plugins/overview)
 - [Claude Code plugin manifest reference](https://code.claude.com/docs/en/plugins-reference)
 - [Regrid MCP documentation](https://support.regrid.com/docs/mcp-server)
-
 - [Custom connector authentication and request-header beta](https://claude.com/docs/connectors/custom/add-unlisted#authenticate-with-request-headers)

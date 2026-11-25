@@ -216,20 +216,6 @@ class ParcelCollection(RegridModel):
     features: list[ParcelFeature]
 
 
-class Feature(RegridModel):
-    """A feature for extensible building, zoning, metadata, or centroid properties."""
-
-    type: Literal["Feature"] = "Feature"
-    geometry: Geometry | None = None
-    properties: dict[str, Any] | None = None
-    id: int | str | None = None
-
-
-class FeatureCollection(RegridModel):
-    type: Literal["FeatureCollection"] = "FeatureCollection"
-    features: list[Feature]
-
-
 class BuildingProperties(RegridModel):
     ed_str_uuid: str | None = None
     ed_bld_uuid: str | None = None

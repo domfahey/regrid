@@ -26,10 +26,10 @@ The category counts total **169**, not 179. Treat these as the website's adverti
 
 ## Recommended Catalog Additions
 
-These are design recommendations, not a claim that every item is implemented:
+In `src/regrid/catalog.py`, `category`, `documentation_url`, `coverage_column`, 4-state `standardized`, `preferred_alternatives`, `queryable`, and `source`/review date (`metadata_reviewed_on`) are now implemented; units and human-readable aliases remain unimplemented:
 
 - Record category, units, documentation URL, and coverage-report column alongside type and tier. Keep missing metadata explicitly unknown.
-- Represent standardization as `yes`, `no`, `some`, or `not_applicable`, with null for unknown. For example, `owner` is partially standardized; `ll_updated_at` is marked not applicable. A boolean loses information.
+- Represent standardization as `yes`, `no`, `some`, or `not-applicable`, with null for unknown. For example, `owner` is partially standardized; `ll_updated_at` is marked not applicable. A boolean loses information.
 - Keep preferred alternatives separate from related fields. A related field may answer a different question rather than replace the original.
 - Track queryability independently from response availability. Premium status does not imply query support. Store the evidence source and review date for query rules.
 - Preserve human-readable aliases for local catalog search only; do not silently rewrite them into API field names.

@@ -107,6 +107,8 @@ def test_main_explain_and_search(capsys):
 
 
 def test_main_default_catalog_and_errors(tmp_path, capsys):
+    assert fields.main(["explain", "owner"]) == 0
+    assert json.loads(capsys.readouterr().out) == {"found": [OWNER], "unknown": []}
     missing = tmp_path / "none.json"
     assert fields.main(["explain", "owner", "--catalog", str(missing)]) == 1
     captured = capsys.readouterr()
@@ -178,14 +180,41 @@ def test_deeply_nested_catalog_is_a_clean_error(tmp_path, capsys):
     assert err.startswith("fields:") and len(err.strip().splitlines()) == 1
 
 
+@pytest.mark.parametrize("depth", [1_500, 20_000])
 @pytest.mark.parametrize("argv", [["search", "deep"], ["explain", "deep"]])
-def test_deep_description_fails_cleanly_on_output(tmp_path, capsys, argv):
-    # Beyond the ~10k C-stack limit of Python 3.12/3.13 (3.10 fails near 1000).
-    nested = "[" * 20_000 + "]" * 20_000
+def test_deep_description_fails_cleanly_on_output(tmp_path, capsys, argv, depth):
+    # 1,500 parses in json.loads on Python 3.12/3.13 and hits json.dumps RecursionError;
+    # 20,000 exceeds the ~10k C-stack limit on every Python version including 3.10.
+    nested = "[" * depth + "]" * depth
     path = tmp_path / "deep.json"
     path.write_text(
         '{"fields": [{"name": "deep", "datatype": "text", "tier": "standard", "category": "Deep",'
-        f' "description": {nested}}}]}}'
+        f' "description": {nested}}}]}}',
+        encoding="utf-8",
+    )
+    assert fields.main([*argv, "--catalog", str(path)]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err.startswith("fields:") and len(captured.err.strip().splitlines()) == 1
+
+
+def test_main_does_not_catch_oserror_from_json_dumps(monkeypatch):
+    def boom(*_args, **_kwargs):
+        raise OSError("unexpected")
+
+    monkeypatch.setattr(fields.json, "dumps", boom)
+    with pytest.raises(OSError, match="unexpected"):
+        fields.main(["explain", "owner"])
+
+
+@pytest.mark.parametrize("bad_number", ["NaN", "Infinity", "-Infinity"])
+@pytest.mark.parametrize("argv", [["explain", "x"], ["search", "x"]])
+def test_non_finite_catalog_values_fail_cleanly_on_output(tmp_path, capsys, argv, bad_number):
+    path = tmp_path / "nan.json"
+    path.write_text(
+        '{"fields": [{"name": "x", "datatype": "text", "tier": "standard", "category": "X",'
+        f' "description": {bad_number}}}]}}',
+        encoding="utf-8",
     )
     assert fields.main([*argv, "--catalog", str(path)]) == 1
     captured = capsys.readouterr()

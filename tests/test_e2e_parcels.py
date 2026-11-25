@@ -3,7 +3,7 @@
 import json
 
 import pytest
-from e2e_support import parcel_response, regrid_server, run_cli  # noqa: F401
+from e2e_support import inprocess_tls_env, parcel_response, run_cli
 
 from regrid import RegridClient, TypedRegridClient
 
@@ -29,7 +29,7 @@ def feature_ids(data):
 
 
 @pytest.fixture
-def server(regrid_server):  # noqa: F811
+def server(regrid_server):
     for path in (
         "/parcels/point",
         "/parcels/area",
@@ -83,7 +83,7 @@ def test_point_lat_lon_and_geojson_get(server):
     assert (request.method, request.path) == ("GET", "/api/v2/parcels/point")
     assert (request.params["lat"], request.params["lon"]) == (["39.9"], ["-75.03"])
     ok(run_cli(server, "point", "--geojson", json.dumps(POINT)), 1)
-    request = server.requests[-1]
+    request = last(server)
     assert request.method == "GET"
     assert json.loads(request.params["geojson"][0]) == POINT
     assert "lat" not in request.params
@@ -131,7 +131,7 @@ def test_query_fields_and_validated_fields(server):
     assert request.params["fields[geoid][eq]"] == ["34007"]
     assert request.params["limit"] == ["2"]
     ok(run_cli(server, "query", "--fields", fields, "--validate-fields"), 1)
-    assert server.requests[-1].params["fields[geoid][eq]"] == ["34007"]
+    assert last(server).params["fields[geoid][eq]"] == ["34007"]
 
 
 def test_query_rejected_field_makes_no_request(server):
@@ -165,9 +165,9 @@ def test_typeahead(server):
 def test_country_default_us_and_ca_paths(server):
     server.routes["/api/v2/ca/parcels/address"] = server.routes["/api/v2/parcels/address"]
     ok(run_cli(server, "address", "1 Main"), 1)
-    assert server.requests[-1].path == "/api/v2/parcels/address"
+    assert last(server).path == "/api/v2/parcels/address"
     ok(run_cli(server, "address", "1 Main", "--country", "ca"), 1)
-    assert server.requests[-1].path == "/api/v2/ca/parcels/address"
+    assert last(server).path == "/api/v2/ca/parcels/address"
 
 
 def _serve_cursor_pages(server, path, total=5):
@@ -252,8 +252,7 @@ def test_option_rejected_before_any_request(server):
 
 
 def test_typed_client_validates_live_shapes(server, monkeypatch):
-    monkeypatch.setenv("SSL_CERT_FILE", str(server.cert))
-    monkeypatch.setenv("NO_PROXY", "127.0.0.1")
+    inprocess_tls_env(monkeypatch, server.cert)
     with TypedRegridClient(TOKEN, base_url=server.api, tiles_base_url=server.base) as client:
         response = client.address("123 Main", limit=1)
         assert isinstance(client.raw, RegridClient)

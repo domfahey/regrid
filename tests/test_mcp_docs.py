@@ -10,7 +10,8 @@ REFS = Path(__file__).resolve().parents[1] / (
     "plugins/regrid-research/skills/property-research/references"
 )
 DOC = (REFS / "mcp-tools.md").read_text(encoding="utf-8")
-ENDPOINTS = set(json.loads((REFS / "endpoints.json").read_text(encoding="utf-8"))["endpoints"])
+_ENDPOINTS_DATA = json.loads((REFS / "endpoints.json").read_text(encoding="utf-8"))["endpoints"]
+ENDPOINTS = set(_ENDPOINTS_DATA)
 FORBIDDEN = {"/report", "/client_token/typeahead"}
 BACKTICKED = re.compile(r"`(/[^`\s]*)`")
 # Slash-prefixed tokens in the doc that are path shapes, not endpoints.
@@ -54,10 +55,7 @@ TOOLS = {
 }
 PREMIUM_DOC = (REFS / "premium.md").read_text(encoding="utf-8")
 ENDPOINT_PARAMS = {
-    path: {p["name"] for p in spec["parameters"]}
-    for path, spec in json.loads((REFS / "endpoints.json").read_text(encoding="utf-8"))[
-        "endpoints"
-    ].items()
+    path: {p["name"] for p in spec["parameters"]} for path, spec in _ENDPOINTS_DATA.items()
 }
 
 
@@ -113,11 +111,14 @@ def _options_with_scope(doc: str) -> list[tuple[str, set[str]]]:
         if line.startswith("|") and len(cells) >= 2:
             paths = set(BACKTICKED.findall(cells[1])) & set(ENDPOINT_PARAMS)
             found += [(o, paths) for o in OPTION.findall(" ".join(cells[2:]))]
-    for para in doc.split("\n\n"):
+    before, sep, rest = doc.partition("## Choosing the endpoint")
+    outside = (
+        before + ("\n## " + rest.split("\n## ", 1)[1] if "\n## " in rest else "") if sep else doc
+    )
+    for para in outside.split("\n\n"):
         head = re.match(r"\*\*[^*]*\(`(/[^`]+)`\)\.\*\*", para)
         scope = {head.group(1)} if head else set()
-        if head or "## Choosing the endpoint" not in para:
-            found += [(o, scope) for o in OPTION.findall(para)]
+        found += [(o, scope) for o in OPTION.findall(para)]
     return found
 
 
@@ -125,7 +126,7 @@ def _drifted(doc: str) -> list[str]:
     bad = []
     for option, paths in _options_with_scope(doc):
         targets = paths or set(ENDPOINT_PARAMS)
-        if not any(option in ENDPOINT_PARAMS[p] for p in targets):
+        if not any(option in ENDPOINT_PARAMS.get(p, set()) for p in targets):
             bad.append(f"{option} not on {sorted(paths) or 'any endpoint'}")
     return bad
 
@@ -150,3 +151,39 @@ def test_response_option_check_detects_drift() -> None:
         != []
     )
     assert _drifted("## return_nonexistent\n") != []
+
+
+def test_choosing_table_options_are_not_rescanned_unscoped() -> None:
+    snippet = (
+        "## Choosing the endpoint\n\n"
+        "| Request | Path | Required | Scope parameters |\n"
+        "| --- | --- | --- | --- |\n"
+        "| Point/radius | `/parcels/point` | `lat` | `radius` |\n\n"
+        "## Next\n\nNo options here.\n"
+    )
+    assert _options_with_scope(snippet) == [("radius", {"/parcels/point"})]
+
+
+def test_drifted_handles_unknown_endpoint_path_without_keyerror() -> None:
+    bad_doc = "**Bogus (`/parcels/nonexistent`).** `return_geometry=true`\n"
+    assert _drifted(bad_doc) == ["return_geometry not on ['/parcels/nonexistent']"]
+
+
+def test_post_area_example_sets_return_parcels_and_disables_stacked_and_premium() -> None:
+    section = DOC.split("### Large geometry (POST search)", 1)[1].split("\n### ", 1)[0]
+    match = re.search(r"```json\n(.*?)\n```", section, re.S)
+    assert match is not None, "POST /parcels/area JSON example missing"
+    payload = json.loads(match.group(1))
+    har = payload["harRequest"]
+    assert har["method"] == "POST"
+    assert har["url"] == "https://app.regrid.com/api/v2/parcels/area"
+    query = {item["name"]: item["value"] for item in har["queryString"]}
+    assert query.get("return_parcels") == "true"
+    assert query.get("return_stacked") == "false"
+    for flag in (
+        "return_zoning",
+        "return_matched_buildings",
+        "return_matched_addresses",
+        "return_enhanced_ownership",
+    ):
+        assert query.get(flag) == "false", flag

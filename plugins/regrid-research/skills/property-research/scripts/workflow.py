@@ -96,7 +96,7 @@ def validate(document: Document) -> None:
     _validate(document, check_budget=True)
 
 
-def _validate(document: Document, *, check_budget: bool) -> None:
+def _validate(document: Document, *, check_budget: bool, check_json: bool = True) -> str | None:
     path = "$"
 
     def require(condition: bool, message: str, field: str = "") -> None:
@@ -112,10 +112,14 @@ def _validate(document: Document, *, check_budget: bool) -> None:
         | ({"reconciliations"} if version == "1.1" else set()),
         "Invalid handoff fields",
     )
-    try:
-        json.dumps(document, allow_nan=False)
-    except (TypeError, ValueError) as exc:
-        raise ValidationError("$: Handoff must contain finite JSON values") from exc
+    serialized: str | None = None
+    if check_json:
+        try:
+            serialized = json.dumps(document, indent=2, allow_nan=False)
+        except RecursionError as exc:
+            raise ValidationError("$: Handoff nesting exceeds checkpoint limit") from exc
+        except (TypeError, ValueError) as exc:
+            raise ValidationError("$: Handoff must contain finite JSON values") from exc
     require(version in ("1.0", "1.1"), "Unsupported schema version", "schema_version")
     require(_text(document.get("workflow_id")), "Missing workflow ID", "workflow_id")
     rows = document.get("results")
@@ -332,7 +336,7 @@ def _validate(document: Document, *, check_budget: bool) -> None:
             uncertain -= attempt["record_limit"]
             consumed += proof["returned_records"]
     if not check_budget:
-        return
+        return serialized
     path = "$.budget"
     for field, expected in (
         ("attempted_requests", len(attempts)),
@@ -340,6 +344,7 @@ def _validate(document: Document, *, check_budget: bool) -> None:
         ("uncertain_records", uncertain),
     ):
         require(budget[field] == expected, "Budget does not match attempt ledger", field)
+    return serialized
 
 
 def new_workflow(
@@ -390,11 +395,12 @@ def upgrade_workflow(document: Document) -> Document:
     """Explicitly migrate a legacy checkpoint; preserve its inputs, evidence and accounting."""
     validate(document)
     result = deepcopy(document)
-    if result["schema_version"] == "1.0":
-        result["schema_version"] = "1.1"
-        result["reconciliations"] = []
-        for attempt in result["attempts"]:
-            attempt["kind"] = "lookup"
+    if result["schema_version"] != "1.0":
+        return result
+    result["schema_version"] = "1.1"
+    result["reconciliations"] = []
+    for attempt in result["attempts"]:
+        attempt["kind"] = "lookup"
     validate(result)
     return result
 
@@ -413,23 +419,27 @@ def reconcile_attempt(
     result = deepcopy(document)
     result["reconciliations"].append({"attempt_id": attempt_id, "proof": deepcopy(proof)})
     # The validator is the sole authority on the new entry; counters are adjusted only after it.
-    _validate(result, check_budget=False)
+    _validate(result, check_budget=False, check_json=True)
     attempt = next(a for a in result["attempts"] if a["attempt_id"] == attempt_id)
     result["budget"]["uncertain_records"] -= attempt["record_limit"]
     result["budget"]["returned_records"] += proof["returned_records"]
-    validate(result)
+    _validate(result, check_budget=True, check_json=False)
     return result
 
 
-def pending_input_ids(document: Document) -> list[str]:
-    """Return only untouched inputs; pending/uncertain/error attempts never auto-retry."""
-    validate(document)
+def _pending_input_ids(document: Document) -> list[str]:
     attempted = {key for attempt in document["attempts"] for key in attempt["input_ids"]}
     return [
         row["input_id"]
         for row in document["results"]
         if row["lookup_status"] == "not_attempted" and row["input_id"] not in attempted
     ]
+
+
+def pending_input_ids(document: Document) -> list[str]:
+    """Return only untouched inputs; pending/uncertain/error attempts never auto-retry."""
+    validate(document)
+    return _pending_input_ids(document)
 
 
 def tighten_budget(document: Document, *, max_requests: int, max_records: int) -> Document:
@@ -479,7 +489,7 @@ def reserve_attempt(
     allowed = (
         {row["input_id"] for row in document["results"]}
         if authorized_retry
-        else set(pending_input_ids(document))
+        else set(_pending_input_ids(document))
     )
     _require(set(input_ids) <= allowed, "Input unknown, already attempted or resolved")
     budget = document["budget"]
@@ -530,9 +540,7 @@ def complete_attempt(
     return result
 
 
-def set_result(document: Document, row: Document) -> Document:
-    """Attach supplied/retrieved evidence without creating or refunding an API attempt."""
-    validate(document)
+def _set_result_validated(document: Document, row: Document) -> Document:
     _require(isinstance(row, dict), "Result row must be an object")
     result = deepcopy(document)
     for index, current in enumerate(result["results"]):
@@ -551,6 +559,12 @@ def set_result(document: Document, row: Document) -> Document:
     raise ValidationError("Unknown input ID")
 
 
+def set_result(document: Document, row: Document) -> Document:
+    """Attach supplied/retrieved evidence without creating or refunding an API attempt."""
+    validate(document)
+    return _set_result_validated(document, row)
+
+
 def reuse_result(document: Document, source_id: str, target_id: str) -> Document:
     """Reuse success evidence only for identical requested identities; preserve output rows."""
     validate(document)
@@ -561,20 +575,13 @@ def reuse_result(document: Document, source_id: str, target_id: str) -> Document
     _require(
         source["requested"] == target["requested"], "Cannot reuse different requested identity"
     )
-    _require(target_id in pending_input_ids(document), "Target already attempted or resolved")
+    _require(target_id in _pending_input_ids(document), "Target already attempted or resolved")
     copied = deepcopy(source)
     copied["input_id"] = target_id
-    return set_result(document, copied)
+    return _set_result_validated(document, copied)
 
 
-def save_checkpoint(
-    document: Document, path: Path, *, requested: bool = False, replace: bool = False
-) -> None:
-    """Write atomically only on explicit request; no implicit overwrite or directory creation."""
-    _require(requested is True, "Checkpoint must be explicitly requested")
-    _require(isinstance(replace, bool), "Checkpoint replace flag must be a boolean")
-    validate(document)
-    data = json.dumps(document, indent=2, allow_nan=False) + "\n"
+def _write_checkpoint(data: str, path: Path, *, replace: bool) -> None:
     path = Path(path)
     _require(not path.is_symlink(), "Checkpoint destination cannot be a symlink")
     temporary: str | None = None
@@ -595,12 +602,28 @@ def save_checkpoint(
             Path(temporary).unlink(missing_ok=True)
 
 
-def load_checkpoint(path: Path) -> Document:
-    """Load a caller-selected checkpoint; never reset its ledger or issue requests."""
+def save_checkpoint(
+    document: Document, path: Path, *, requested: bool = False, replace: bool = False
+) -> None:
+    """Write atomically only on explicit request; no implicit overwrite or directory creation."""
+    _require(requested is True, "Checkpoint must be explicitly requested")
+    _require(isinstance(replace, bool), "Checkpoint replace flag must be a boolean")
+    serialized = _validate(document, check_budget=True, check_json=True)
+    assert serialized is not None
+    _write_checkpoint(serialized + "\n", path, replace=replace)
+
+
+def _load_checkpoint(path: Path) -> tuple[Document, str]:
     with Path(path).open(encoding="utf-8") as stream:
         document = json.load(stream)
-    validate(document)
-    return document
+    serialized = _validate(document, check_budget=True, check_json=True)
+    assert serialized is not None
+    return document, serialized
+
+
+def load_checkpoint(path: Path) -> Document:
+    """Load a caller-selected checkpoint; never reset its ledger or issue requests."""
+    return _load_checkpoint(path)[0]
 
 
 def main() -> int:
@@ -616,7 +639,7 @@ def main() -> int:
             )
     args = parser.parse_args()
     try:
-        document = load_checkpoint(args.checkpoint)
+        document, serialized = _load_checkpoint(args.checkpoint)
     except json.JSONDecodeError as exc:
         print(f"Malformed JSON at line {exc.lineno}, column {exc.colno}; repair JSON syntax")
         return 1
@@ -634,7 +657,7 @@ def main() -> int:
         return 1
     if args.command == "save":
         try:
-            save_checkpoint(document, args.destination, requested=True, replace=args.replace)
+            _write_checkpoint(serialized + "\n", args.destination, replace=args.replace)
         except FileExistsError:
             print(
                 "Checkpoint already exists; choose another destination or explicitly use --replace"
@@ -643,13 +666,16 @@ def main() -> int:
         except ValidationError as exc:
             print(f"Cannot save checkpoint: {exc}")
             return 1
+        except RecursionError:
+            print("Cannot save checkpoint: $: Handoff nesting exceeds checkpoint limit")
+            return 1
         except OSError:
             print("Cannot write checkpoint; check the destination parent exists and is writable")
             return 1
         print("Saved checkpoint")
     else:
         print(
-            json.dumps(pending_input_ids(document))
+            json.dumps(_pending_input_ids(document))
             if args.command == "pending"
             else "Valid handoff/checkpoint"
         )

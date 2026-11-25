@@ -9,94 +9,79 @@
 - [Resume without duplicate retrieval](#resume-without-duplicate-retrieval)
 - [Optional offline helper](#optional-offline-helper)
 
-Use the envelope from the [result schema](result.schema.json) for a batch, handoff, or
-checkpoint (see also [composition](composition.md) for its fields): legacy `1.0` remains supported; explicitly select `1.1` for tagged
-search queries or reconciliation. The ledger accounts for this workflow's requests; account
-usage counters can include other clients and cannot replace it.
+Use the [result schema](result.schema.json) envelope for batches, handoffs, or
+checkpoints (see [composition](composition.md) for fields): `1.0` remains supported;
+select `1.1` for tagged search queries or reconciliation. The ledger tracks this
+workflow's requests conservatively and is not a billing cap; account usage counters
+reflect other clients and lag, so they cannot replace it.
 
 ## Default budgets
 
-A finite list authorizes one bounded one-result lookup per distinct input by
-default; retain duplicate output rows. Honor lower caller limits and proceed
-within authorized scope without renewed permission. For open-ended searches,
-establish geography and a finite total record budget first. Broader searches,
-extra candidates beyond the budget, and unrequested premium datasets require
-additional authorization; ambiguity resolution within an explicit candidate
-budget does not. Page only within the agreed budget and one task.
+A finite list authorizes one bounded one-result lookup per distinct input by default
+(keep duplicate output rows). Honor lower caller limits and proceed within authorized
+scope without renewed permission. Open-ended searches require geography and a finite
+total record budget first. Broader searches, extra candidates beyond budget, and
+unrequested premium datasets need additional authorization; ambiguity resolution within
+an explicit candidate budget does not. Page only within the agreed budget and one task.
 
-Carry one shared attempt ledger across stages, reserve possible records before
-dispatch, and retain reservations for unknown outcomes. Never reset consumption or
-automatically retry a potentially billable uncertain request. Stop at budget,
-auth/permission failure, or exhaustion; these workflow limits are not billing caps.
-Report partial counts and per-input statuses, identify unfinished input IDs, and
-explain when continuing requires authorization beyond the cap. Never omit them.
-The rules below say what counts and how to record it.
+Share one attempt ledger across stages: reserve possible records before dispatch, keep
+reservations on unknown outcomes, never reset consumption, and never auto-retry a
+potentially billable uncertain call. Stop at budget, auth/permission failure, or
+exhaustion. Report partial counts, per-input statuses, unfinished input IDs, and when
+continuing needs new authorization.
 
 ## One allowance across stages
 
-`budget` carries `max_requests`, `max_records`, `attempted_requests`,
-`returned_records`, and `uncertain_records`. Limits are finite nonnegative
-integers. Do not count reused evidence as a new lookup.
-Count every API executor invocation against `max_requests`: parcel lookups,
-count-only queries, usage/authentication diagnostics, and failed or uncertain
-attempts. A non-billable diagnostic still consumes one request; a usage-only
-diagnostic reserves zero parcel records. Local tool listing/schema inspection
-and documentation-only discovery are not API executor calls and do not consume
-API requests. Remote discovery still obeys offline/no-network instructions. Pass
-the same remaining allowance and constraints to setup or other consumers.
+`budget` holds finite nonnegative integers: `max_requests`, `max_records`,
+`attempted_requests`, `returned_records`, and `uncertain_records`. Reused evidence
+never consumes a lookup. Count every API executor call against `max_requests` (parcel
+lookups, `return_count` queries, diagnostics, and failed/uncertain calls; diagnostics
+reserve zero records). Local tool/schema/doc inspection consumes no API requests but
+still obeys offline constraints. Pass remaining allowance and constraints to setup or
+other consumers.
 
 For open-ended searches, an optional `return_count` call (one request, zero records)
-sizes the search when supported; then paginate only within the remaining
-allowance. A list of addresses does not authorize a broader owner search. Honor the endpoint's actual parameter schema;
-count-only and pagination options are not universal.
+sizes results when supported; paginate only within remaining allowance. An address list
+does not authorize an owner search; honor each endpoint's schema (`return_count` and
+pagination are not universal).
 
-Before dispatch, append a unique attempt with `attempt_id`, the affected
-`input_ids`, `state: pending`, its bounded `record_limit`, and
-`returned_records: null`. Increase attempted requests and reserve that record
-limit. Dispatch only if both the request cap and the returned-plus-reserved
-record cap permit it. Record reservations before calls; parallel stages must use
-a single serialized coordinator, not independent copies of the allowance.
+Before dispatch, append a unique attempt (`attempt_id`, `input_ids`, `state: pending`,
+bounded `record_limit`, `returned_records: null`), increment `attempted_requests`, and
+reserve `record_limit`. Dispatch only when request and returned-plus-reserved record
+caps allow it; parallel stages must share one serialized coordinator.
 
-After a definite result, set state to `success` or `error`, record the actual
-returned record count, and release its reservation. Retain all attempts, including
-zero-result and failed calls. After a timeout or other unknown outcome, use
-`uncertain` with null returned count and retain the full reservation. Never claim
-zero consumption or automatically retry an uncertain request. Account usage may
-lag and is not enough by itself to reconcile a specific attempt.
+On a definite result, set `state` to `success` or `error`, record actual returned
+records, and release the reservation (retain all attempts, including zero-result and
+failed calls). On timeout or unknown outcome, set `uncertain` with `null` returned
+count and keep the full reservation.
 
-The counters must agree with the ledger:
+Ledger invariants:
 
 - `attempted_requests` equals the number of attempts.
-- `returned_records` sums known counts from resolved attempts and authoritative
-  counts from version `1.1` reconciliation records.
-- `uncertain_records` sums `record_limit` for pending/uncertain attempts without
-  an accepted reconciliation.
-- Remaining requests are `max_requests - attempted_requests`.
-- Available records are `max_records - returned_records - uncertain_records`.
+- `returned_records` sums known counts from resolved attempts and proven counts from
+  `1.1` reconciliation records.
+- `uncertain_records` sums `record_limit` for pending/uncertain attempts lacking
+  accepted reconciliation.
+- Remaining requests: `max_requests - attempted_requests`.
+- Available records: `max_records - returned_records - uncertain_records`.
 
-If the server returns more than the requested limit, preserve the actual count,
-stop further retrieval, and report the overshoot; never clamp facts to make the
-ledger appear compliant. New authorization may change limits, never consumption.
-These are conservative workflow limits, not guaranteed billing caps.
+If the server returns more than `record_limit`, record the actual count, stop further
+retrieval, and report the overshoot; never clamp facts. New authorization may adjust
+limits, never consumption.
 
-In version `1.1`, reserve setup/usage diagnostics with
-`reserve_attempt(..., input_ids=[], record_limit=0, kind="diagnostic")`; ordinary
-lookup attempts use `kind="lookup"`. A diagnostic consumes a request without
-pretending to evaluate a property row. Use `1.1` when diagnostics need to be
-represented in a legacy workflow; upgrade it without replacing its history.
+In `1.1`, reserve diagnostics with
+`reserve_attempt(..., input_ids=[], record_limit=0, kind="diagnostic")` and lookups with
+`kind="lookup"`. Upgrade legacy `1.0` workflows via `upgrade_workflow` rather than
+replacing history.
 
-Reconcile an uncertain attempt only from an authoritative, per-attempt receipt
-whose evidence the caller independently verifies. Use
+Reconcile an uncertain attempt only from an authoritative, independently verified
+per-attempt receipt using
 `reconcile_attempt(document, attempt_id, proof, evidence_verified=True)` with
-proof fields `provider`, `evidence_id`, `retrieved_at`, `attempt_id`,
-`returned_records`, and nullable `source_url`. The proof must identify that exact
-attempt; aggregate account usage is insufficient. The helper validates structure
-and accounting but cannot authenticate the provider or receipt; never set the
-verification flag merely because a document parses. Reconciliation appends a
-record and preserves the original uncertain attempt and evidence. It replaces
-the reservation with the proven count, preserves attempted-request consumption,
-and does not retry the request or silently change input results. Preserve an
-overshoot and stop if the proven count exceeds the allowance.
+`provider`, `evidence_id`, `retrieved_at`, `attempt_id`, `returned_records`, and
+nullable `source_url`. Aggregate usage is insufficient, and parsing alone never
+justifies `evidence_verified=True`. Reconciliation appends a record while keeping the
+original uncertain attempt, replaces the reservation with the proven count, preserves
+request consumption, and never retries or alters input results; stop on overshoot.
 
 ## CLI and suggestion requests
 
@@ -109,7 +94,7 @@ line leaves the attempt uncertain and is never retried. A cache hit reports 0.
 - No-record calls (`regrid freshness`, typeahead over CLI or MCP, schema, usage, tiles):
   `reserve_attempt(doc, [], 0, kind="diagnostic")`, then complete with the actual
   outcome: `complete_attempt(doc, attempt_id, "success", 0)` or `"error"` with 0 when
-  it failed, or leave it uncertain when the count or outcome is unknown.
+  it failed, or record an unknown outcome with `complete_attempt(doc, attempt_id, "uncertain")`.
 - `/parcels/path`: `kind="lookup"` for the input, record_limit 1. When the input is already
   resolved (a refresh, or a path lookup after typeahead), reserve with
   `authorized_retry=True`; the user's refresh request is the authorization.
@@ -166,10 +151,10 @@ document = workflow.upgrade_workflow(document)  # Explicitly enables 1.1 if need
 document = workflow.reconcile_attempt(document, attempt_id, proof, evidence_verified=True)
 ```
 
-For an attempt already marked `uncertain`, skip `complete_attempt`; it accepts
-only pending attempts. Without a verified receipt, stop after recording uncertainty
-and retain the reservation. Do not transition a still-running request or infer
-zero consumption from a crash. These helper calls neither retry nor save a file.
+Skip `complete_attempt` for an already `uncertain` attempt (it accepts only `pending`).
+Without a verified receipt, stop and keep the reservation; never transition a
+still-running call or infer zero consumption from a crash. These calls neither retry
+nor save files.
 
 An explicit refresh of a saved result uses `/parcels/path` with the saved `path`:
 one request, one record, reserved with `authorized_retry=True` because the input is resolved. If the saved result has no `path`, stop and ask;
@@ -185,21 +170,14 @@ completed merely because its first request and continuation plan were prepared.
 
 ## Optional offline helper
 
-Run the packaged `<skill>/scripts/workflow.py` with Python 3.10+; it uses
-only the standard library, so no package installation is required. It performs
-no API calls or credential reads. Execute it for validation and persistence;
-read its source only when integrating its functions into a batch runner.
+Run `<skill>/scripts/workflow.py` with Python 3.10+ (stdlib only, no API calls or
+credential reads) for validation and persistence; read its source only when integrating
+into a batch runner.
 
-After the user requests a checkpoint destination, prepare a complete envelope
-using the result schema linked from `SKILL.md`; consult the synthetic example
-only if needed. Use the helper's default `1.0` for legacy address/parcel requests,
-or explicitly pass `schema_version="1.1"` to `new_workflow` for tagged queries.
-Use `upgrade_workflow` to migrate an existing `1.0` envelope without resetting
-rows, evidence, attempts, or consumed budget; do not simply rewrite its version.
-Validate it, fix reported field/invariant errors, and repeat validation until it
-passes. Save to the requested destination, then validate the saved file before
-resuming. The `save` command also validates before writing atomically:
-
+For a requested checkpoint destination, build the envelope from the result schema
+linked in `SKILL.md` (default `1.0`, or `schema_version="1.1"` in `new_workflow`;
+migrate `1.0` with `upgrade_workflow` without altering history). Validate, fix errors,
+and save atomically (`save` validates first); validate again before resuming:
 
 ```sh
 python3 "<skill>/scripts/workflow.py" validate /path/to/result.json
@@ -208,15 +186,14 @@ python3 "<skill>/scripts/workflow.py" validate /path/to/checkpoint.json
 python3 "<skill>/scripts/workflow.py" pending /path/to/checkpoint.json
 ```
 
-Substitute the actual installed skill directory and user-requested file paths.
-Use `save ... --replace` only for an explicitly requested checkpoint update; the
-default refuses an existing destination. Do not copy the synthetic example as
-real property evidence. If validation fails, correct the envelope and rerun; do
-not dispatch resumed calls from invalid state.
+Substitute the installed skill directory and requested file paths. Use
+`save ... --replace` only for an explicit checkpoint update; never copy the synthetic
+example as real evidence, and never dispatch resumed calls from invalid state.
 
-For a controlled batch runner, import its functions: `new_workflow`,
-`reserve_attempt`, `complete_attempt`, `set_result`, `reuse_result`,
-`pending_input_ids`, `save_checkpoint`, and `load_checkpoint`. Functions return
+For a controlled batch runner, import its functions: `new_workflow`, `validate`,
+`upgrade_workflow`, `reserve_attempt`, `complete_attempt`, `reconcile_attempt`,
+`set_result`, `reuse_result`, `pending_input_ids`, `tighten_budget`,
+`save_checkpoint`, and `load_checkpoint`. Functions return
 new documents; they do not mutate the caller's ledger. Save a pending reservation
 before dispatch when checkpointing is requested, then save the resolved state
 after recording the response. `save_checkpoint` requires `requested=True` and

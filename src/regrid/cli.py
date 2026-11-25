@@ -33,7 +33,7 @@ def _object(value: str) -> dict[str, Any]:
     valid = True
     result: Any = None
     try:
-        raw = Path(value[1:]).read_text() if value.startswith("@") else value
+        raw = Path(value[1:]).read_text(encoding="utf-8") if value.startswith("@") else value
         result = json.loads(raw)
     except (OSError, ValueError, UnicodeError, RecursionError):
         valid = False
@@ -46,6 +46,13 @@ def _object(value: str) -> dict[str, Any]:
 
 
 def _run_map(args: dict[str, Any]) -> None:
+    if not args["response"]:
+        raise ValueError("Response path cannot be empty")
+    if not args["output"]:
+        raise ValueError("Output path cannot be empty")
+    neighbours = args["neighbours"]
+    if neighbours is not None and not neighbours:
+        raise ValueError("Neighbours path cannot be empty")
     summary = parcel_map.render(
         Path(args["response"]),
         Path(args["output"]),
@@ -53,16 +60,20 @@ def _run_map(args: dict[str, Any]) -> None:
         all_candidates=args["all_candidates"],
         retrieved_at=args["retrieved_at"],
         replace=args["replace"],
-        neighbours_path=args["neighbours"],
+        neighbours_path=Path(neighbours) if neighbours is not None else None,
     )
     print(json.dumps(summary, indent=2, ensure_ascii=False, allow_nan=False))
 
 
 def _run_export(args: dict[str, Any]) -> None:
+    if args["csv"] is not None and not args["csv"]:
+        raise ValueError("Output path cannot be empty")
+    if args["geojson"] is not None and not args["geojson"]:
+        raise ValueError("Output path cannot be empty")
     summary = parcel_map.export(
         Path(args["response"]),
-        csv_path=Path(args["csv"]) if args["csv"] else None,
-        geojson_path=Path(args["geojson"]) if args["geojson"] else None,
+        csv_path=Path(args["csv"]) if args["csv"] is not None else None,
+        geojson_path=Path(args["geojson"]) if args["geojson"] is not None else None,
         all_fields=args["all_fields"],
         replace=args["replace"],
     )
@@ -77,7 +88,7 @@ def _run_fields(args: dict[str, Any]) -> None:
         result: dict[str, Any] = parcel_fields.explain(catalog, args["names"])
     else:
         result = {"matches": parcel_fields.search(catalog, args["term"])}
-    print(json.dumps(result, indent=2, ensure_ascii=False))
+    print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
 
 
 def _client(args: dict[str, Any]) -> RegridClient:
@@ -109,11 +120,12 @@ def _save_json(path: Path, text: str, *, replace: bool) -> None:
 
 
 def _subject_feature(result: Any) -> Any:
-    """The first parcel feature of a response, or None when there is none."""
+    """The single parcel feature of a response, or None when absent or ambiguous."""
     try:
-        return parcel_map.load_features(result)[0]
+        features = parcel_map.load_features(result)
     except ValueError:
         return None
+    return features[0] if len(features) == 1 else None
 
 
 def _subject_point(subject: Any) -> list[float] | None:
@@ -134,11 +146,22 @@ def _subject_mappable(subject: Any) -> bool:
 def _address_map(
     args: dict[str, Any], sent: list[int], saved: list[Path], notes: list[str]
 ) -> None:
+    if not args["output"]:
+        raise ValueError("Output path cannot be empty")
     output = Path(args["output"])
-    response_path = Path(args["save_response"] or output.with_suffix(".json"))
-    neighbours_path = output.with_name(f"{output.stem}.neighbours.json")
+    if output.is_dir():
+        raise ValueError(f"{output} is a directory")
+    if args["save_response"] is not None:
+        if not args["save_response"]:
+            raise ValueError("Output path cannot be empty")
+        response_path = Path(args["save_response"])
+    else:
+        response_path = output.with_suffix(".json")
+    neighbours_path = (
+        output.with_name(f"{output.stem}.neighbours.json") if args["neighbours"] else None
+    )
     replace = args["replace"]
-    targets = [response_path, output] + ([neighbours_path] if args["neighbours"] else [])
+    targets = [response_path, output] + ([neighbours_path] if neighbours_path is not None else [])
     if len({parcel_map.same_file_key(target) for target in targets}) != len(targets):
         raise ValueError("Saved response and map output must be different files")
     for target in targets:
@@ -168,7 +191,7 @@ def _address_map(
             body = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
             _save_json(response_path, body, replace=replace)
             saved.append(response_path)
-            if args["neighbours"]:
+            if neighbours_path is not None:
                 subject = _subject_feature(result)
                 point = _subject_point(subject)
                 if point is None:
@@ -282,12 +305,13 @@ def _identity(item: Any) -> str:
     return "json:" + json.dumps(item, sort_keys=True, default=str)
 
 
-def _extend_new(current: list[Any], incoming: list[Any]) -> None:
+def _extend_new(current: list[Any], incoming: list[Any], known: set[str] | None = None) -> None:
     """Append items not already merged; a misbehaving cursor may repeat the previous page's tail.
 
     Only dict items (features, objects) are de-duplicated; other items are always kept.
     """
-    known = {_identity(item) for item in current if isinstance(item, dict)}
+    if known is None:
+        known = {_identity(item) for item in current if isinstance(item, dict)}
     for item in incoming:
         if isinstance(item, dict):
             identity = _identity(item)
@@ -297,30 +321,38 @@ def _extend_new(current: list[Any], incoming: list[Any]) -> None:
         current.append(item)
 
 
-def _dedupe(items: list[Any]) -> list[Any]:
+def _dedupe(items: list[Any], known: set[str] | None = None) -> list[Any]:
     unique: list[Any] = []
-    _extend_new(unique, items)
+    _extend_new(unique, items, known)
     return unique
 
 
-def _merge_page(merged: dict[str, Any], result: dict[str, Any], noted: set[str]) -> None:
+def _merge_page(
+    merged: dict[str, Any],
+    result: dict[str, Any],
+    noted: set[str],
+    seen: dict[str, set[str]],
+) -> None:
     """Fold a later page's top-level lists and FeatureCollections into the merged response."""
     for key, value in result.items():
-        if key == "parcels":
+        if key == "parcels" or key in noted or value is None:
             continue
         current = merged.get(key)
         if isinstance(value, list):
-            if merged.get(key) is None:
-                merged[key] = _dedupe(value)
+            if current is None:
+                merged[key] = _dedupe(value, seen.setdefault(key, set()))
             elif isinstance(current, list):
-                _extend_new(current, value)
+                _extend_new(current, value, seen.setdefault(key, set()))
             else:
                 _shape_note(key, noted)
         elif _is_collection(value):
-            if merged.get(key) is None:
-                merged[key] = {**value, "features": _dedupe(value["features"])}
-            elif isinstance(current, dict) and _is_collection(current):
-                _extend_new(current["features"], value["features"])
+            if current is None:
+                merged[key] = {
+                    **value,
+                    "features": _dedupe(value["features"], seen.setdefault(key, set())),
+                }
+            elif _is_collection(current):
+                _extend_new(current["features"], value["features"], seen.setdefault(key, set()))
             else:
                 _shape_note(key, noted)
         elif isinstance(current, list) or _is_collection(current):
@@ -336,13 +368,16 @@ def _shape_note(key: str, noted: set[str]) -> None:
         )
 
 
-def _copy_first_page(result: dict[str, Any]) -> dict[str, Any]:
+def _copy_first_page(result: dict[str, Any], seen: dict[str, set[str]]) -> dict[str, Any]:
     merged: dict[str, Any] = {}
     for key, value in result.items():
         if key != "parcels" and isinstance(value, list):
-            merged[key] = _dedupe(value)
+            merged[key] = _dedupe(value, seen.setdefault(key, set()))
         elif key != "parcels" and _is_collection(value):
-            merged[key] = {**value, "features": _dedupe(value["features"])}
+            merged[key] = {
+                **value,
+                "features": _dedupe(value["features"], seen.setdefault(key, set())),
+            }
         else:
             merged[key] = value
     return merged
@@ -379,6 +414,8 @@ def _cursor(feature: Any) -> int | None:
 
 def _drop_trimmed_siblings(merged: dict[str, Any], kept: list[Any], trimmed: list[Any]) -> None:
     """Remove sibling features that belong to parcels trimmed off the end."""
+    if not trimmed:
+        return
 
     def uuids(features: list[Any]) -> set[Any]:
         found = set()
@@ -439,6 +476,7 @@ def _paged_search(
     print(f"regrid: up to {requests_cap} requests for {total} records", file=sys.stderr)
     features: list[Any] = []
     seen_ids: set[str] = set()
+    seen: dict[str, set[str]] = {}
     merged: dict[str, Any] = {}
     noted: set[str] = set()
     pages = 0
@@ -453,9 +491,9 @@ def _paged_search(
         page = _parse_page(result)
         pages += 1
         if pages == 1:
-            merged = _copy_first_page(result)
+            merged = _copy_first_page(result, seen)
         else:
-            _merge_page(merged, result, noted)
+            _merge_page(merged, result, noted, seen)
         new = []
         for feature in page:
             if _feature_id(feature) is not None:
@@ -524,7 +562,12 @@ def _paged_result(
 
 def _freshness(args: dict[str, Any], sent: list[int]) -> None:
     county = county_freshness.county_path(args["path"])
-    cache_path = Path(args["cache"]) if args["cache"] else county_freshness.default_cache_path()
+    if args["cache"] is not None:
+        if not args["cache"]:
+            raise ValueError("Cache path cannot be empty")
+        cache_path = Path(args["cache"])
+    else:
+        cache_path = county_freshness.default_cache_path()
     base_url = args["base_url"]
     cached = None if args["refresh"] else county_freshness.read_cache(cache_path, base_url)
     max_age = args["max_age_days"]
@@ -607,9 +650,7 @@ def _parser() -> argparse.ArgumentParser:
     offline.add_argument("--feature", type=int, metavar="N", help="Zero-based feature index")
     offline.add_argument("--all-candidates", action="store_true", help="Map every feature")
     offline.add_argument("--retrieved-at", metavar="ISO", help="Retrieval timestamp to display")
-    offline.add_argument(
-        "--neighbours", type=Path, metavar="FILE", help="Saved neighbouring parcels response"
-    )
+    offline.add_argument("--neighbours", metavar="FILE", help="Saved neighbouring parcels response")
     offline.add_argument("--replace", action="store_true", help="Overwrite an existing output")
     export = commands.add_parser(
         "export",
@@ -816,6 +857,7 @@ def _parser() -> argparse.ArgumentParser:
         if name == "tile":
             sub.add_argument("--retina", action="store_true")
             sub.add_argument("--output", required=True, help="Destination for binary tile bytes")
+            sub.add_argument("--replace", action="store_true", help="Overwrite an existing output")
     return parser
 
 
@@ -831,8 +873,13 @@ def main(argv: list[str] | None = None) -> int:
     if offline_handler is not None:
         try:
             offline_handler(args)
-        except (ValueError, OSError) as exc:  # MapError is a ValueError
-            print(f"regrid: {' '.join(str(exc).split())}", file=sys.stderr)
+        except (ValueError, OSError, RecursionError) as exc:  # MapError is a ValueError
+            message = (
+                "Response or input is nested too deeply"
+                if isinstance(exc, RecursionError)
+                else " ".join(str(exc).split())
+            )
+            print(f"regrid: {message}", file=sys.stderr)
             return 1
         return 0
     if command == "freshness":
@@ -843,10 +890,22 @@ def main(argv: list[str] | None = None) -> int:
     base_url = args.pop("base_url")
     tiles_base_url = args.pop("tiles_base_url")
     output = args.pop("output", None)
+    replace = args.pop("replace", False)
     max_records = args.pop("max_records", None)
     count = 0
     progress: dict[str, Any] = {}
     try:
+        output_path: Path | None = None
+        if output is not None:
+            if not output:
+                raise ValueError("Output path cannot be empty")
+            output_path = Path(output)
+            if not output_path.parent.is_dir():
+                raise ValueError("Output directory does not exist")
+            if output_path.is_dir():
+                raise ValueError(f"{output_path} is a directory")
+            if not replace and os.path.lexists(output_path):
+                raise ValueError(f"{output_path} exists; pass --replace to overwrite it")
         options = _object(args.pop("options", "{}"))
         for name in ("geojson", "fields", "details", "metadata"):
             if args.get(name) is not None:
@@ -866,8 +925,8 @@ def main(argv: list[str] | None = None) -> int:
                     result = _paged_search(client, command, args, options, max_records, progress)
             finally:
                 count = client.request_count
-        if output is not None:
-            Path(output).write_bytes(result)
+        if output_path is not None:
+            parcel_map.write_atomic_bytes(output_path, result, replace=replace)
         else:
             print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
     except (RegridError, ValueError, TypeError, OSError, RecursionError) as exc:

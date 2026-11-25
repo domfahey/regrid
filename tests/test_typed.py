@@ -6,7 +6,7 @@ import traceback
 import httpx
 import pytest
 
-from regrid import AuthenticationError, RegridDecodeError, RegridHTTPError
+from regrid import AuthenticationError, QueryPagingError, RegridDecodeError, RegridHTTPError
 from regrid.models import (
     ClientTokenResponse,
     CountResponse,
@@ -371,3 +371,41 @@ def test_typed_tilejson_model_can_be_reused_as_grid_metadata():
     assert isinstance(result, UTFGridResponse)
     assert result.keys == ["", "parcel-1"]
     assert [request.url.path for request in seen] == ["/api/v1/parcels", "/utf/15/8828/12121.json"]
+
+
+def test_typed_validate_query_sends_nothing_and_checks_paging():
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json=PARCELS)
+
+    with TypedRegridClient(
+        "test-auth-token",
+        max_limit=10,
+        transport=httpx.MockTransport(handler),
+    ) as client:
+        assert client.validate_query({"yearbuilt": {"order": "ASC"}}) is None
+        assert (
+            client.validate_query(
+                {"custom_unknown": {"eq": "1"}},
+                country="us",
+                validate_fields=True,
+                allow_unknown_fields=True,
+                limit=10,
+            )
+            is None
+        )
+        with pytest.raises(ValueError, match="Invalid Regrid request parameters"):
+            client.validate_query({"geoid": {"eq": "1"}}, bogus_option=1)
+        with pytest.raises(ValueError, match="Field is not queryable"):
+            client.validate_query({"nope_field": {"eq": "x"}}, validate_fields=True)
+        with pytest.raises(ValueError, match="exceeds configured maximum"):
+            client.validate_query({"geoid": {"eq": "1"}}, limit=50)
+        with pytest.raises(QueryPagingError):
+            client.validate_query({"yearbuilt": {"order": "ASC"}}, paging=True)
+        with pytest.raises(QueryPagingError):
+            client.validate_query(
+                {"yearbuilt": {"order": "ASC"}}, paging=True, validate_fields=True
+            )
+    assert seen == []

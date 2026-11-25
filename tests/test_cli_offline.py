@@ -111,6 +111,21 @@ def test_export_cli_non_finite_is_one_line(tmp_path, capsys):
     assert not (tmp_path / "o.geojson").exists()
 
 
+@pytest.mark.parametrize("literal", ["NaN", "Infinity", "-Infinity"])
+def test_export_cli_csv_only_non_finite_is_one_line(tmp_path, capsys, literal):
+    response = tmp_path / "r.json"
+    response.write_text(
+        '{"parcels":{"features":[{"type":"Feature","geometry":null,'
+        f'"properties":{{"path":"/us/nj/x","headline":{literal},"fields":{{}}}}}}]}}}}',
+        encoding="utf-8",
+    )
+    out = tmp_path / "o.csv"
+    assert cli.main(["export", str(response), "--csv", str(out)]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("regrid: ") and "NaN or Infinity" in err and err.count("\n") == 1
+    assert not out.exists()
+
+
 def test_map_neighbours_passthrough(tmp_path, capsys):
     response = write_response(tmp_path / "r.json", good_feature())
     other = good_feature()
@@ -146,3 +161,24 @@ def test_map_onto_directory_is_one_clean_line(tmp_path, capsys):
     (tmp_path / "out").mkdir()
     assert cli.main(["map", str(response), str(tmp_path / "out"), "--replace"]) == 1
     assert capsys.readouterr().err == "regrid: Output path is a directory\n"
+
+
+@pytest.mark.parametrize("flag", ["--csv", "--geojson"])
+def test_export_rejects_empty_output_path(tmp_path, capsys, flag):
+    response = write_response(tmp_path / "r.json", good_feature())
+    assert cli.main(["export", str(response), flag, ""]) == 1
+    assert capsys.readouterr().err == "regrid: Output path cannot be empty\n"
+
+
+def test_map_rejects_empty_path_options(tmp_path, capsys):
+    response = write_response(tmp_path / "r.json", good_feature())
+    out = tmp_path / "m.html"
+    for argv in [
+        ["map", "", str(out)],
+        ["map", str(response), ""],
+        ["map", str(response), str(out), "--neighbours", ""],
+    ]:
+        assert cli.main(argv) == 1
+        err = capsys.readouterr().err
+        assert "cannot be empty" in err and err.count("\n") == 1
+        assert not out.exists()

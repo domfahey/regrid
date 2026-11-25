@@ -289,7 +289,7 @@ def test_empty_address_skips_dependent_steps(capsys):
         "PASS final usage",
     ):
         assert name in results
-    assert any("subject county present" not in line for line in output)
+    assert all("subject county present" not in line for line in output)
     assert not [r for r in server.requests if r.url.path.endswith("/parcels/point")]
 
 
@@ -432,7 +432,7 @@ def test_subject_with_missing_pieces_skips_dependents(capsys):
     assert run_full(server) == 0
     output = lines(capsys)
     assert "SKIP parcel: subject lacks ll_uuid" in output
-    assert "SKIP parcel-path: subject lacks path" in output
+    assert "SKIP parcel-path: subject lacks path, ll_uuid" in output
     assert "SKIP apn: subject lacks county, parcelnumb" in output
     assert "SKIP owner: subject lacks county" in output
     assert "SKIP point GET: subject lacks lat, lon" in output
@@ -524,13 +524,13 @@ def test_final_usage_failure_and_unavailable_counters(capsys):
     assert "PASS final usage: comparable record counters unavailable" in lines(capsys)
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def restore_logging():
     yield
     logging.disable(logging.NOTSET)
 
 
-def test_main_runs_with_environment(monkeypatch, capsys, restore_logging):
+def test_main_runs_with_environment(monkeypatch, capsys):
     server = Server()
     seen = []
     inner = server.respond
@@ -556,7 +556,7 @@ def test_main_runs_with_environment(monkeypatch, capsys, restore_logging):
     assert any(r.url.params.get("query") == "private-address" for r in server.requests)
 
 
-def test_main_initialization_failure_is_generic(monkeypatch, capsys, restore_logging):
+def test_main_initialization_failure_is_generic(monkeypatch, capsys):
     monkeypatch.setenv("REGRID_TOKEN", TOKEN)
 
     def boom(*args, **kwargs):
@@ -577,6 +577,63 @@ def test_run_builds_and_closes_its_own_bad_client(monkeypatch, capsys):
     with real(TOKEN, transport=transport, max_limit=2, default_limit=1) as client:
         assert live_full.run(client, "private-address") == 0
     assert "PASS bad token: rejected with HTTP 401" in lines(capsys)
+
+
+def test_run_preserves_custom_base_urls_for_bad_client(monkeypatch, capsys):
+    server = Server()
+    transport = httpx.MockTransport(server)
+    real = live_full.RegridClient
+    calls = []
+    closed = []
+
+    def fake_client(*args, **kwargs):
+        bad = real(*args, transport=transport, **kwargs)
+        orig_close = bad.close
+
+        def tracked_close():
+            closed.append(bad)
+            orig_close()
+
+        bad.close = tracked_close
+        calls.append((args, kwargs, bad))
+        return bad
+
+    monkeypatch.setattr(live_full, "RegridClient", fake_client)
+    with real(
+        TOKEN,
+        base_url="https://staging.example/api/v2",
+        tiles_base_url="https://tiles.staging.example",
+        transport=transport,
+        max_limit=2,
+        default_limit=1,
+    ) as client:
+        live_full.run(client, "private-address")
+    assert len(calls) == 1
+    args, kwargs, bad = calls[0]
+    assert args == (live_full.BAD_TOKEN,)
+    assert kwargs["base_url"] == "https://staging.example/api/v2"
+    assert kwargs["tiles_base_url"] == "https://tiles.staging.example"
+    assert closed == [bad]
+    assert bad._http.is_closed
+    bad_requests = [r for r in server.requests if r.url.params.get("token") == live_full.BAD_TOKEN]
+    assert bad_requests and bad_requests[0].url.host == "staging.example"
+    assert "PASS bad token: rejected with HTTP 401" in lines(capsys)
+
+
+def test_by_path_skips_when_subject_lacks_ll_uuid(capsys):
+    subject = json.loads(json.dumps(SUBJECT))
+    del subject["properties"]["ll_uuid"]
+    server = Server(
+        {
+            ("GET", "/parcels/address"): httpx.Response(
+                200, json={"parcels": {"type": "FeatureCollection", "features": [subject]}}
+            )
+        }
+    )
+    assert run_full(server) == 0
+    output = lines(capsys)
+    assert "SKIP parcel-path: subject lacks ll_uuid" in output
+    assert not any(r.url.path.endswith("/parcels/path") for r in server.requests)
 
 
 def test_geometry_helpers():

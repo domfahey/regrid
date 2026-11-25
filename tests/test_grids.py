@@ -137,12 +137,12 @@ def test_unsafe_or_missing_template_fails_before_network(metadata, message):
     "coords", [(9, 0, 0), (22, 0, 0), (10, -1, 0), (10, 0, 1024), (True, 0, 0)]
 )
 def test_invalid_coordinates_do_not_even_discover_metadata(coords):
-    seen = []
-    transport = httpx.MockTransport(lambda request: seen.append(request))
-    with RegridClient(TOKEN, transport=transport) as client:
+    def unexpected(request: httpx.Request) -> httpx.Response:
+        pytest.fail(f"Unexpected HTTP request: {request.url}")
+
+    with RegridClient(TOKEN, transport=httpx.MockTransport(unexpected)) as client:
         with pytest.raises(ValueError, match="^Invalid Regrid request parameters$"):
             fetch_grid(client, *coords)
-    assert seen == []
 
 
 @pytest.mark.parametrize(

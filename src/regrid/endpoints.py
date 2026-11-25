@@ -52,7 +52,7 @@ def _country(country: str) -> str:
     return "" if country == "us" else "/ca"
 
 
-def _text(value: str, name: str) -> str:
+def _text(value: str) -> str:
     return safe_validate(TextInput, {"value": value}).value
 
 
@@ -84,8 +84,12 @@ def _options(options: dict[str, Any], allowed: set[str]) -> dict[str, Any]:
     return validate_options(options, allowed)
 
 
+def _parcel_options_for_prefix(prefix: str) -> set[str]:
+    return _COMMON | (_PREMIUM if not prefix else set())
+
+
 def _parcel_options(country: str) -> set[str]:
-    return _COMMON | (_PREMIUM if not _country(country) else set())
+    return _parcel_options_for_prefix(_country(country))
 
 
 class EndpointsMixin:
@@ -118,7 +122,7 @@ class EndpointsMixin:
         method = safe_validate(
             MethodInput, {"value": method.upper() if isinstance(method, str) else method}
         ).value
-        allowed = _parcel_options(country) | {"radius", "limit", "return_count"}
+        allowed = _parcel_options_for_prefix(prefix) | {"radius", "limit", "return_count"}
         if not prefix:
             allowed.add("return_custom_id")
         if method == "GET":
@@ -153,7 +157,7 @@ class EndpointsMixin:
         method = safe_validate(
             MethodInput, {"value": method.upper() if isinstance(method, str) else method}
         ).value
-        allowed = _parcel_options(country) | {
+        allowed = _parcel_options_for_prefix(prefix) | {
             "radius",
             "offset_id",
             "limit",
@@ -173,24 +177,27 @@ class EndpointsMixin:
 
     def address(self, query: str, *, country: str = "us", **options: Any) -> dict[str, Any]:
         """Search an address; use path to disambiguate its geography."""
-        params = _options(options, _parcel_options(country) | {"path", "limit"})
-        params["query"] = _text(query, "query")
-        return self._request("GET", f"{_country(country)}/parcels/address", params=params)
+        prefix = _country(country)
+        params = _options(options, _parcel_options_for_prefix(prefix) | {"path", "limit"})
+        params["query"] = _text(query)
+        return self._request("GET", f"{prefix}/parcels/address", params=params)
 
     def apn(self, parcelnumb: str, *, country: str = "us", **options: Any) -> dict[str, Any]:
         """Search an APN as a string, preserving leading zeros and letters."""
-        params = _options(options, _parcel_options(country) | {"path", "limit"})
-        params["parcelnumb"] = _text(parcelnumb, "parcelnumb")
-        return self._request("GET", f"{_country(country)}/parcels/apn", params=params)
+        prefix = _country(country)
+        params = _options(options, _parcel_options_for_prefix(prefix) | {"path", "limit"})
+        params["parcelnumb"] = _text(parcelnumb)
+        return self._request("GET", f"{prefix}/parcels/apn", params=params)
 
     def owner(self, owner: str, *, country: str = "us", **options: Any) -> dict[str, Any]:
         """Search an owner-name prefix (US only, at least four characters)."""
-        if _country(country):
+        prefix = _country(country)
+        if prefix:
             raise ValueError("owner search is only documented for the US")
-        owner = _text(owner, "owner")
+        owner = _text(owner)
         if len(owner.strip()) < 4:
             raise ValueError("owner must contain at least four characters")
-        params = _options(options, _parcel_options(country) | {"path", "limit"})
+        params = _options(options, _parcel_options_for_prefix(prefix) | {"path", "limit"})
         params["owner"] = owner
         return self._request("GET", "/parcels/owner", params=params)
 
@@ -261,7 +268,7 @@ class EndpointsMixin:
         if type(validate_fields) is not bool or type(allow_unknown_fields) is not bool:
             raise ValueError("Catalog validation flags must be booleans")
         prefix = _country(country)
-        allowed = _parcel_options(country) | {
+        allowed = _parcel_options_for_prefix(prefix) | {
             "offset_id",
             "geojson",
             "radius",
@@ -290,6 +297,10 @@ class EndpointsMixin:
                 allow_unknown=allow_unknown_fields,
                 paging=paging or params.get("offset_id") is not None,
             )
+        if (paging or params.get("offset_id") is not None) and any(
+            "order" in operators for operators in validated.values()
+        ):
+            raise ValueError("order operator cannot be used with offset_id paging")
         for field, operators in validated.items():
             for operator, value in operators.items():
                 if isinstance(value, (list, tuple, dict, bool)) or value is None:
@@ -299,24 +310,26 @@ class EndpointsMixin:
 
     def parcel(self, ll_uuid: str, *, country: str = "us", **options: Any) -> dict[str, Any]:
         """Retrieve one parcel by its Regrid UUID."""
-        params = _options(options, _parcel_options(country))
+        prefix = _country(country)
+        params = _options(options, _parcel_options_for_prefix(prefix))
         try:
-            parcel_id = str(UUID(_text(ll_uuid, "ll_uuid")))
+            parcel_id = str(UUID(_text(ll_uuid)))
         except (ValueError, AttributeError):
             raise ValueError("ll_uuid must be a valid UUID") from None
-        return self._request("GET", f"{_country(country)}/parcels/{parcel_id}", params=params)
+        return self._request("GET", f"{prefix}/parcels/{parcel_id}", params=params)
 
     def parcel_path(self, path: str, *, country: str = "us", **options: Any) -> dict[str, Any]:
         """Retrieve one parcel by its full canonical path."""
-        params = _options(options, _parcel_options(country))
-        params["path"] = _text(path, "path")
-        return self._request("GET", f"{_country(country)}/parcels/path", params=params)
+        prefix = _country(country)
+        params = _options(options, _parcel_options_for_prefix(prefix))
+        params["path"] = _text(path)
+        return self._request("GET", f"{prefix}/parcels/path", params=params)
 
     def typeahead(self, query: str, *, country: str = "us") -> dict[str, Any]:
         """Enterprise US address autocomplete; accepts a client token at client creation."""
         if _country(country):
             raise ValueError("typeahead is only documented for the US")
-        return self._request("GET", "/parcels/typeahead", params={"query": _text(query, "query")})
+        return self._request("GET", "/parcels/typeahead", params={"query": _text(query)})
 
     def client_token_typeahead(self, exp: float | None = None) -> dict[str, Any]:
         """Create a temporary typeahead-only token; exp is a duration in seconds."""
@@ -359,13 +372,13 @@ class EndpointsMixin:
         """Submit a data issue to Regrid. This method creates an external report."""
         params: dict[str, Any] = {}
         if comment is not None:
-            params["comment"] = _text(comment, "comment")
+            params["comment"] = _text(comment)
         if path is not None:
-            params["path"] = _text(path, "path")
+            params["path"] = _text(path)
         if ll_uuid is not None:
-            params["ll_uuid"] = _text(ll_uuid, "ll_uuid")
+            params["ll_uuid"] = _text(ll_uuid)
         if details is not None:
             params["details"] = (
-                _json(dict(details)) if isinstance(details, Mapping) else _text(details, "details")
+                _json(dict(details)) if isinstance(details, Mapping) else _text(details)
             )
         return self._request("POST", "/report", params=params)

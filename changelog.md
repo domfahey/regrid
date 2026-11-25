@@ -6,7 +6,28 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
-No changes yet.
+### Added
+
+- Typed SDK: `TypedRegridClient.validate_query()` now mirrors `RegridClient.validate_query()` for offline query and paging validation.
+- CLI (`regrid tile`): added `--replace` to explicitly opt into overwriting an existing output file, matching `map`, `export`, and `address-map`.
+
+### Changed
+
+- SDK (`regrid.models`): removed unused generic `Feature` and `FeatureCollection` models (all typed endpoints use dedicated `*Feature` and `*Collection` classes).
+- Plugin docs, evals, and CI: tightened `SKILL.md` (to 786 words) and `batch.md`; aligned `return_parcels=true`, exact per-command CLI `--options` keys, and ambiguous `address-map` handling across skill references; expanded `evals/run.py validate --suite all` to check `composability-regressions.json`, `composability-rubric.json`, and `discovery-rubric.json` plus Canadian routes on all suites; added data-issue and legal-ownership exclusion prompts to `trigger-cases.json`; reduced redundant validation/JSON serialization passes in `workflow.py`; pinned `uv` and deduplicated lint/type/build steps in CI; pruned superseded planning docs and intermediate `not_run` map-host records.
+
+### Fixed
+
+- CLI (`regrid tile`): `--output` is now validated (non-empty, existing parent directory, not a directory, and not overwriting existing files without `--replace`) before sending a billable tile request, and bytes are written atomically without following symlinks.
+- CLI & SDK: `fields[...][order]` is now rejected whenever `offset_id` paging or `--max-records` is used, even without `--validate-fields` / `validate_fields=True` or when `allow_unknown_fields=True`; empty-string path flags (`--csv ""`, `--geojson ""`, `--save-response ""`, `--cache ""`, `--neighbours ""`, empty `map`/`address-map`/`tile` paths) are now rejected instead of silently falling back.
+- CLI & SDK: `@file` JSON arguments (`--options`, `--fields`, `--geojson`, `--details`, `--metadata`) now read explicitly as UTF-8 instead of the platform default encoding; `RegridClient.query(..., geojson=...)` now accepts any `Mapping` (matching `point` and `area`); offline CLI commands (`map`, `export`, `fields`) and `map.py` now catch `RecursionError` cleanly and enforce `allow_nan=False` on JSON output.
+- Offline map helper (`regrid export --csv` and `scripts/map.py`): scalar `NaN`, `Infinity`, and `-Infinity` values now raise `MapError` on CSV-only exports instead of writing non-JSON literals.
+- Offline map helper (`same_file_key`): `FileNotFoundError` and `NotADirectoryError` from `Path.resolve()` now raise `MapError` instead of crashing with `UnboundLocalError`.
+- CLI paging (`--max-records`): `_merge_page()` no longer emits a false shape-change note when a later page returns `null` for a sibling collection/list, actually ignores later pages for keys whose shape changed, and de-duplicates merged collections in linear time instead of rescanning prior pages.
+- CLI `address-map`: `--neighbours` no longer sends a second `/parcels/point` request when `/parcels/address` returns multiple parcels (which `render()` rejects), and directory paths such as `.` or `/` now report `<target> is a directory` instead of a raw `pathlib` empty-name error.
+- Offline helpers (`fields.py`, `freshness.py`): `fields.py` and `freshness.py` now serialize CLI output with `allow_nan=False`, and `freshness.county_path()` now rejects whitespace-only state or county segments before making a `/verse` request.
+- `regrid.live_full`: `run()` now passes the caller's `base_url` and `tiles_base_url` to its default `bad_client`, and `by_path()` now requires `ll_uuid` on the subject before comparing parcel IDs.
+- Plugin helper, docs, and evals: `workflow.py validate` and `save_checkpoint` now agree on indented JSON nesting limits and handle `RecursionError` cleanly; `evals/run.py`'s Canadian-route guard inspects HAR `queryString`, `country`, and CLI `--country ca`/`schema ca` without false-positiving on California addresses; `cli.md` documents `regrid grid`'s two-request default when `--metadata` is omitted; `mcp-tools.md` keeps dated observations in `## Observed history`; `scripts/build_claude_plugins.py` applies dotfile/secret filtering to `commands/`.
 
 ## [SDK 0.4.5][sdk-v0.4.5] and [Regrid Research 0.9.6][regrid-research-v0.9.6] - 2026-11-20
 

@@ -101,9 +101,9 @@ def test_invalid_tile_coordinates_never_send_request(z, x, y):
 
 
 def test_retina_vector_is_rejected():
-    seen = []
-    transport = httpx.MockTransport(lambda request: seen.append(request))
-    with RegridClient(token="tile-token", transport=transport) as client:
+    def unexpected(request: httpx.Request) -> httpx.Response:
+        pytest.fail(f"Unexpected HTTP request: {request.url}")
+
+    with RegridClient(token="tile-token", transport=httpx.MockTransport(unexpected)) as client:
         with pytest.raises(ValueError, match="^Invalid Regrid request parameters$"):
             client.tile(10, 0, 0, format="mvt", retina=True)
-    assert seen == []

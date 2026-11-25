@@ -61,11 +61,16 @@ def command_files(root: Path) -> dict[str, bytes]:
         raise ValueError("Symlink not allowed in package: commands")
     if not directory.exists():
         return {}
-    return {
-        f"commands/{path.name}": read_public_file(root, f"commands/{path.name}")
-        for path in sorted(directory.glob("*.md"))
-        if path.is_file() or path.is_symlink()
-    }
+    result: dict[str, bytes] = {}
+    for path in sorted(directory.glob("*.md")):
+        if path.is_symlink():
+            raise ValueError(f"Symlink not allowed in package: commands/{path.name}")
+        if not path.is_file():
+            continue
+        if path.name.startswith(".") or path.name.lower().startswith(("credentials", "secrets")):
+            continue
+        result[f"commands/{path.name}"] = read_public_file(root, f"commands/{path.name}")
+    return result
 
 
 def json_bytes(value: object) -> bytes:

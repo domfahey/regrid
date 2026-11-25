@@ -4,7 +4,7 @@ import json
 import time
 
 import pytest
-from e2e_support import regrid_server, run_cli  # noqa: F401
+from e2e_support import run_cli
 
 pytestmark = pytest.mark.e2e
 TOKEN = "secret-token"
@@ -22,7 +22,7 @@ def requests_made(proc):
     return int(line.rsplit(": ", 1)[1])
 
 
-def test_tilejson_mvt(regrid_server):  # noqa: F811
+def test_tilejson_mvt(regrid_server):
     regrid_server.route("/api/v1/parcels", json={"tilejson": "2.2.0", "tiles": ["x"]})
     proc = run_cli(regrid_server, "tilejson", "--format", "mvt")
     assert proc.returncode == 0, proc.stderr
@@ -35,7 +35,7 @@ def test_tilejson_mvt(regrid_server):  # noqa: F811
     assert_clean(proc)
 
 
-def test_tilejson_png(regrid_server):  # noqa: F811
+def test_tilejson_png(regrid_server):
     regrid_server.route("/api/v1/parcels", json={"tilejson": "2.2.0"})
     proc = run_cli(regrid_server, "tilejson", "--format", "png")
     assert proc.returncode == 0, proc.stderr
@@ -54,7 +54,7 @@ def test_tilejson_png(regrid_server):  # noqa: F811
         (["--format", "png", "--retina"], "/api/v1/parcels/10/1/2@2x.png"),
     ],
 )
-def test_tile_writes_bytes(regrid_server, tmp_path, args, path):  # noqa: F811
+def test_tile_writes_bytes(regrid_server, tmp_path, args, path):
     regrid_server.route(path, body=TILE)
     out = tmp_path / "tile.bin"
     proc = run_cli(regrid_server, "tile", *args, "--output", str(out), "10", "1", "2")
@@ -74,7 +74,7 @@ def raster_tilejson(server, template="{base}/grid/{{z}}/{{x}}/{{y}}.json?token={
     return meta
 
 
-def test_grid_discovers_tilejson(regrid_server):  # noqa: F811
+def test_grid_discovers_tilejson(regrid_server):
     raster_tilejson(regrid_server)
     proc = run_cli(regrid_server, "grid", "12", "6", "7")
     assert proc.returncode == 0, proc.stderr
@@ -90,7 +90,7 @@ def test_grid_discovers_tilejson(regrid_server):  # noqa: F811
     assert_clean(proc)
 
 
-def test_grid_with_metadata_file(regrid_server, tmp_path):  # noqa: F811
+def test_grid_with_metadata_file(regrid_server, tmp_path):
     meta = raster_tilejson(regrid_server)
     path = tmp_path / "meta.json"
     path.write_text(json.dumps(meta))
@@ -103,7 +103,7 @@ def test_grid_with_metadata_file(regrid_server, tmp_path):  # noqa: F811
     assert_clean(proc)
 
 
-def test_grid_rejects_foreign_origin(regrid_server):  # noqa: F811
+def test_grid_rejects_foreign_origin(regrid_server):
     meta = {"grids": ["https://evil.example/grid/{z}/{x}/{y}.json"]}
     proc = run_cli(regrid_server, "grid", "--metadata", json.dumps(meta), "12", "6", "7")
     assert proc.returncode != 0
@@ -112,7 +112,7 @@ def test_grid_rejects_foreign_origin(regrid_server):  # noqa: F811
     assert_clean(proc)
 
 
-def test_report_posts_to_local_server_only(regrid_server):  # noqa: F811
+def test_report_posts_to_local_server_only(regrid_server):
     regrid_server.route("/api/v2/report", json={"status": "ok"})
     proc = run_cli(
         regrid_server,
@@ -135,7 +135,7 @@ def test_report_posts_to_local_server_only(regrid_server):  # noqa: F811
     assert_clean(proc)
 
 
-def test_report_details_text(regrid_server):  # noqa: F811
+def test_report_details_text(regrid_server):
     regrid_server.route("/api/v2/report", json={"status": "ok"})
     proc = run_cli(regrid_server, "report", "--ll-uuid", "abc", "--details-text", "plain words")
     assert proc.returncode == 0, proc.stderr
@@ -147,7 +147,7 @@ def test_report_details_text(regrid_server):  # noqa: F811
     assert_clean(proc)
 
 
-def test_client_token_typeahead(regrid_server):  # noqa: F811
+def test_client_token_typeahead(regrid_server):
     regrid_server.route("/api/v2/client_token/typeahead", json={"token": "client-xyz"})
     proc = run_cli(regrid_server, "client-token-typeahead", "--exp", "600")
     assert proc.returncode == 0, proc.stderr
@@ -160,7 +160,7 @@ def test_client_token_typeahead(regrid_server):  # noqa: F811
     assert_clean(proc)
 
 
-def test_redirect_not_followed(regrid_server):  # noqa: F811
+def test_redirect_not_followed(regrid_server):
     regrid_server.route(
         "/api/v2/parcels/address",
         status=302,
@@ -177,8 +177,8 @@ def test_redirect_not_followed(regrid_server):  # noqa: F811
     assert_clean(proc)
 
 
-@pytest.mark.parametrize("status", [500, 429])
-def test_http_errors_are_clean(regrid_server, status):  # noqa: F811
+@pytest.mark.parametrize("status", [500, 429, 403])
+def test_http_errors_are_clean(regrid_server, status):
     regrid_server.route(
         "/api/v2/parcels/address",
         status=status,
@@ -192,18 +192,18 @@ def test_http_errors_are_clean(regrid_server, status):  # noqa: F811
     assert_clean(proc)
 
 
-def test_timeout_exits_quickly(regrid_server):  # noqa: F811
-    regrid_server.route("/api/v2/parcels/address", json={"parcels": {}}, delay=5)
+def test_timeout_exits_quickly(regrid_server):
+    regrid_server.route("/api/v2/parcels/address", json={"parcels": {}}, delay=1.0)
     start = time.monotonic()
-    proc = run_cli(regrid_server, "--timeout", "1", "address", "1 Main St")
-    assert time.monotonic() - start < 4.5
+    proc = run_cli(regrid_server, "--timeout", "0.25", "address", "1 Main St")
+    assert time.monotonic() - start < 2.0
     assert proc.returncode != 0
     assert "transport request failed" in proc.stderr.decode()
     assert proc.stdout == b""
     assert_clean(proc)
 
 
-def test_non_json_body(regrid_server):  # noqa: F811
+def test_non_json_body(regrid_server):
     regrid_server.route(
         "/api/v2/parcels/address", body=b"<html>oops</html>", content_type="text/html"
     )
@@ -215,14 +215,14 @@ def test_non_json_body(regrid_server):  # noqa: F811
     assert_clean(proc)
 
 
-def test_missing_token_makes_no_request(regrid_server):  # noqa: F811
+def test_missing_token_makes_no_request(regrid_server):
     proc = run_cli(regrid_server, "address", "1 Main St", token=None)
     assert proc.returncode != 0
     assert regrid_server.requests == []
     assert requests_made(proc) == 0
 
 
-def test_tile_retina_mvt_rejected_before_request(regrid_server, tmp_path):  # noqa: F811
+def test_tile_retina_mvt_rejected_before_request(regrid_server, tmp_path):
     out = tmp_path / "tile.bin"
     proc = run_cli(regrid_server, "tile", "--retina", "--output", str(out), "10", "1", "2")
     assert proc.returncode != 0

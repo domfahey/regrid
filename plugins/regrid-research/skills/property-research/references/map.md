@@ -48,8 +48,8 @@ OUTPUT.html` (one request) or `regrid map RESPONSE.json OUTPUT.html` (offline).
 Follow the confirmation rule in [batch](batch.md#neighbour-requests): state the cost
 if the user already asked for neighbours ("one request, up to 25 records"), otherwise offer it and
 wait. Then make one `/parcels/point` request with the subject's `lat` and `lon`,
-`radius=100`, `limit=25`, `return_geometry=true`, and premium datasets off. Save the
-response verbatim to `NEIGHBOURS.json` and run:
+`radius=100`, `limit=25`, `return_geometry=true`, `return_parcels=true`, and premium
+datasets off. Save the response verbatim to `NEIGHBOURS.json` and run:
 
 ```
 python3 "<skill>/scripts/map.py" render RESPONSE.json OUTPUT.html --neighbours NEIGHBOURS.json

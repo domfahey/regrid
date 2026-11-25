@@ -89,8 +89,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         result = {"matches": search(catalog, args.term)}
     try:
-        text = json.dumps(result, indent=2, ensure_ascii=False)
-    except (OSError, ValueError, RecursionError) as exc:
+        text = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False)
+    except (ValueError, RecursionError) as exc:
         print(f"fields: {' '.join(str(exc).split()) or type(exc).__name__}", file=sys.stderr)
         return 1
     print(text)

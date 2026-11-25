@@ -1,7 +1,7 @@
 """The skill's bundled helpers are generated copies of src/regrid/offline sources."""
 
+import ast
 import importlib.util
-import re
 import shutil
 from pathlib import Path
 
@@ -34,14 +34,14 @@ def test_skill_copies_match_sources():
 
 def test_check_reports_drift_without_writing(tmp_path):
     fake = make_tree(tmp_path)
-    (fake / SKILL_SCRIPTS / "map.py").write_text("# edited\n")
+    (fake / SKILL_SCRIPTS / "map.py").write_text("# edited\n", encoding="utf-8")
     assert sync_module.sync(fake, check=True) == ["map.py"]
-    assert (fake / SKILL_SCRIPTS / "map.py").read_text() == "# edited\n"
+    assert (fake / SKILL_SCRIPTS / "map.py").read_text(encoding="utf-8") == "# edited\n"
 
 
 def test_sync_writes_identical_copy(tmp_path):
     fake = make_tree(tmp_path)
-    (fake / SKILL_SCRIPTS / "map.py").write_text("# edited\n")
+    (fake / SKILL_SCRIPTS / "map.py").write_text("# edited\n", encoding="utf-8")
     assert sync_module.sync(fake, check=False) == ["map.py"]
     assert sync_module.sync(fake, check=True) == []
 
@@ -57,7 +57,7 @@ def test_missing_skill_copy_counts_as_drift(tmp_path):
 def test_cli_check_exit_codes(tmp_path, capsys):
     assert sync_module.main(["--check"], root=ROOT) == 0
     fake = make_tree(tmp_path)
-    (fake / SKILL_SCRIPTS / "map.py").write_text("# edited\n")
+    (fake / SKILL_SCRIPTS / "map.py").write_text("# edited\n", encoding="utf-8")
     assert sync_module.main(["--check"], root=fake) == 1
     assert (
         "out of sync: map.py; run python scripts/sync_skill_helpers.py" in capsys.readouterr().out
@@ -66,8 +66,26 @@ def test_cli_check_exit_codes(tmp_path, capsys):
     assert sync_module.main(["--check"], root=fake) == 0
 
 
+def _disallowed_imports(source: str) -> list[str]:
+    tree = ast.parse(source)
+    bad: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "regrid" or alias.name.startswith("regrid."):
+                    bad.append(f"import {alias.name}")
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            if node.level > 0 or module == "regrid" or module.startswith("regrid."):
+                bad.append(f"from {'.' * node.level}{module}")
+    return bad
+
+
 def test_offline_helpers_import_nothing_from_regrid():
     paths = sorted((ROOT / "src/regrid/offline").glob("*.py"))
     assert {"map.py", "fields.py", "freshness.py"} <= {p.name for p in paths}
     for path in paths:
-        assert not re.search(r"^\s*(from|import)\s+regrid\b|^\s*from\s+\.", path.read_text(), re.M)
+        assert _disallowed_imports(path.read_text(encoding="utf-8")) == []
+    assert _disallowed_imports("import os, regrid\n") == ["import regrid"]
+    assert _disallowed_imports("from regrid.client import RegridClient\n") == ["from regrid.client"]
+    assert _disallowed_imports("from . import fields\n") == ["from ."]

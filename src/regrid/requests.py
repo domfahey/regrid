@@ -29,13 +29,14 @@ NonemptyText = Annotated[str, StringConstraints(strict=True, min_length=1)]
 
 
 def _reject_blank_text(value: str) -> str:
-    # Same rule as TextInput: whitespace-only text is blank. Values are never altered.
+    # Whitespace-only text is blank. Values are never altered.
     if not value.strip():
         raise ValueError("Text must not be blank")
     return value
 
 
-PathText = Annotated[NonemptyText, AfterValidator(_reject_blank_text)]
+NonblankText = Annotated[NonemptyText, AfterValidator(_reject_blank_text)]
+PathText = NonblankText
 Number = Annotated[StrictInt | StrictFloat, Field(allow_inf_nan=False)]
 Latitude = Annotated[Number, Field(ge=-90, le=90)]
 Longitude = Annotated[Number, Field(ge=-180, le=180)]
@@ -66,14 +67,7 @@ def safe_validate(model: type[RequestT], data: Any) -> RequestT:
 
 
 class TextInput(StrictRequest):
-    value: NonemptyText
-
-    @field_validator("value")
-    @classmethod
-    def not_blank(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError("Text must not be blank")
-        return value
+    value: NonblankText
 
 
 class CountryInput(StrictRequest):
@@ -156,7 +150,7 @@ _OPTION_TYPES: dict[str, Any] = {
     "radius": Radius,
     "offset_id": Offset,
     "path": PathText,
-    "geojson": dict[str, Any] | str,
+    "geojson": Mapping[str, Any] | str,
     "begin_date": Annotated[str, StringConstraints(strict=True, pattern=r"^\d{4}-\d{2}-\d{2}$")],
     "end_date": Annotated[str, StringConstraints(strict=True, pattern=r"^\d{4}-\d{2}-\d{2}$")],
 }

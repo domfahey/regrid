@@ -20,7 +20,7 @@ Processing APIs are out of scope and not implemented.
 - [Operation coverage](docs/api-coverage.md): all 33 supplied OpenAPI operations and parameter profiles.
 - [Parcel schema guidance](docs/parcel-schema-guidance.md): field meanings, standardized alternatives, and coverage limitations.
 - [Response models](docs/model-coverage.md) and [UTFGrid](docs/utfgrid.md): typed fields and tileserver discovery.
-- [Plugin feature audit](docs/plugin-feature-audit-2026-11-19.md) and [todos](todos.md): MCP/CLI coverage audit and its remaining open items.
+- [Todos](todos.md): remaining open items and out-of-scope decisions.
 
 ## Installation
 
@@ -114,9 +114,9 @@ Coverage includes every SDK and CLI module; XML output is written to ignored `co
 
 Every API command prints `regrid: requests made: N` to stderr (JSON on stdout is unchanged); SDK users can read `RegridClient.request_count`. `--max-records N` on `point`, `area` and `query` follows `offset_id` cursors for up to N records and requires a positive integer `limit` in `--options`. Output is the first page's response with `parcels.features` replaced by the merged, de-duplicated features (other list-valued keys and FeatureCollection keys are merged; a key first seen on a later page is added, and a key whose shape changes keeps page 1's value with a `regrid: paging note` on stderr), plus `pages` and `complete`. A truthy `return_count` is rejected with `--max-records`. Paging starts at `offset_id=0`: verified live, point and area return their first page in spatial order without an `offset_id` but in ascending id order with one, so starting at 0 gives id-ordered pages with no gaps. The `offset_id` cursor is exclusive (verified live), so each page starts after the previous one and requests at most the remaining records; the printed cap is `ceil(N / limit)`: 300 records at `limit` 100 prints `up to 3 requests`. If a server repeats the cursor record anyway, repeats are de-duplicated in every merged collection, and sibling features of parcels trimmed to N (matched by `properties.ll_uuid`) are dropped. A cursor id may be a non-negative integer or a string of ASCII digits. `complete` is true only when results ended (a short page) or N records were reached; it is false if paging stops for any other reason. If a later page fails or is malformed, the partial result is printed with `"complete": false` and the command exits 1. Paging also stops with `complete: false` and `regrid: paging stopped: results not in cursor order` if a page's numeric feature ids are not strictly ascending or not all above the previous cursor (non-numeric ids are skipped by this check), so records are never skipped silently. It also stops with `complete: false` if a page has no usable cursor (`regrid: paging stopped: no cursor in response`) or adds only already-seen records (`regrid: paging stopped: cursor did not advance`). `address-map --neighbours` draws neighbouring outlines within 100 m, capped at 25 records. `regrid export RESPONSE` writes core columns to CSV and GeoJSON properties (`--all-fields` appends the rest to both; IDs are exported as given) and never overwrites without `--replace`.
 
-`regrid map RESPONSE OUTPUT [--feature N] [--all-candidates] [--retrieved-at ISO] [--neighbours FILE] [--replace]` renders offline with no request (the output may not be the response or neighbours file). `regrid freshness` reuses its `/verse` cache for 30 days (`--max-age-days N`) and only for the same `--base-url`; an older cache is refetched with one request and a stderr note. `regrid address-map ADDRESS OUTPUT [--path SCOPE] [--save-response FILE] [--retrieved-at ISO] [--replace]` makes one address request, prints `regrid: requests made: N` to stderr, and saves the response next to the page unless `--save-response` is given. Pages load Leaflet and Esri imagery in the viewer's browser.
+`regrid map RESPONSE OUTPUT [--feature N] [--all-candidates] [--retrieved-at ISO] [--neighbours FILE] [--replace]` renders offline with no request (the output may not be the response or neighbours file). `regrid freshness` reuses its `/verse` cache for 30 days (`--max-age-days N`) and only for the same `--base-url`; an older cache is refetched with one request and a stderr note. `regrid address-map ADDRESS OUTPUT [--path SCOPE] [--save-response FILE] [--retrieved-at ISO] [--neighbours] [--replace]` makes one address request (up to two requests with `--neighbours`), saves the response next to the page unless `--save-response` is given, and—like `regrid freshness`—prints `regrid: requests made: N` to stderr before its note or error lines (unlike other API commands, where it is the last stderr line). Pages load Leaflet and Esri imagery in the viewer's browser.
 
-Every SDK method has a CLI command: `point`, `area`, `address`, `apn`, `owner`, `query`, `parcel`, `parcel-path`, `typeahead`, `client-token-typeahead`, `schema`, `verse`, `usage`, `report`, `tilejson`, `tile`, and `grid`. Workflow commands build on them: `address-map` and `freshness` make API requests, while `map`, `export` and `fields` run offline with no token or client. The offline helpers live in the standard-library-only `regrid.offline` package (`map`, `fields`, `freshness`), which is also the source of the plugin's bundled scripts. Use `<command> --help` for arguments. `python -m regrid` is equivalent to the installed command.
+Every API endpoint method has a CLI command: `point`, `area`, `address`, `apn`, `owner`, `query`, `parcel`, `parcel-path`, `typeahead`, `client-token-typeahead`, `schema`, `verse`, `usage`, `report`, `tilejson`, `tile`, and `grid`. Workflow commands build on them: `address-map` and `freshness` make API requests, while `map`, `export` and `fields` run offline with no token or client. The offline helpers live in the standard-library-only `regrid.offline` package (`map`, `fields`, `freshness`), which is also the source of the plugin's bundled scripts. Use `<command> --help` for arguments. `python -m regrid` is equivalent to the installed command.
 
 Use `--country ca` where Canadian endpoints are supported. `--options` accepts an object or `@file` containing JSON for supported SDK keyword parameters. `--fields` and `--geojson` also accept JSON or `@file`. Report details accept structured `--details` or plain `--details-text`; `report` submits an external data issue. The `client-token-typeahead` command intentionally prints the newly generated temporary token in its JSON response, so handle that output as a credential.
 
@@ -270,79 +270,7 @@ For Regrid Research 0.9.6 and SDK 0.4.5 (PR #31 and the release PR, patch releas
 - **Map render check:** the map helper is unchanged since 0.9.3, so the 0.9.3 plain-browser render check applies; see `plugins/regrid-research/evals/results/map-hosts-0.9.6.json`.
 - **Not run:** the Claude Code, Claude apps and Cowork map host checks, a live `/mcp` connection, typeahead, POST area `return_parcels`, and model and Cowork acceptance evaluations.
 
-For Regrid Research 0.9.5 (PR #28, plugin-only patch release; the SDK stays at 0.4.4, unchanged):
-- **Tests:** `make check` passed **1457 tests** (2 skipped) with **97.48%** SDK/CLI coverage, `make e2e` passed **58**, `claude plugin validate --strict` passed and the 27 eval fixtures validated.
-- **CI:** passed on Python 3.10 and 3.12 and on Windows.
-- **Map render check:** the map helper is unchanged since 0.9.3 (the `address-map` command text changed, not rendering), so the 0.9.3 plain-browser render check applies; see `plugins/regrid-research/evals/results/map-hosts-0.9.5.json`.
-- **Not run:** the Claude Code, Claude apps and Cowork map host checks, a live `/mcp` connection, typeahead, POST geometry search over MCP, and model and Cowork acceptance evaluations.
-
-For Regrid Research 0.9.4 and SDK 0.4.4 (PR #26, patch release):
-- **Tests:** `make check` passed **1457 tests** (2 skipped) with **97.48%** SDK/CLI coverage, and `make e2e` passed **58**.
-- **CI:** passed on Python 3.10 and 3.12 and on Windows.
-- **Live (authorized, 2026-11-19):** `make live-full` passed every step except typeahead (skipped: needs an Enterprise token) in 26 requests; its `verse` count was corrected afterwards and confirmed offline against the saved live payload (3,231 counties).
-- **Map render check:** the map helper and command are unchanged since 0.9.3, so the 0.9.3 plain-browser render check applies; see `plugins/regrid-research/evals/results/map-hosts-0.9.4.json`.
-- **Not run:** the Claude Code, Claude apps and Cowork map host checks, a live `/mcp` connection, typeahead, and model and Cowork acceptance evaluations.
-
-For Regrid Research 0.9.3 and SDK 0.4.3 (PRs #19–#24, patch release):
-- **Tests:** `make check` passed **1406 tests** (2 skipped) with **98.06%** SDK/CLI coverage, and `make e2e` passed **58** (every CLI subcommand over local TLS).
-- **CI:** passed on Python 3.10 and 3.12 and on Windows.
-- **Live (authorized, 2026-11-19):** `make live` passed after the timestamp fix; a default address lookup includes `geometry`; `offset_id` is an exclusive cursor on the feature `id`; starting at `offset_id=0` gives id-ordered pages.
-- **Map render check:** the 0.9.3 map page rendered correctly in a plain browser with synthetic data; see `plugins/regrid-research/evals/results/map-hosts-0.9.3.json`.
-- **Not run:** the Claude Code, Claude apps and Cowork map host checks, a live `/mcp` connection, and model and Cowork acceptance evaluations.
-
-For Regrid Research 0.9.2 and SDK 0.4.2 (PR #17, patch release):
-- **Tests:** `make check` passed **1336 tests** (2 skipped) with **98.02%** SDK/CLI coverage, and `make e2e` passed 4.
-- **CI:** passed on Python 3.10 and 3.12 and on Windows.
-- **Map render check:** the 0.9.2 map page rendered correctly in a plain browser with synthetic data; see `plugins/regrid-research/evals/results/map-hosts-0.9.2.json`.
-- **Not run:** the same live and host checks as 0.9.0 below.
-
-For Regrid Research 0.9.1 and SDK 0.4.1 (PR #15, patch release):
-- **Tests:** `make check` passed **1321 tests** (2 skipped) with **97.99%** SDK/CLI coverage, and `make e2e` passed 4.
-- **CI:** passed on Python 3.10 and 3.12 and on Windows.
-- **Map render check:** the 0.9.1 map page rendered correctly in a plain browser with synthetic data; see `plugins/regrid-research/evals/results/map-hosts-0.9.1.json`.
-- **Not run:** the same live and host checks as 0.9.0 below.
-
-For Regrid Research 0.9.0 and SDK 0.4.0 (PRs #9 to #12):
-- **Tests:** `make check` passed **1231 tests** with **97.83%** SDK/CLI coverage (gate 95%), and `make e2e` passed 4.
-- **CI:** passed on Python 3.10 and 3.12 and on Windows.
-- **Plugin:** the three 0.9.0 archives passed `claude plugin validate --strict` (only the plugin-directory icon warning remains).
-- **Map render check:** the 0.9.0 map page rendered correctly in a plain browser with synthetic data; see `plugins/regrid-research/evals/results/map-hosts-0.9.0.json`.
-- **Not run:** a live `/mcp` connection over the native HTTP transport, the live geometry check, the Claude host map checks, the live `offset_id` cursor, and model/Cowork acceptance evals.
-
-For Regrid Research 0.8.0 and SDK 0.3.0 (PR #6, merged as `619394a`):
-- **Tests:** `make check` passed **1106 tests** with **97.94%** SDK/CLI coverage, and `make e2e` passed 4.
-- **CI:** passed on Python 3.10 and 3.12, plus a new Windows job for the offline helper tests and the offline and freshness CLI tests.
-- **Plugin:** the three 0.8.0 archives passed `claude plugin validate --strict`, and 19 packet fixtures validated.
-- **Map render check:** the satellite map rendered correctly in a plain browser (Chromium via Playwright) with synthetic data; this is not a check inside a Claude host; see `plugins/regrid-research/evals/results/map-hosts-0.8.0.json`.
-- **Not run:**
-  - the live geometry check (`make live`)
-  - the Claude Code, Claude apps and Cowork map host checks
-  - the live `offset_id` paging cursor
-  - model and Cowork acceptance evals
-
-The earlier records below describe previous versions:
-
-For the 0.5.0 implementation in `b4b7e94`, local `make check` passed **727 tests**
-with no skips, including **64 workflow-helper tests** and required JSON Schema
-compatibility checks. Lint, formatting, and type checks passed; SDK/CLI coverage
-remained **98.16%**, excluding skill helpers. All three extracted 0.5.0 archives
-passed Claude's strict structural validator. See the
-[0.5.0 regression report](plugins/regrid-research/evals/results/composability-0.5.0-report.json)
-for runtime red/green evidence and offline model decisions, including corrected
-failures and a separate setup retest. These are not actual Claude/Cowork acceptance
-runs. Local HTTPS tests were unchanged and not rerun for that helper/docs update.
-
-The publication checks below describe the earlier baseline, not a fresh run:
-
-At publication commit `a197265`, local formatting, lint, type checks, **692 mocked tests**, and **four local HTTPS E2E tests** passed. SDK/CLI combined line and branch coverage was **98.16%** on Python 3.12; the coverage gate excludes bundled skill scripts. The mocked suite includes 29 workflow-helper tests, 16 discovery/runner tests, and seven packaging tests.
-
-[Publication CI](https://github.com/domfahey/regrid/actions/runs/40680206321) passed on Python 3.10 and 3.12, including `make check`, `make e2e`, plugin packaging, and wheel/source builds. These offline checks do not establish live Regrid behavior or Cowork acceptance. Historical verification reports remain unchanged.
-
-Both extracted plugin variants and the standalone skill passed Claude's strict structural validator. Actual Haiku/Sonnet/Opus evaluations remain blocked by an expired Claude CLI login; Cowork import and authenticated lookup remain unverified because Desktop inspection was unavailable. See the [0.4.0 acceptance report](plugins/regrid-research/evals/results/authoring-0.4.0-report.json). These are recorded results, not a fresh authentication check.
-
-The [MCP reference](plugins/regrid-research/skills/property-research/references/mcp-tools.md) separately records a successful authenticated usage-only request. That does not establish Cowork connectivity, parcel lookup behavior, or billing. The older `05fd61f` SDK check passed 630 tests; its live smoke attempt stopped before network access because no token was configured.
-
-A targeted test-quality audit replaced route-only, truthiness, and configuration-inspection assertions with full request contracts, exact binary output, timeout forwarding, explicit false/zero preservation, and typed attribute checks. Seven controlled mutations that survived the previous assertions were caught by their replacements; this was a focused regression check, not a whole-project mutation score.
+For earlier release verification history and retained reports (`composability-0.5.0-report.json`, `authoring-0.4.0-report.json`, `final-report.json`, `forward-report.json`), see [changelog.md](changelog.md) and [plugins/regrid-research/evals/README.md](plugins/regrid-research/evals/README.md#historical-verification).
 
 ## Live smoke test
 
@@ -419,8 +347,3 @@ affiliated with or endorsed by Regrid. Project code is available under the
 [MIT license](LICENSE). Regrid trademarks, service access, and parcel data remain
 subject to their respective owners' terms; this license does not grant API or
 data access. See [CONTRIBUTING.md](CONTRIBUTING.md) to participate.
-
-Version 0.5.0 additionally supports explicit `1.1` query handoffs, evidence-backed
-reconciliation, and setup diagnostics within the same request budget. Version
-`1.0` checkpoints remain readable. Schema/example files load only when needed;
-see the [plugin compatibility guide](plugins/regrid-research/README.md#contract-compatibility).

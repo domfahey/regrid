@@ -29,7 +29,12 @@ class FreshnessError(ValueError):
 def county_path(path: str) -> str:
     """Return the first three segments of a US path: /us/<state>/<county>."""
     segments = path.split("/") if isinstance(path, str) else []
-    if len(segments) < 4 or segments[0] != "" or segments[1] != "us" or not all(segments[2:4]):
+    if (
+        len(segments) < 4
+        or segments[0] != ""
+        or segments[1] != "us"
+        or not all(segment.strip() for segment in segments[2:4])
+    ):
         raise FreshnessError("Expected a US path with state and county, e.g. /us/nj/camden")
     return "/".join(segments[:4])
 
@@ -156,7 +161,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (OSError, ValueError, RecursionError) as exc:
         print(f"freshness: {' '.join(str(exc).split())}", file=sys.stderr)
         return 1
-    print(json.dumps(result, indent=2, ensure_ascii=False))
+    print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
     return 0
 
 

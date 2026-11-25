@@ -20,6 +20,9 @@ but not extended, and the Global and Batch APIs are intentionally absent.
 | `models.py` | Response envelopes, discriminated GeoJSON models, usage, metadata, and serialization |
 | `typed.py` | `TypedRegridClient`, which validates raw responses into endpoint-specific models |
 | `cli.py` | Argument parsing, JSON or `@file` input, command dispatch, and output formatting |
+| `offline/` (`map.py`, `fields.py`, `freshness.py`) | Standard-library-only offline helpers for satellite map rendering/export, field catalog lookup, and cached `/verse` freshness; source of the skill's bundled scripts |
+| `doctor.py` | Local `.env` and `REGRID_TOKEN` configuration check without contacting the API |
+| `live.py`, `live_full.py` | Opt-in, bounded live-service smoke tests (`make live`, `make live-full`) reporting status and aggregate counts only |
 | `__init__.py`, `__main__.py` | Public imports and `python -m regrid` entry point |
 
 ## Request and Response Flow
@@ -58,7 +61,7 @@ Authentication uses the API's `token` query parameter. The client stores credent
 
 HTTP errors expose status codes without upstream bodies or request URLs. Request and typed-response validation failures discard the input-bearing Pydantic exception. Invalid JSON and non-finite upstream numbers are rejected. Temporary-token models mask credentials in normal representations; explicit `.to_dict()` exports reveal their temporary token.
 
-HTTPX request logging can include tokens in URLs, so applications must redact logs. No automatic retries, redirects, pagination, result caching, or task-level budgets are implemented. Applications must manage broader usage limits and licensing obligations.
+HTTPX request logging can include tokens in URLs, so applications must redact logs. The SDK client implements no automatic retries, redirects, pagination, result caching, or task-level budgets; the CLI adds opt-in bounded `--max-records` pagination and `/verse` caching in `freshness`. Applications must manage broader usage limits and licensing obligations.
 
 ## Testing and Extension
 

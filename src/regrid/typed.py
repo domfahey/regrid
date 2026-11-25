@@ -141,6 +141,26 @@ class TypedRegridClient:
             )
         )
 
+    def validate_query(
+        self,
+        fields: Mapping[str, Mapping[str, Any]],
+        *,
+        country: str = "us",
+        paging: bool = False,
+        validate_fields: bool = False,
+        allow_unknown_fields: bool = False,
+        **options: Any,
+    ) -> None:
+        """Validate a query exactly as ``query`` would, without sending a request."""
+        self.raw.validate_query(
+            fields,
+            country=country,
+            paging=paging,
+            validate_fields=validate_fields,
+            allow_unknown_fields=allow_unknown_fields,
+            **options,
+        )
+
     def parcel(self, ll_uuid: str, *, country: str = "us", **options: Any) -> ParcelResponse:
         """Retrieve a parcel by Regrid UUID."""
         return _validate(ParcelResponse, self.raw.parcel(ll_uuid, country=country, **options))
