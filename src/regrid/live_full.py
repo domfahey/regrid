@@ -56,7 +56,6 @@ class Outcome:
 
 @dataclass
 class Subject:
-    feature_id: Any = None
     ll_uuid: str | None = None
     path: str | None = None
     county: str | None = None
@@ -89,7 +88,7 @@ def _number(value: Any, limit: float = 180) -> float | None:
 
 
 def county_path(path: str | None) -> str | None:
-    """The first four segments of a canonical path: /us/st/county."""
+    """The first three segments of a canonical path: /us/st/county."""
     if not path:
         return None
     parts = path.strip("/").split("/")
@@ -237,7 +236,6 @@ class Runner:
             fields = raw["properties"]["fields"]
             path = _text(raw["properties"].get("path"))
             self.subject = Subject(
-                feature_id=raw.get("id"),
                 ll_uuid=feature_uuid(raw),
                 path=path,
                 county=county_path(path),
@@ -269,7 +267,7 @@ class Runner:
         self.step("parcel", 1, check)
 
     def by_path(self) -> None:
-        subject = self.needs("parcel-path", path=True)
+        subject = self.needs("parcel-path", path=True, ll_uuid=True)
         if subject is None:
             return
 
@@ -604,7 +602,18 @@ def run(
 ) -> int:
     """Run every step; print status and aggregate counts only. Exit 0 only if nothing failed."""
     own = bad_client is None
-    bad = bad_client or RegridClient(BAD_TOKEN, max_limit=2, default_limit=1)
+    bad = (
+        RegridClient(
+            BAD_TOKEN,
+            base_url=client.base_url,
+            tiles_base_url=client.tiles_base_url,
+            timeout=client.timeout,
+            max_limit=2,
+            default_limit=1,
+        )
+        if bad_client is None
+        else bad_client
+    )
     try:
         runner = Runner(
             client, bad, address, enterprise, MAX_REQUESTS if max_requests is None else max_requests

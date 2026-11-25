@@ -370,6 +370,7 @@ def test_directory_targets_rejected_before_request(tmp_path, monkeypatch, capsys
     assert seen == [] and "requests made: 0" in err and err.count("requests made:") == 1
 
 
+@pytest.mark.skipif(os.name == "nt", reason="symlinks need privilege on Windows")
 def test_replace_does_not_write_through_symlink(tmp_path, monkeypatch, capsys):
     _two_stage(monkeypatch, {"lat": 39.9, "lon": -75.03})
     victim = tmp_path / "victim.txt"
@@ -486,7 +487,7 @@ def test_map_command_refuses_case_variant_of_response(tmp_path, capsys):
     assert "Output must not be the response file" in capsys.readouterr().err
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="symlinks need privilege on Windows")
+@pytest.mark.skipif(os.name == "nt", reason="symlinks need privilege on Windows")
 def test_symlink_loop_output_makes_no_request(tmp_path, seen, capsys):
     (tmp_path / "a").symlink_to(tmp_path / "b")
     (tmp_path / "b").symlink_to(tmp_path / "a")
@@ -494,3 +495,53 @@ def test_symlink_loop_output_makes_no_request(tmp_path, seen, capsys):
     err = capsys.readouterr().err
     assert seen == [] and "Path contains a symlink loop" in err
     assert "Traceback" not in err and err.count("requests made: 0") == 1
+
+
+def test_neighbours_skips_second_request_when_multiple_parcels_returned(
+    tmp_path, monkeypatch, capsys
+):
+    first = good_feature(lat=39.9, lon=-75.03)
+    second = good_feature(lat=39.91, lon=-75.04)
+    second["properties"]["ll_uuid"] = "00000000-0000-4000-8000-000000000002"
+    seen = _install(
+        monkeypatch,
+        lambda request: httpx.Response(200, json={"parcels": {"features": [first, second]}}),
+    )
+    assert cli.main(["address-map", "x", str(tmp_path / "m.html"), "--neighbours"]) == 1
+    err = capsys.readouterr().err
+    assert len(seen) == 1
+    assert "requests made: 1" in err
+    assert not (tmp_path / "m.neighbours.json").exists()
+    assert "Response has several parcels" in err
+    assert "neighbours skipped" not in err
+
+
+def test_directory_dot_and_root_outputs_rejected_before_request(
+    tmp_path, seen, capsys, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    for argv in [
+        ["address-map", "x", "."],
+        ["address-map", "x", ".", "--save-response", str(tmp_path / "r.json")],
+        ["address-map", "x", tmp_path.anchor],
+    ]:
+        assert cli.main(argv) == 1
+        err = capsys.readouterr().err
+        assert seen == []
+        assert "requests made: 0" in err
+        assert "is a directory" in err
+        assert "empty name" not in err
+
+
+def test_address_map_rejects_empty_paths_before_request(tmp_path, seen, capsys):
+    for argv in [
+        ["address-map", "x", ""],
+        ["address-map", "x", str(tmp_path / "m.html"), "--save-response", ""],
+    ]:
+        assert cli.main(argv) == 1
+        err = capsys.readouterr().err
+        assert seen == []
+        assert "requests made: 0" in err
+        assert "Output path cannot be empty" in err
+    assert not (tmp_path / "m.json").exists()
+    assert not (tmp_path / "m.html").exists()

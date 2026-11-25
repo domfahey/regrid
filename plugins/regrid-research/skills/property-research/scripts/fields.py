@@ -68,7 +68,7 @@ def search(catalog: list[dict], term: str) -> list[dict]:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Explain or search Regrid parcel fields offline.")
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--catalog", type=Path, help="Catalog JSON file (default: bundled catalog)")
+    common.add_argument("--catalog", help="Catalog JSON file (default: bundled catalog)")
     commands = parser.add_subparsers(dest="command", required=True)
     explain_parser = commands.add_parser(
         "explain", parents=[common], help="Show definitions of named fields"
@@ -80,7 +80,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     search_parser.add_argument("term")
     args = parser.parse_args(argv)
     try:
-        catalog = load_catalog(args.catalog or default_catalog())
+        if args.catalog == "":
+            raise ValueError("Catalog path cannot be empty")
+        catalog = load_catalog(default_catalog() if args.catalog is None else Path(args.catalog))
     except (OSError, ValueError, RecursionError) as exc:
         print(f"fields: {' '.join(str(exc).split()) or type(exc).__name__}", file=sys.stderr)
         return 1
@@ -89,8 +91,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         result = {"matches": search(catalog, args.term)}
     try:
-        text = json.dumps(result, indent=2, ensure_ascii=False)
-    except (OSError, ValueError, RecursionError) as exc:
+        text = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False)
+    except (ValueError, RecursionError) as exc:
         print(f"fields: {' '.join(str(exc).split()) or type(exc).__name__}", file=sys.stderr)
         return 1
     print(text)

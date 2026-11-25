@@ -4,16 +4,32 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import os
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
 from typing import Any
 
-import discovery
+_DISCOVERY_PATH = Path(__file__).resolve().with_name("discovery.py")
+_existing_discovery = sys.modules.get("discovery")
+_existing_file = getattr(_existing_discovery, "__file__", None)
+if (
+    _existing_discovery is not None
+    and _existing_file
+    and Path(_existing_file).resolve() == _DISCOVERY_PATH
+):
+    discovery = _existing_discovery
+else:
+    _discovery_spec = importlib.util.spec_from_file_location("discovery", _DISCOVERY_PATH)
+    assert _discovery_spec and _discovery_spec.loader
+    discovery = importlib.util.module_from_spec(_discovery_spec)
+    sys.modules["discovery"] = discovery
+    _discovery_spec.loader.exec_module(discovery)
 
 MODELS = ("haiku", "sonnet", "opus")
 
@@ -109,15 +125,17 @@ def run_trial(
     destination.mkdir()
     with tempfile.TemporaryDirectory(prefix="regrid-discovery-") as temporary:
         workspace = Path(temporary) / "trial"
-        manifest = discovery.stage(case, variant, workspace)
-        prompt = json.loads((workspace / "prompt.json").read_text())
-        prompt["execution_limit"] = (
-            "Only Read, Glob, and Grep are available. Python/helper execution is unavailable. Do not claim to have executed a validator."
+        manifest = discovery.stage(
+            case,
+            variant,
+            workspace,
+            execution_limit=(
+                "Only Read, Glob, and Grep are available. Python/helper execution is unavailable. "
+                "Do not claim to have executed a validator."
+            ),
         )
-        prompt_text = json.dumps(prompt)
-        (workspace / "prompt.json").write_text(prompt_text)
-        (destination / "prompt.json").write_text(prompt_text)
-        manifest["files"]["prompt.json"] = hashlib.sha256(prompt_text.encode()).hexdigest()
+        prompt_text = (workspace / "prompt.json").read_text(encoding="utf-8")
+        (destination / "prompt.json").write_text(prompt_text, encoding="utf-8")
         command = argv(cli, model, budget)
         status, returncode = "failed", None
         try:
@@ -127,6 +145,8 @@ def run_trial(
                 cwd=workspace,
                 env=environment(),
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 capture_output=True,
                 timeout=timeout,
                 check=False,
@@ -174,13 +194,17 @@ def run_trial(
             "invalid_trace_lines": invalid,
             "tool_calls": calls,
             "read_paths": discovery.read_paths(calls),
+            "trace_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest(),
             "helper_execution": "unavailable_read_only",
             "grading_status": "not_graded",
             "scope": "CLI navigation trial; not Cowork acceptance or executed helper validation",
         }
-        (destination / "trace.jsonl").write_text(raw)
-        (destination / "stderr.txt").write_text(stderr)
-        (destination / "record.json").write_text(json.dumps(report, indent=2) + "\n")
+        with (destination / "trace.jsonl").open("w", encoding="utf-8", newline="\n") as handle:
+            handle.write(raw)
+        (destination / "stderr.txt").write_text(stderr, encoding="utf-8")
+        (destination / "record.json").write_text(
+            json.dumps(report, indent=2) + "\n", encoding="utf-8"
+        )
         return report
 
 
@@ -196,6 +220,8 @@ def run_suite(
         version_result = subprocess.run(
             [cli, "--version"],
             text=True,
+            encoding="utf-8",
+            errors="replace",
             capture_output=True,
             timeout=10,
             check=False,
@@ -232,7 +258,9 @@ def run_suite(
                     )
                     blocked = report["auth_blocked"] or report["status"] == "blocked"
                 reports.append(report)
-                (output / "summary.json").write_text(json.dumps({"runs": reports}, indent=2) + "\n")
+                (output / "summary.json").write_text(
+                    json.dumps({"runs": reports}, indent=2) + "\n", encoding="utf-8"
+                )
     return {"runs": reports}
 
 

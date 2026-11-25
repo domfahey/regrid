@@ -101,11 +101,11 @@ def main() -> int:
     target = Path(__file__).resolve().parents[1] / "src/regrid/parcel_fields.py"
     generated = render()
     if args.check:
-        if not target.exists() or target.read_text() != generated:
+        if not target.exists() or target.read_text(encoding="utf-8") != generated:
             print("ParcelFields is stale; run scripts/generate_parcel_fields.py")
             return 1
     else:
-        target.write_text(generated)
+        target.write_text(generated, encoding="utf-8")
     return 0
 
 

@@ -31,7 +31,19 @@ def test_county_path_trims_parcel_path():
     assert freshness.county_path("/us/nj/camden/haddonfield/123") == "/us/nj/camden"
 
 
-@pytest.mark.parametrize("bad", ["/ca/on/toronto", "/us/nj", "nj/camden", "", "/us//camden"])
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "/ca/on/toronto",
+        "/us/nj",
+        "nj/camden",
+        "",
+        "/us//camden",
+        "/us/ / ",
+        "/us/nj/   ",
+        "/us/\t/camden",
+    ],
+)
 def test_county_path_rejects(bad):
     with pytest.raises(freshness.FreshnessError, match="^Expected a US path with state and county"):
         freshness.county_path(bad)
@@ -119,7 +131,9 @@ def test_default_cache_path_posix():
 
 def test_default_cache_path_windows():
     path = freshness.default_cache_path({"LOCALAPPDATA": "C:/Users/a/AppData/Local"}, "nt")
-    assert path.parts[-2:] == ("regrid", "verse.json")
+    assert path.as_posix() == "C:/Users/a/AppData/Local/regrid/verse.json"
+    fallback = freshness.default_cache_path({}, "nt")
+    assert fallback.parts[-4:] == ("AppData", "Local", "regrid", "verse.json")
 
 
 def test_cache_round_trip_is_private_and_atomic(tmp_path):
@@ -127,7 +141,7 @@ def test_cache_round_trip_is_private_and_atomic(tmp_path):
     freshness.write_cache(cache, "2026-11-19T00:00:00Z", VERSE)
     assert freshness.read_cache(cache) == ("2026-11-19T00:00:00Z", VERSE)
     assert list(cache.parent.iterdir()) == [cache]
-    if sys.platform != "win32":
+    if os.name != "nt":
         assert stat.S_IMODE(os.stat(cache.parent).st_mode) == 0o700
 
 
@@ -269,7 +283,64 @@ def test_read_cache_treats_deeply_nested_json_as_corrupt(tmp_path):
 
 def test_main_treats_deeply_nested_verse_as_clean_error(tmp_path, capsys):
     path = tmp_path / "verse.json"
-    path.write_text("[" * 200000 + "]" * 200000)
+    path.write_text("[" * 200000 + "]" * 200000, encoding="utf-8")
     assert freshness.main(["county", str(path), "--path", "/us/nj/camden"]) == 1
     err = capsys.readouterr().err
     assert err.startswith("freshness:") and len(err.strip().splitlines()) == 1
+
+
+def test_main_rejects_nan_in_result(tmp_path, monkeypatch, capsys):
+    verse = tmp_path / "v.json"
+    verse.write_text(json.dumps(VERSE), encoding="utf-8")
+    monkeypatch.setattr(
+        freshness, "county_dates", lambda _doc, path: {"path": path, "bad": float("nan")}
+    )
+    assert freshness.main(["county", str(verse), "--path", "/us/nj/camden"]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert (
+        captured.err.startswith("freshness:")
+        and len(captured.err.strip().splitlines()) == 1
+        and "Traceback" not in captured.err
+    )
+
+
+def test_main_handles_nan_in_verse_file(tmp_path, capsys):
+    verse = tmp_path / "v.json"
+    verse.write_text(
+        '{"verse": {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": '
+        '{"path": "/us/nj/camden", "county": "Camden", "state": "NJ", '
+        '"last_refresh": NaN, "extra": NaN}}]}}',
+        encoding="utf-8",
+    )
+    assert freshness.main(["county", str(verse), "--path", "/us/nj/camden"]) == 0
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    assert json.loads(captured.out) == {
+        "path": "/us/nj/camden",
+        "county": "Camden",
+        "state": "NJ",
+        "last_refresh": None,
+        "assessor_data_date": None,
+        "usps_data_date": None,
+    }
+
+
+def test_main_treats_deeply_nested_result_as_clean_error(tmp_path, monkeypatch, capsys):
+    verse = tmp_path / "v.json"
+    verse.write_text(json.dumps(VERSE), encoding="utf-8")
+    deep: list = []
+    for _ in range(20_000):
+        deep = [deep]
+    monkeypatch.setattr(freshness, "county_dates", lambda _doc, path: {"path": path, "deep": deep})
+    assert freshness.main(["county", str(verse), "--path", "/us/nj/camden"]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err.startswith("freshness:") and len(captured.err.strip().splitlines()) == 1
+
+
+def test_main_rejects_empty_verse_path(capsys):
+    assert freshness.main(["county", "", "--path", "/us/nj/camden"]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == "freshness: Verse path cannot be empty\n"

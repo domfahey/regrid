@@ -93,6 +93,12 @@ def test_bad_path_makes_no_request(tmp_path, verse_server, capsys):
     assert verse_server == [] and "requests made: 0" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("path", ["/us/ / ", "/us/nj/   ", "/us/\t/camden"])
+def test_whitespace_path_makes_no_request(tmp_path, verse_server, capsys, path):
+    assert cli.main(["freshness", "--path", path, "--cache", str(tmp_path / "v.json")]) == 1
+    assert verse_server == [] and "requests made: 0" in capsys.readouterr().err
+
+
 def test_api_error_reports_count(tmp_path, monkeypatch, capsys):
     seen = _install(monkeypatch, lambda request: httpx.Response(401, text="secret"))
     assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", str(tmp_path / "v")]) == 1
@@ -257,3 +263,16 @@ def test_trailing_slash_base_url_shares_cache(tmp_path, verse_server, capsys):
     capsys.readouterr()
     assert cli.main(args) == 0
     assert len(verse_server) == 1 and json.loads(capsys.readouterr().out)["cache"] == "hit"
+
+
+def test_freshness_rejects_empty_cache_path_before_request(
+    tmp_path, verse_server, monkeypatch, capsys
+):
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", ""]) == 1
+    err = capsys.readouterr().err
+    assert verse_server == []
+    assert "requests made: 0" in err
+    assert "Cache path cannot be empty" in err
+    assert not (tmp_path / "regrid" / "verse.json").exists()

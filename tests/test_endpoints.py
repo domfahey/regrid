@@ -1,6 +1,7 @@
 """Exercise endpoint contracts through the real client and a network-free transport."""
 
 import json
+from types import MappingProxyType
 
 import httpx
 import pytest
@@ -385,9 +386,9 @@ def test_deeply_nested_json_is_invalid_input_without_context(recording_client):
     assert requests == []
 
 
-def test_validate_query_checks_limit_and_paging_flag(recording_client):
-    _, requests = recording_client
-    with RegridClient(token="t", max_limit=10, transport=httpx.MockTransport(lambda r: None)) as c:
+def test_validate_query_checks_limit_and_paging_flag():
+    transport = httpx.MockTransport(lambda r: pytest.fail("validate_query must not send requests"))
+    with RegridClient(token="t", max_limit=10, transport=transport) as c:
         with pytest.raises(ValueError, match="exceeds configured maximum"):
             c.validate_query({"geoid": {"eq": "1"}}, limit=50)
         c.validate_query({"geoid": {"eq": "1"}}, limit=10)
@@ -395,4 +396,108 @@ def test_validate_query_checks_limit_and_paging_flag(recording_client):
         for bad in ("false", 0, "x", 1):
             with pytest.raises(ValueError, match="paging"):
                 c.validate_query({"geoid": {"eq": "1"}}, paging=bad)
+
+
+def test_query_accepts_mapping_proxy_geojson(recording_client):
+    client, requests = recording_client
+    client.query(
+        {"geoid": {"eq": "48113"}},
+        geojson=MappingProxyType({"type": "Point", "coordinates": [-75.0, 39.9]}),
+    )
+    assert len(requests) == 1
+    assert json.loads(requests[0].url.params["geojson"]) == {
+        "type": "Point",
+        "coordinates": [-75.0, 39.9],
+    }
+
+
+def test_nested_mapping_proxy_geojson_accepted_by_query_point_and_area(recording_client):
+    client, requests = recording_client
+    feature = MappingProxyType(
+        {
+            "type": "Feature",
+            "geometry": MappingProxyType({"type": "Point", "coordinates": (-75.0, 39.9)}),
+            "properties": MappingProxyType({"nested": (MappingProxyType({"ok": True}),)}),
+        }
+    )
+    expected = {
+        "type": "Feature",
+        "geometry": {"type": "Point", "coordinates": [-75.0, 39.9]},
+        "properties": {"nested": [{"ok": True}]},
+    }
+    client.query({"geoid": {"eq": "48113"}}, geojson=feature)
+    client.point(geojson=feature)
+    client.area(geojson=feature)
+    assert len(requests) == 3
+    for req in requests:
+        assert json.loads(req.url.params["geojson"]) == expected
+
+
+def test_parcel_endpoints_validate_country_once_per_request(recording_client, monkeypatch):
+    import regrid.endpoints as endpoints_mod
+
+    client, _ = recording_client
+    calls: list[str] = []
+    real_country = endpoints_mod._country
+
+    def counting_country(country: str) -> str:
+        calls.append(country)
+        return real_country(country)
+
+    monkeypatch.setattr(endpoints_mod, "_country", counting_country)
+    operations = [
+        lambda: client.point(40.5, -105.2),
+        lambda: client.area(POINT),
+        lambda: client.address("123 Main"),
+        lambda: client.apn("001-A"),
+        lambda: client.owner("Smith"),
+        lambda: client.query({"geoid": {"eq": "48113"}}),
+        lambda: client.parcel(UUID),
+        lambda: client.parcel_path("/us/co/boulder/1"),
+    ]
+    for op in operations:
+        calls.clear()
+        op()
+        assert len(calls) == 1
+
+
+def test_order_filter_rejected_when_paging_without_validate_fields(recording_client):
+    client, requests = recording_client
+    with pytest.raises(QueryPagingError) as excinfo:
+        client.validate_query({"yearbuilt": {"order": "ASC"}}, paging=True)
+    assert excinfo.value.__context__ is None
+    assert excinfo.value.__cause__ is None
     assert requests == []
+
+    with pytest.raises(QueryPagingError):
+        client.validate_query(
+            {"custom_unknown": {"order": "ASC"}},
+            paging=True,
+            validate_fields=True,
+            allow_unknown_fields=True,
+        )
+    assert requests == []
+
+    with pytest.raises(ValueError, match="order operator cannot be used with offset_id paging"):
+        client.query({"yearbuilt": {"order": "ASC"}}, offset_id=0)
+    assert requests == []
+
+    client.query({"yearbuilt": {"order": "ASC"}})
+    assert len(requests) == 1
+
+
+def test_report_all_parameters_optional():
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json={"message": "Report received", "id": 123})
+
+    with RegridClient(token="test-token", transport=httpx.MockTransport(handler)) as client:
+        assert client.report() == {"message": "Report received", "id": 123}
+    (request,) = seen
+    assert request.method == "POST"
+    assert request.url.path == "/api/v2/report"
+    # Omitted optionals are not sent as empty values, in the query or in a body.
+    assert sorted(request.url.params.multi_items()) == [("token", "test-token")]
+    assert request.content == b""

@@ -105,15 +105,17 @@ Recommended application controls derived from the guide:
 
 `limit=1` limits retrieval but does not establish a unique or correct match. Ambiguous addresses, boundary points, and stacked parcels require explicit handling.
 
-## Specification issues to resolve before implementation
+## Specification quirks handled in the SDK
 
-- Preserve APNs as application strings despite the specification's integer type, to retain leading zeros, alphanumeric identifiers, and numeric precision.
-- Set `return_parcels` explicitly because its documented and schema defaults conflict.
-- Several polygon examples omit the closing coordinate. Valid rings must repeat the first coordinate and contain at least four positions.
-- Example query strings are embedded in several OpenAPI path keys; normalize these to the actual endpoint with separate query parameters before client generation.
+These upstream OpenAPI quirks from the supplied contract are handled in the SDK and documented in [docs/api-coverage.md](docs/api-coverage.md):
+
+- APNs are preserved as application strings despite the specification's integer type, retaining leading zeros, alphanumeric identifiers, and numeric precision.
+- `return_parcels` is sent explicitly when set because its documented and schema defaults conflict.
+- Several polygon examples omit the closing coordinate; valid rings repeat the first coordinate and contain at least four positions.
+- Example query strings are embedded in several OpenAPI path keys; the SDK normalizes these to the actual endpoint path with separate query parameters.
 - Some request schemas constrain arrays more narrowly than endpoint descriptions, and some examples have inconsistent types.
-- Typeahead centroid geometry is modeled as Polygon/MultiPolygon; verify the actual response before choosing a geometry model.
-- `return_geometry` wording and some nullability declarations need review before generating strict response validators.
-- Trial-token county restrictions and premium entitlement descriptions are not proof of this account's access.
+- Typeahead centroid geometry is modeled in the OpenAPI spec as Polygon/MultiPolygon while runtime responses can differ; typed models accept forward-compatible geometry payloads.
+- `return_geometry` wording and some nullability declarations in the spec are loose; response models retain unexpected fields and distinguish omitted values from explicit nulls.
+- Trial-token county restrictions and premium entitlement descriptions are not proof of a given account's access.
 
 No credentials are included in this reference.

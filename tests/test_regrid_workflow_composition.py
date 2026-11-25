@@ -242,7 +242,7 @@ def test_checkpoint_rejects_forged_reconciliation_links_and_accounting(mutate, m
     mutate(doc)
     before = deepcopy(doc)
     path = tmp_path / "tampered.json"
-    path.write_text(json.dumps(doc))
+    path.write_text(json.dumps(doc), encoding="utf-8")
     with pytest.raises(ValueError, match=message):
         workflow.load_checkpoint(path)
     assert doc == before
@@ -321,7 +321,9 @@ def test_filter_preserves_nested_json_and_defers_endpoint_operator_validation():
 def test_json_schema_and_runtime_agree_on_versioned_structural_contract():
     import jsonschema
 
-    schema = json.loads((SCRIPT.parent.parent / "references/result.schema.json").read_text())
+    schema = json.loads(
+        (SCRIPT.parent.parent / "references/result.schema.json").read_text(encoding="utf-8")
+    )
     validator = jsonschema.Draft202012Validator(schema)
     validator.check_schema(schema)
     old = legacy()

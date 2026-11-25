@@ -20,7 +20,7 @@ import sys
 import unicodedata
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 R = 6378137.0
 SQFT_PER_SQM = 10.763910416709722
@@ -40,6 +40,22 @@ OUTSIDE_US = "Geometry lies outside the United States"
 
 class MapError(ValueError):
     """A diagnostic containing only fixed invariants."""
+
+
+def _reject_non_finite(_token: str) -> NoReturn:
+    raise MapError("Response contains a value that is not JSON (NaN or Infinity)")
+
+
+def _load_json(path: Path, invalid_message: str) -> Any:
+    try:
+        return json.loads(
+            Path(path).read_text(encoding="utf-8"),
+            parse_constant=_reject_non_finite,
+        )
+    except MapError:
+        raise
+    except (ValueError, RecursionError) as exc:
+        raise MapError(invalid_message) from exc
 
 
 def load_features(document: object) -> list[dict]:
@@ -90,12 +106,13 @@ def same_file_key(path: Path | str) -> str:
     """
     try:
         resolved = unicodedata.normalize("NFC", str(Path(path).resolve()))
-        # Python 3.13+ resolve() no longer raises on a loop, so probe explicitly.
-        os.stat(path)
+        try:
+            # Python 3.13+ resolve() no longer raises on a loop, so probe explicitly.
+            os.stat(path)
+        except (FileNotFoundError, NotADirectoryError):  # missing output; reported by the caller
+            pass
     except RuntimeError as exc:  # Python <= 3.12 resolve() on a symlink loop
         raise MapError("Path contains a symlink loop") from exc
-    except (FileNotFoundError, NotADirectoryError):  # missing output; reported by the caller
-        pass
     except OSError as exc:
         if exc.errno == errno.ELOOP or getattr(exc, "winerror", None) == 1921:
             raise MapError("Path contains a symlink loop") from exc
@@ -302,9 +319,6 @@ def fallback_point(feature: dict) -> list[float] | None:
     return [lat, lon]
 
 
-_fallback_point = fallback_point
-
-
 def _display_geometry(geometry: dict) -> dict:
     """Shift western longitudes east when a geometry spans 180 degrees, so Leaflet draws it
     as one small shape instead of a band around the globe."""
@@ -337,7 +351,7 @@ def _feature_data(feature: dict, label: str | None, retrieved_at: str | None) ->
     geometry = feature.get("geometry")
     point = None
     if geometry is None:
-        point = _fallback_point(feature)
+        point = fallback_point(feature)
         if point is None:
             raise MapError(f"{label or 'Parcel'} has no boundary and no usable coordinates")
     return {
@@ -379,10 +393,7 @@ def _neighbour_data(feature: object) -> tuple[dict[str, Any], list[str]]:
 
 def load_neighbours(path: Path, subject_ids: set[str]) -> tuple[list[dict[str, Any]], list[str]]:
     """Drawable neighbour outlines and a warning for each skipped entry."""
-    try:
-        document = json.loads(Path(path).read_text(encoding="utf-8"))
-    except (ValueError, RecursionError) as exc:
-        raise MapError("Neighbours file is not valid JSON") from exc
+    document = _load_json(path, "Neighbours file is not valid JSON")
     parcels = document.get("parcels") if isinstance(document, dict) else None
     features = parcels.get("features") if isinstance(parcels, dict) else None
     if not isinstance(features, list):
@@ -511,12 +522,13 @@ __WARNINGS__<div id="banners"></div>
 
 def _json_for_script(value: object) -> str:
     """JSON safe to embed in a script element: <, > and & never appear literally."""
-    return (
-        json.dumps(value, ensure_ascii=True)
-        .replace("<", "\\u003c")
-        .replace(">", "\\u003e")
-        .replace("&", "\\u0026")
-    )
+    try:
+        dumped = json.dumps(value, ensure_ascii=True, allow_nan=False)
+    except ValueError as error:
+        raise MapError("Map output contains a value that is not JSON (NaN or Infinity)") from error
+    except RecursionError as error:
+        raise MapError(_TOO_DEEP_ERROR) from error
+    return dumped.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
 
 
 def render_html(
@@ -600,11 +612,7 @@ def _write_atomic_bytes(path: Path, data: bytes, *, replace: bool) -> None:
         temp.unlink(missing_ok=True)
 
 
-def check_mappable(feature: dict, *, label: str | None = None) -> None:
-    """Raise MapError unless the feature can be drawn: US path, valid boundary or a US point.
-
-    With ``label`` the path and omitted-geometry messages are prefixed ``label: `` as render does.
-    """
+def _check_and_prune(feature: dict, *, label: str | None = None) -> tuple[dict, list[str]]:
     prefix = f"{label}: " if label else ""
     properties = feature.get("properties")
     path = properties.get("path") if isinstance(properties, dict) else None
@@ -614,9 +622,21 @@ def check_mappable(feature: dict, *, label: str | None = None) -> None:
         raise MapError(f"{prefix}response omits geometry; it was requested without boundaries")
     geometry = feature["geometry"]
     if geometry is not None:
-        validate_geometry(geometry)
-    elif _fallback_point(feature) is None:
+        pruned, dropped = prune_geometry(geometry)
+        if dropped:
+            return {**feature, "geometry": pruned}, dropped
+        return feature, []
+    if fallback_point(feature) is None:
         raise MapError(f"{label or 'Parcel'} has no boundary and no usable coordinates")
+    return feature, []
+
+
+def check_mappable(feature: dict, *, label: str | None = None) -> None:
+    """Raise MapError unless the feature can be drawn: US path, valid boundary or a US point.
+
+    With ``label`` the path and omitted-geometry messages are prefixed ``label: `` as render does.
+    """
+    _check_and_prune(feature, label=label)
 
 
 def render(
@@ -637,10 +657,7 @@ def render(
         raise MapError("Output directory does not exist")
     if Path(output_path).is_dir():
         raise MapError("Output path is a directory")
-    try:
-        document = json.loads(Path(response_path).read_text(encoding="utf-8"))
-    except (ValueError, RecursionError) as exc:
-        raise MapError("Response file is not valid JSON") from exc
+    document = _load_json(response_path, "Response file is not valid JSON")
     features = load_features(document)
     if not all(isinstance(feature, dict) for feature in features):
         raise MapError("Expected a Regrid parcel response with parcels.features")
@@ -649,13 +666,10 @@ def render(
     warnings: list[str] = []
     for number, feature in enumerate(chosen, 1):
         name = f"Candidate {number}" if all_candidates else "Parcel"
-        check_mappable(feature, label=name)
-        if isinstance(feature.get("geometry"), dict):
-            geometry, dropped = prune_geometry(feature["geometry"])
-            if dropped:
-                feature = {**feature, "geometry": geometry}
-                chosen[number - 1] = feature
-                warnings.extend(f"{name}: {text}" for text in dropped)
+        feature, dropped = _check_and_prune(feature, label=name)
+        if dropped:
+            chosen[number - 1] = feature
+            warnings.extend(f"{name}: {text}" for text in dropped)
         check = area_check(feature)
         checks.append(check)
         if check["status"] == "mismatch":
@@ -709,6 +723,7 @@ CORE_COLUMNS = (
     "lat",
     "lon",
 )
+_CORE_COLUMNS_SET = frozenset(CORE_COLUMNS)
 _PROPERTY_COLUMNS = frozenset({"headline", "path", "ll_uuid"})
 NO_OUTPUT = "Choose --csv and/or --geojson"
 
@@ -716,17 +731,23 @@ NO_OUTPUT = "Choose --csv and/or --geojson"
 _PLAIN_NUMBER = re.compile(r"[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?", re.ASCII)
 
 
+_CSV_NON_JSON_ERROR = "A CSV cell contains a value that is not JSON (NaN or Infinity)"
+_TOO_DEEP_ERROR = "Response or input is nested too deeply"
+
+
 def _csv_cell(value: object) -> str:
     """A CSV cell: missing is empty, and spreadsheet formula prefixes are neutralised."""
     if value is None:
         return ""
+    if isinstance(value, float) and not math.isfinite(value):
+        raise MapError(_CSV_NON_JSON_ERROR)
     if isinstance(value, (dict, list)):
         try:
             text = json.dumps(value, ensure_ascii=False, allow_nan=False)
         except ValueError as error:
-            raise MapError(
-                "A CSV cell contains a value that is not JSON (NaN or Infinity)"
-            ) from error
+            raise MapError(_CSV_NON_JSON_ERROR) from error
+        except RecursionError as error:
+            raise MapError(_TOO_DEEP_ERROR) from error
     else:
         text = str(value)
     if text[:1] not in {"=", "+", "-", "@", "\t", "\r"}:
@@ -736,11 +757,12 @@ def _csv_cell(value: object) -> str:
     return "'" + text
 
 
-def _core_value(feature: dict, name: str) -> Any:
+def _core_value(feature: dict, name: str, fields: dict | None = None) -> Any:
+    resolved_fields = _fields(feature) if fields is None else fields
     if name == "ll_uuid":
         properties = feature.get("properties")
         empty = None
-        for source in (properties, _fields(feature)):
+        for source in (properties, resolved_fields):
             value = source.get("ll_uuid") if isinstance(source, dict) else None
             if value == "":
                 empty = value
@@ -749,7 +771,13 @@ def _core_value(feature: dict, name: str) -> Any:
         return empty
     properties = feature.get("properties")
     source = properties if name in _PROPERTY_COLUMNS and isinstance(properties, dict) else None
-    return (source if source is not None else _fields(feature)).get(name)
+    return (source if source is not None else resolved_fields).get(name)
+
+
+def _feature_column(feature: dict, name: str, fields: dict) -> Any:
+    if name in _CORE_COLUMNS_SET:
+        return _core_value(feature, name, fields)
+    return fields.get(name)
 
 
 def export(
@@ -773,10 +801,7 @@ def export(
             raise MapError("Output path is a directory")
         if same_file_key(target) == same_file_key(response_path):
             raise MapError("Output must not be the response file")
-    try:
-        document = json.loads(Path(response_path).read_text(encoding="utf-8"))
-    except (ValueError, RecursionError) as exc:
-        raise MapError("Response file is not valid JSON") from exc
+    document = _load_json(response_path, "Response file is not valid JSON")
     features = load_features(document)
     for number, feature in enumerate(features):
         if not isinstance(feature, dict):
@@ -797,45 +822,38 @@ def export(
     columns = list(CORE_COLUMNS)
     if all_fields:
         extras = {key for feature in features for key in _fields(feature)}
-        columns += sorted(extras - set(CORE_COLUMNS))
+        columns += sorted(extras - _CORE_COLUMNS_SET)
     csv_data = geojson_data = None
     if csv_path is not None:
         buffer = io.StringIO(newline="")
         writer = csv.writer(buffer, lineterminator="\r\n")
         writer.writerow(_csv_cell(name) for name in columns)
         for feature in features:
-            writer.writerow(
-                _csv_cell(
-                    _core_value(feature, name)
-                    if name in CORE_COLUMNS
-                    else _fields(feature).get(name)
-                )
-                for name in columns
-            )
+            fields = _fields(feature)
+            writer.writerow(_csv_cell(_feature_column(feature, name, fields)) for name in columns)
         csv_data = buffer.getvalue().encode("utf-8-sig")
     if geojson_path is not None:
-        collection = {
-            "type": "FeatureCollection",
-            "features": [
+        geojson_features: list[dict[str, Any]] = []
+        for feature in features:
+            fields = _fields(feature)
+            geojson_features.append(
                 {
                     "type": "Feature",
                     "geometry": feature["geometry"],
                     "properties": {
-                        name: _core_value(feature, name)
-                        if name in CORE_COLUMNS
-                        else _fields(feature).get(name)
-                        for name in columns
+                        name: _feature_column(feature, name, fields) for name in columns
                     },
                 }
-                for feature in features
-            ],
-        }
+            )
+        collection = {"type": "FeatureCollection", "features": geojson_features}
         try:
             text = json.dumps(collection, ensure_ascii=False, allow_nan=False)
         except ValueError as error:
             raise MapError(
                 "GeoJSON output contains a value that is not JSON (NaN or Infinity)"
             ) from error
+        except RecursionError as error:
+            raise MapError(_TOO_DEEP_ERROR) from error
         geojson_data = (text + "\n").encode("utf-8")
     if csv_path is not None and csv_data is not None:
         _write_atomic_bytes(Path(csv_path), csv_data, replace=replace)
@@ -849,48 +867,64 @@ def export(
     }
 
 
+def _require_path(value: str, label: str) -> Path:
+    if value == "":
+        raise MapError(f"{label} path cannot be empty")
+    return Path(value)
+
+
+def _optional_path(value: str | None, label: str) -> Path | None:
+    return None if value is None else _require_path(value, label)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     cmd = commands.add_parser("render", help="render a saved parcel response as a satellite map")
-    cmd.add_argument("response", type=Path)
-    cmd.add_argument("output", type=Path)
+    cmd.add_argument("response")
+    cmd.add_argument("output")
     cmd.add_argument("--feature", type=int, metavar="N", help="zero-based feature index")
     cmd.add_argument("--all-candidates", action="store_true")
     cmd.add_argument("--retrieved-at", metavar="ISO")
     cmd.add_argument("--replace", action="store_true")
-    cmd.add_argument("--neighbours", type=Path, metavar="FILE", help="neighbouring parcels")
+    cmd.add_argument("--neighbours", metavar="FILE", help="neighbouring parcels")
     exp = commands.add_parser("export", help="export a saved parcel response to CSV and/or GeoJSON")
-    exp.add_argument("response", type=Path)
-    exp.add_argument("--csv", type=Path, metavar="FILE")
-    exp.add_argument("--geojson", type=Path, metavar="FILE")
+    exp.add_argument("response")
+    exp.add_argument("--csv", metavar="FILE")
+    exp.add_argument("--geojson", metavar="FILE")
     exp.add_argument("--all-fields", action="store_true")
     exp.add_argument("--replace", action="store_true")
     args = parser.parse_args(argv)
     try:
+        response_path = _require_path(args.response, "Response")
         if args.command == "export":
             summary = export(
-                args.response,
-                csv_path=args.csv,
-                geojson_path=args.geojson,
+                response_path,
+                csv_path=_optional_path(args.csv, "CSV"),
+                geojson_path=_optional_path(args.geojson, "GeoJSON"),
                 all_fields=args.all_fields,
                 replace=args.replace,
             )
         else:
             summary = render(
-                args.response,
-                args.output,
+                response_path,
+                _require_path(args.output, "Output"),
                 index=args.feature,
                 all_candidates=args.all_candidates,
                 retrieved_at=args.retrieved_at,
                 replace=args.replace,
-                neighbours_path=args.neighbours,
+                neighbours_path=_optional_path(args.neighbours, "Neighbours"),
             )
-    except (MapError, OSError, ValueError) as exc:
-        message = " ".join(str(exc).split())
+    except (MapError, OSError, ValueError, RecursionError) as exc:
+        message = " ".join(str(exc).split()) or type(exc).__name__
         print(f"error: {message}", file=sys.stderr)
         return 1
-    print(json.dumps(summary, indent=2))
+    try:
+        print(json.dumps(summary, indent=2, ensure_ascii=False, allow_nan=False))
+    except (ValueError, RecursionError) as exc:
+        message = " ".join(str(exc).split()) or type(exc).__name__
+        print(f"error: {message}", file=sys.stderr)
+        return 1
     return 0
 
 

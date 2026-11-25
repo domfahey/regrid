@@ -76,6 +76,16 @@
    "id": "trigger_15",
    "prompt": "What is 12 Example Ave, Haddonfield NJ worth on the market today?",
    "expected_skill": "none"
+  },
+  {
+   "id": "trigger_16",
+   "prompt": "File a Regrid data-issue report for an outdated parcel boundary in Camden County NJ",
+   "expected_skill": "none"
+  },
+  {
+   "id": "trigger_17",
+   "prompt": "Give me a legal ownership opinion on whether this deed conveys marketable title to 12 Example Ave, Haddonfield NJ",
+   "expected_skill": "none"
   }
  ]
 }

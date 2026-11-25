@@ -34,7 +34,7 @@ Preserve dictionary responses and CLI JSON compatibility. CLI commands that call
 
 Use pytest with `test_*.py` files and `test_*` functions. Add regression tests for behavior changes, especially request serialization, validation, and credential redaction. Use `httpx.MockTransport`; ordinary tests must not contact Regrid.
 
-`make test` requires at least 95% combined line and branch coverage for `src/regrid`. `src/regrid/offline/` counts toward coverage. The skill-only `workflow.py` is tested but excluded. Windows CI runs the offline helper tests and the offline and freshness CLI tests (not `test_cli.py`, paging or address-map), so mark POSIX-only assertions with `skipif(os.name == "nt")`. Mark HTTPS integration tests `e2e`; they run separately. Report blocked tests explicitly rather than treating them as passed.
+`make test` requires at least 95% combined line and branch coverage for `src/regrid`. `src/regrid/offline/` counts toward coverage. The skill-only `workflow.py` is tested but excluded. Windows CI runs the offline helper, plugin, discovery, eval, and offline/freshness CLI tests (not `test_cli.py`, paging or address-map), so mark POSIX-only assertions with `skipif(os.name == "nt")`. Mark HTTPS integration tests `e2e`; they run separately. Report blocked tests explicitly rather than treating them as passed.
 
 ## Plugin Changes
 
@@ -43,7 +43,7 @@ handoff compatibility and shared request accounting; changes to the schema and
 helper must agree. The SDK and plugin have independent versions.
 
 - Build archives: `.venv/bin/python scripts/build_claude_plugins.py`.
-- Focused checks: `.venv/bin/python -m pytest tests/test_claude_plugins.py tests/test_regrid_workflow.py tests/test_regrid_workflow_composition.py tests/test_regrid_map.py tests/test_skill_helper_sync.py tests/test_cli_docs.py tests/test_offline_fields.py tests/test_offline_freshness.py tests/test_cli_offline.py tests/test_cli_freshness.py`.
+- Focused checks: `.venv/bin/python -m pytest tests/test_claude_plugins.py tests/test_regrid_workflow.py tests/test_regrid_workflow_composition.py tests/test_regrid_map.py tests/test_skill_helper_sync.py tests/test_cli_docs.py tests/test_mcp_docs.py tests/test_regrid_feature_evals.py tests/test_regrid_discovery.py tests/test_regrid_discovery_claude.py tests/test_offline_fields.py tests/test_offline_freshness.py tests/test_cli_offline.py tests/test_cli_freshness.py`.
 - Plugin commands live in `plugins/regrid-research/commands/`. They ship in the Claude Code and Cowork archives, not the standalone skill. `references/cli.md`'s command map is checked against the real CLI parser.
 - Validate packet fixtures: `.venv/bin/python plugins/regrid-research/evals/run.py validate --suite all`.
 - Validate plugin structure, when Claude CLI is installed: `claude plugin validate ./plugins/regrid-research --strict`.

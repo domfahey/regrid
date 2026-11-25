@@ -16,7 +16,9 @@ If no address was given, ask for one. A trailing "with neighbours" or `--neighbo
 1. Make one request: the skill's address lookup with one record (`limit=1`). Do not
    add searches, retries or other requests, and map only the matched parcel.
 2. Check the match as the skill requires. If the result is unmatched or an error, say
-   so and stop; do not render a map.
+   so and stop; do not render a map. If it is ambiguous (such as a unit or multi-parcel
+   mismatch under `limit=1`), state that the single returned parcel is an unconfirmed
+   candidate, not the requested property.
 3. Save the decoded `execute-request` JSON verbatim to a response file in the current
    working directory (never the plugin folder).
 4. Render it with `python3 "<skill>/scripts/map.py" render`, following
@@ -26,7 +28,7 @@ If no address was given, ask for one. A trailing "with neighbours" or `--neighbo
 6. Present the page as `<skill>/references/map.md` describes: the absolute path in Claude Code,
    or the interactive page in the Claude apps.
 
-With neighbours: if the user already asked, state the cost ("up to 25 records") and proceed; otherwise offer it
+With neighbours: if the user already asked, state the cost ("one request, up to 25 records") and proceed; otherwise offer it
 and wait, per the neighbour rule in `<skill>/references/batch.md`. Then follow
 the neighbours section of `<skill>/references/map.md` and the ledger rules in
 `<skill>/references/batch.md` (neighbour requests), and render with `--neighbours`.

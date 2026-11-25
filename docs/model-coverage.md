@@ -20,13 +20,14 @@ The typed client validates the response structures and field types defined by th
 | Temporary client token | `ClientTokenResponse` | Secret token and expiration; explicit export reveals token intentionally |
 | Data issue report | `ReportResponse` | Message and report ID |
 | TileJSON | `TileJSON` | Tile URLs and common metadata; unknown TileJSON extensions retained |
+| UTFGrid | `UTFGridResponse` | UTFGrid `grid`, `keys`, and `data` returned by `TypedRegridClient.grid()`; unknown fields retained |
 | GeoJSON | Discriminated `Geometry` union | Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon, and GeometryCollection |
 
 ## Compatibility and Deliberate Flexibility
 
 All response models retain unknown fields and distinguish absent values from explicit nulls when using `to_dict()`. Known values are validated strictly rather than coerced; APNs, address coordinates, and ownership identifiers retain source strings. Optional property values permit null because source datasets can omit values. Date strings and URLs are retained without normalization.
 
-The dynamic standard parcel `fields` dictionary is intentional: the supplied specification defines it as an open object, with county-specific and premium attributes obtained through the public schema endpoint. Its keys are not replaced with an invented fixed schema. Scalar metadata alongside direct schema maps remains untouched; direct map object entries are validated as `SchemaField`. Single-description schema responses remain lossless.
+The dynamic standard parcel `fields` dictionary is intentional: the supplied specification defines it as an open object, with county-specific and premium attributes obtained through the public schema endpoint. Its keys are not replaced with an invented fixed schema; callers that want strict validation of the 169 cataloged US fields can opt in via `ParcelProperties.typed_fields` (`ParcelFields`). Scalar metadata alongside direct schema maps remains untouched; direct map object entries are validated as `SchemaField`. Single-description schema responses remain lossless.
 
 Building, zoning, matched-address, enhanced-ownership, and typeahead properties now expose typed attributes. To obtain their dictionary form, use `to_dict()`; the raw client and CLI still return dictionaries. This extends the initial typed client's formerly dynamic property objects.
 

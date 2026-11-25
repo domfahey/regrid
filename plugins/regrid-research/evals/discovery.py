@@ -40,12 +40,17 @@ DISTRACTORS = {
 
 
 def read_json(path: Path) -> Any:
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def metadata(path: Path) -> dict[str, str]:
-    text = path.read_text()
-    front = text.split("---", 2)[1]
+    text = path.read_text(encoding="utf-8")
+    if not (text.startswith("---\n") or text.startswith("---\r\n")):
+        raise ValueError("Missing YAML frontmatter")
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        raise ValueError("Missing YAML frontmatter")
+    front = parts[1]
     result = {}
     for key in ("name", "description"):
         match = re.search(rf"^{key}:\s*(.+)$", front, re.MULTILINE)
@@ -55,7 +60,9 @@ def metadata(path: Path) -> dict[str, str]:
     return result
 
 
-def stage(case_id: str, variant: str, output: Path) -> dict[str, Any]:
+def stage(
+    case_id: str, variant: str, output: Path, *, execution_limit: str | None = None
+) -> dict[str, Any]:
     """Create a new workspace. An existing directory is never overwritten."""
     if variant not in {"skill", "baseline"}:
         raise ValueError("variant must be skill or baseline")
@@ -86,17 +93,18 @@ def stage(case_id: str, variant: str, output: Path) -> dict[str, Any]:
         path = output / "skills" / name / "SKILL.md"
         path.parent.mkdir(parents=True)
         path.write_text(
-            f"---\nname: {name}\ndescription: {description}\n---\n\nUse only for the described task.\n"
+            f"---\nname: {name}\ndescription: {description}\n---\n\nUse only for the described task.\n",
+            encoding="utf-8",
         )
         catalog.append(
-            {"name": name, "description": description, "path": str(path.relative_to(output))}
+            {"name": name, "description": description, "path": path.relative_to(output).as_posix()}
         )
     data = output / "data"
     data.mkdir()
     fixture = read_json(SKILL / "references/result-example.json")
     if case["fixture"] == "checkpoint":
         fixture["budget"]["attempted_requests"] = 0  # Deliberately inconsistent ledger.
-    (data / "evidence.json").write_text(json.dumps(fixture, indent=2) + "\n")
+    (data / "evidence.json").write_text(json.dumps(fixture, indent=2) + "\n", encoding="utf-8")
     # Baselines receive the same public contract/helper, but no skill instructions.
     # This isolates instruction discovery from unavailable task dependencies.
     if case["fixture"] in {"handoff", "checkpoint"}:
@@ -110,11 +118,13 @@ def stage(case_id: str, variant: str, output: Path) -> dict[str, Any]:
         "constraints": "Offline trial. Use only files within this workspace. No MCP, network, credentials, or external writes. Read skill bodies only when relevant. Return your answer and describe any validation performed.",
         "inputs": ["data/evidence.json"],
     }
+    if execution_limit is not None:
+        packet["execution_limit"] = execution_limit
     if case["fixture"] in {"handoff", "checkpoint"}:
         packet["task_dependencies"] = ["support/result.schema.json", "support/workflow.py"]
-    (output / "prompt.json").write_text(json.dumps(packet, indent=2) + "\n")
+    (output / "prompt.json").write_text(json.dumps(packet, indent=2) + "\n", encoding="utf-8")
     hashes = {
-        str(p.relative_to(output)): hashlib.sha256(p.read_bytes()).hexdigest()
+        p.relative_to(output).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in sorted(output.rglob("*"))
         if p.is_file()
     }
@@ -156,7 +166,8 @@ def record(manifest: dict[str, Any], trace: Path, model: str, cli_version: str) 
     """Preserve raw stream-json and extract observed tool calls without grading."""
     if not model.strip() or model in {"haiku", "sonnet", "opus"} or not cli_version.strip():
         raise ValueError("An explicit model ID and CLI version are required")
-    raw = trace.read_text()
+    raw_bytes = trace.read_bytes()
+    raw = raw_bytes.decode("utf-8")
     events = [json.loads(line) for line in raw.splitlines() if line.strip()]
     observed_models, calls = extract_calls(events)
     return {
@@ -166,7 +177,7 @@ def record(manifest: dict[str, Any], trace: Path, model: str, cli_version: str) 
         "cli_version": cli_version,
         "tool_calls": calls,
         "read_paths": read_paths(calls),
-        "trace_sha256": hashlib.sha256(raw.encode()).hexdigest(),
+        "trace_sha256": hashlib.sha256(raw_bytes).hexdigest(),
         "trace": events,
         "grading_status": "not_graded",
         "read_paths_semantics": "requested reads; verify successful tool_result evidence separately",

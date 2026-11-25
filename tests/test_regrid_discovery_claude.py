@@ -1,5 +1,6 @@
 """No real models or credentials are accessed by these runner tests."""
 
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -257,44 +258,88 @@ def test_blank_trace_lines_do_not_fail_successful_trial(tmp_path, monkeypatch):
     assert report["invalid_trace_lines"] == 0
 
 
-NULL_EVENTS = [
-    {"type": "assistant", "message": None},
-    {"type": "assistant", "message": {"model": None, "content": None}},
-    {"type": "assistant", "message": {"content": [{"type": "tool_use"}]}},
-    {
-        "type": "assistant",
-        "message": {"content": [{"type": "tool_use", "name": "Read", "input": None}]},
-    },
-    {"type": "assistant", "message": {"content": [None, "text"]}},
-]
+def test_run_discovery_claude_imports_without_preseeded_discovery(tmp_path, monkeypatch):
+    monkeypatch.delitem(sys.modules, "discovery", raising=False)
+    monkeypatch.setattr(sys, "path", [entry for entry in sys.path if Path(entry).resolve() != ROOT])
+    monkeypatch.chdir(tmp_path)
+    fresh_spec = importlib.util.spec_from_file_location(
+        "fresh_run_discovery_claude", ROOT / "run_discovery_claude.py"
+    )
+    assert fresh_spec and fresh_spec.loader
+    fresh_module = importlib.util.module_from_spec(fresh_spec)
+    fresh_spec.loader.exec_module(fresh_module)
+    assert fresh_module.discovery.ROOT == ROOT
 
 
-def test_extract_calls_tolerates_null_fields():
-    models, calls = sys.modules["discovery"].extract_calls(NULL_EVENTS)
-    assert models == set()
-    assert calls == [{"name": None, "input": {}}, {"name": "Read", "input": {}}]
+def test_run_trial_includes_trace_sha256_and_is_directly_comparable(tmp_path, monkeypatch):
+    trace = success_trace()
+    monkeypatch.setattr(
+        runner.subprocess,
+        "run",
+        lambda *a, **k: SimpleNamespace(stdout=trace, stderr="", returncode=0),
+    )
+    skill_report = runner.run_trial(
+        "claude", "haiku", "existing-evidence", "skill", tmp_path, "2.test", 90, 0.5
+    )
+    baseline_report = runner.run_trial(
+        "claude", "haiku", "existing-evidence", "baseline", tmp_path, "2.test", 90, 0.5
+    )
+    expected_sha = hashlib.sha256(trace.encode("utf-8")).hexdigest()
+    assert skill_report["trace_sha256"] == expected_sha
+    assert baseline_report["trace_sha256"] == expected_sha
+    saved_record = json.loads(
+        (tmp_path / "haiku-existing-evidence-skill/record.json").read_text(encoding="utf-8")
+    )
+    assert saved_record["trace_sha256"] == expected_sha
+    prompt_bytes = (tmp_path / "haiku-existing-evidence-skill/prompt.json").read_bytes()
+    assert skill_report["files"]["prompt.json"] == hashlib.sha256(prompt_bytes).hexdigest()
+    comparison = sys.modules["discovery"].compare(skill_report, baseline_report)
+    assert comparison["comparison_status"] == "comparable"
+    assert comparison["case_id"] == "existing-evidence"
+    assert comparison["model"] == "haiku"
 
 
-def test_record_tolerates_null_fields(tmp_path):
-    trace = tmp_path / "trace.jsonl"
-    trace.write_text("\n".join(json.dumps(event) for event in NULL_EVENTS) + "\n")
-    report = sys.modules["discovery"].record({}, trace, "claude-test-1", "2.test")
-    assert report["read_paths"] == [None]
-    assert len(report["tool_calls"]) == 2
+def test_run_discovery_claude_ignores_shadowing_discovery_on_sys_path(tmp_path, monkeypatch):
+    (tmp_path / "discovery.py").write_text('raise RuntimeError("shadowed")\n', encoding="utf-8")
+    monkeypatch.delitem(sys.modules, "discovery", raising=False)
+    monkeypatch.setattr(
+        sys, "path", [str(tmp_path), *[e for e in sys.path if Path(e).resolve() != ROOT]]
+    )
+    monkeypatch.chdir(tmp_path)
+    fresh_spec = importlib.util.spec_from_file_location(
+        "shadow_safe_run_discovery_claude", ROOT / "run_discovery_claude.py"
+    )
+    assert fresh_spec and fresh_spec.loader
+    fresh_module = importlib.util.module_from_spec(fresh_spec)
+    fresh_spec.loader.exec_module(fresh_module)
+    assert Path(fresh_module.discovery.__file__).resolve() == (ROOT / "discovery.py").resolve()
 
 
-def test_non_object_tool_input_is_preserved():
-    events = [
-        {
-            "type": "assistant",
-            "message": {
-                "content": [
-                    {"type": "tool_use", "name": "Read", "input": '{"file_path": "x.md"}'},
-                    {"type": "tool_use", "name": "Read", "input": {"file_path": "y.md"}},
-                ]
-            },
-        }
-    ]
-    _, calls = sys.modules["discovery"].extract_calls(events)
-    assert calls[0]["input"] == '{"file_path": "x.md"}'
-    assert sys.modules["discovery"].read_paths(calls) == [None, "y.md"]
+def test_subprocess_calls_use_utf8_replace_and_lf_trace(tmp_path, monkeypatch):
+    sub_kwargs = []
+    open_calls = []
+    real_open = Path.open
+
+    def fake_run(command, **kwargs):
+        sub_kwargs.append((command[-1] == "--version", kwargs))
+        if command[-1] == "--version":
+            return SimpleNamespace(stdout="2.test", returncode=0)
+        return SimpleNamespace(stdout=success_trace(), stderr="", returncode=0)
+
+    def spy_open(self, *args, **kwargs):
+        if self.name == "trace.jsonl":
+            open_calls.append((args, kwargs))
+        return real_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(Path, "open", spy_open)
+    report = runner.run_suite(tmp_path / "results")
+    assert report["runs"][0]["status"] == "completed"
+    assert len(sub_kwargs) == EXPECTED_RUNS + 1
+    for _, kwargs in sub_kwargs:
+        assert kwargs.get("encoding") == "utf-8"
+        assert kwargs.get("errors") == "replace"
+    assert len(open_calls) == EXPECTED_RUNS
+    for _, kwargs in open_calls:
+        assert kwargs.get("encoding") == "utf-8"
+        assert kwargs.get("newline") == "\n"

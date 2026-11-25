@@ -6,7 +6,27 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ## Unreleased
 
-No changes yet.
+### Added
+
+- SDK: `TypedRegridClient.validate_query()` now mirrors `RegridClient.validate_query()` for offline query and paging validation; `RegridClient` exposes read-only `base_url`, `tiles_base_url`, and `timeout` properties.
+- CLI (`regrid tile`): added `--replace` to explicitly opt into overwriting an existing output file, matching `map`, `export`, and `address-map`.
+
+### Changed
+
+- Plugin docs, evals, and CI: tightened `SKILL.md` (to 786 words) and `batch.md`; aligned `return_parcels=true` (keeping `POST /parcels/area` explicitly unverified), exact per-command CLI `--options` keys, and ambiguous `address-map` handling across skill references; expanded `evals/run.py validate --suite all` to check `composability-regressions.json`, `composability-rubric.json`, and `discovery-rubric.json` plus Canadian routes on all suites (enforced even under `python -O`); added data-issue and legal-ownership exclusion prompts to `trigger-cases.json`; reduced redundant validation/JSON serialization passes in `workflow.py`; pinned `uv==0.13.9`, gated duplicate lint/type/build steps to Python 3.12, and added plugin/discovery/eval tests to Windows CI; pruned superseded planning docs and intermediate `not_run` map-host records.
+
+### Fixed
+
+- CLI (`regrid tile`): `--output` is now validated (non-empty, existing parent directory, not a directory, and not overwriting existing files without `--replace`) before sending a billable tile request, surfaces path-free `MapError` guidance (including the `--replace` hint) on stderr, and writes bytes atomically without following symlinks.
+- CLI & SDK: `fields[...][order]` is now rejected whenever `offset_id` paging or `--max-records` is used, even without `--validate-fields` / `validate_fields=True` or when `allow_unknown_fields=True`; `--options '{"paging":...}'` with `--max-records` now returns a clean error instead of `TypeError`; empty-string path flags (`--csv ""`, `--geojson ""`, `--save-response ""`, `--cache ""`, `--neighbours ""`, `--catalog ""`, empty `map`/`export`/`address-map`/`tile`/`freshness` paths) are now rejected cleanly instead of silently falling back or resolving `.`.
+- CLI & SDK: `@file` JSON arguments (`--options`, `--fields`, `--geojson`, `--details`, `--metadata`) now read explicitly as UTF-8 instead of the platform default encoding; `RegridClient.query`/`point`/`area` recursively normalize nested `Mapping` GeoJSON values; offline CLI commands (`map`, `export`, `fields`, `freshness`) and `map.py`/`fields.py`/`freshness.py` now catch `RecursionError` and non-finite JSON cleanly and enforce `allow_nan=False` on JSON output (and reject non-JSON `NaN`/`Infinity` on load in `map.py`).
+- Offline map helper (`regrid export --csv` and `scripts/map.py`): scalar `NaN`, `Infinity`, and `-Infinity` values now raise `MapError` on CSV-only exports instead of writing non-JSON literals, and `_json_for_script()` enforces `allow_nan=False`.
+- Offline map helper (`same_file_key`): `FileNotFoundError` and `NotADirectoryError` from `Path.resolve()` now raise `MapError` instead of crashing with `UnboundLocalError`.
+- CLI paging (`--max-records`): `_merge_page()` no longer emits a false shape-change note when a later page returns `null` for a sibling collection/list, actually ignores later pages for keys whose shape changed, and de-duplicates merged collections in linear time instead of rescanning prior pages.
+- CLI `address-map`: `--neighbours` no longer sends a second `/parcels/point` request when `/parcels/address` returns multiple parcels (which `render()` rejects), and directory paths such as `.` or `/` now report `<target> is a directory` instead of a raw `pathlib` empty-name error.
+- Offline helpers (`fields.py`, `freshness.py`): `fields.py` and `freshness.py` now serialize CLI output with `allow_nan=False` inside their error handlers (no unhandled tracebacks), and `freshness.county_path()` rejects whitespace-only state or county segments before making a `/verse` request.
+- `regrid.live_full`: `run()` now forwards `client.base_url`, `client.tiles_base_url`, and `client.timeout` to its default `bad_client`, and `by_path()` requires `ll_uuid` on the subject before comparing parcel IDs.
+- Plugin helper, docs, and evals: `workflow.py` enforces an iterative nesting depth limit (100, below `copy.deepcopy()`'s Python recursion limit on every Python 3.10–3.13 runtime) and falls back to exclusive create (`"xb"`) when `os.link` is unsupported; `evals/run.py`'s Canadian-route guard inspects HAR `queryString`, `country`, standalone `/ca`, percent-encoded query params, `--options`/`--fields`/`--geojson` JSON, `schema` with flags, and `-c` commands without false-positiving on California addresses; `discovery.py` and `run_discovery_claude.py` use POSIX path keys, strict frontmatter checks, UTF-8 subprocess decoding, LF `trace.jsonl` hashing, and sibling module loading; `cli.md` documents `regrid grid`'s two-request default when `--metadata` is omitted; `mcp-tools.md` keeps dated observations in `## Observed history`; `scripts/build_claude_plugins.py` applies dotfile/secret filtering to `commands/`.
 
 ## [SDK 0.4.5][sdk-v0.4.5] and [Regrid Research 0.9.6][regrid-research-v0.9.6] - 2026-11-20
 

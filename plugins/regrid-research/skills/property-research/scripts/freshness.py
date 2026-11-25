@@ -29,7 +29,12 @@ class FreshnessError(ValueError):
 def county_path(path: str) -> str:
     """Return the first three segments of a US path: /us/<state>/<county>."""
     segments = path.split("/") if isinstance(path, str) else []
-    if len(segments) < 4 or segments[0] != "" or segments[1] != "us" or not all(segments[2:4]):
+    if (
+        len(segments) < 4
+        or segments[0] != ""
+        or segments[1] != "us"
+        or not all(segment.strip() for segment in segments[2:4])
+    ):
         raise FreshnessError("Expected a US path with state and county, e.g. /us/nj/camden")
     return "/".join(segments[:4])
 
@@ -147,16 +152,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Report county data dates from a verse response.")
     commands = parser.add_subparsers(dest="command", required=True)
     county = commands.add_parser("county", help="Show a county's published data dates")
-    county.add_argument("verse", type=Path, help="Saved /verse response JSON")
+    county.add_argument("verse", help="Saved /verse response JSON")
     county.add_argument("--path", required=True, help="Regrid path, e.g. /us/nj/camden")
     args = parser.parse_args(argv)
     try:
-        document = json.loads(args.verse.read_text(encoding="utf-8"))
+        if not args.verse:
+            raise ValueError("Verse path cannot be empty")
+        document = json.loads(Path(args.verse).read_text(encoding="utf-8"))
         result = county_dates(document, args.path)
+        text = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False)
     except (OSError, ValueError, RecursionError) as exc:
-        print(f"freshness: {' '.join(str(exc).split())}", file=sys.stderr)
+        print(f"freshness: {' '.join(str(exc).split()) or type(exc).__name__}", file=sys.stderr)
         return 1
-    print(json.dumps(result, indent=2, ensure_ascii=False))
+    print(text)
     return 0
 
 

@@ -101,10 +101,8 @@ def test_deep_decoded_result_fails_at_output(monkeypatch, capsys, tmp_path, argv
     """A result that decodes but cannot be serialized still fails cleanly."""
     seen = _install(monkeypatch, lambda r: httpx.Response(200, json={}))
     deep = {"parcels": {"features": [{"id": 1, "properties": {"x": _nested(DEEP_LEVELS)}}]}}
-    deep["features"] = [{"properties": {"path": "/us/nj/camden"}}]
     monkeypatch.setattr(RegridClient, "_decode", staticmethod(lambda response: deep))
     argv = [str(tmp_path / "m.html") if a == "OUTPATH" else a for a in argv]
-    argv = [str(tmp_path / "c.json") if a == "CACHE" else a for a in argv]
     assert cli.main(argv) == 1
     _assert_clean_failure(capsys, 1, DEEP)
     assert len(seen) == 1
@@ -116,9 +114,21 @@ def test_freshness_deep_verse_cache_failure_is_a_warning(monkeypatch, capsys, tm
     monkeypatch.setattr(RegridClient, "_decode", staticmethod(lambda response: verse))
     cache = tmp_path / "c.json"
     assert cli.main(["freshness", "--path", "/us/nj/camden", "--cache", str(cache)]) == 0
-    out, err = capsys.readouterr()
+    err = capsys.readouterr().err
     assert "regrid: warning: verse cache not saved" in err
     assert err.count("requests made: 1") == 1 and len(seen) == 1
+
+
+def test_map_recursion_error_fails_cleanly(monkeypatch, capsys, tmp_path):
+    def fail_render(*args, **kwargs):
+        raise RecursionError("maximum recursion depth exceeded")
+
+    monkeypatch.setattr(cli.parcel_map, "render", fail_render)
+    assert cli.main(["map", str(tmp_path / "resp.json"), str(tmp_path / "m.html")]) == 1
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert err == "regrid: Response or input is nested too deeply\n"
+    assert "Traceback" not in err
 
 
 @pytest.mark.parametrize("flag", ["--options", "--fields", "--geojson"])

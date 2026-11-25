@@ -120,7 +120,7 @@ def test_invalid_checkpoint_does_not_replace_existing_file(tmp_path):
     with pytest.raises(ValueError, match="ledger"):
         workflow.save_checkpoint(invalid, path, requested=True, replace=True)
     assert path.read_bytes() == original
-    path.write_text(json.dumps(invalid))
+    path.write_text(json.dumps(invalid), encoding="utf-8")
     with pytest.raises(ValueError, match="ledger"):
         workflow.load_checkpoint(path)
 
@@ -291,7 +291,7 @@ def test_extracted_standalone_helper_validates_and_resumes_checkpoint(tmp_path):
         check=True,
     )
     assert saved.stdout.strip() == "Saved checkpoint"
-    assert json.loads(destination.read_text()) == doc
+    assert json.loads(destination.read_text(encoding="utf-8")) == doc
 
 
 def test_generated_attempt_id_does_not_collide_with_caller_ledger_ids():
@@ -359,7 +359,7 @@ def test_cli_actionable_redacted_validation(tmp_path, monkeypatch, capsys, mutat
     mutation(doc)
     doc["workflow_id"] = "secret-sentinel"
     path = tmp_path / "secret-sentinel.json"
-    path.write_text(json.dumps(doc))
+    path.write_text(json.dumps(doc), encoding="utf-8")
     code, output = run_cli(monkeypatch, capsys, "validate", path)
     assert code == 1
     assert expected in output
@@ -368,7 +368,7 @@ def test_cli_actionable_redacted_validation(tmp_path, monkeypatch, capsys, mutat
 
 def test_cli_distinguishes_json_and_unreadable_input(tmp_path, monkeypatch, capsys):
     path = tmp_path / "secret-sentinel.json"
-    path.write_text('{"secret-sentinel":')
+    path.write_text('{"secret-sentinel":', encoding="utf-8")
     code, output = run_cli(monkeypatch, capsys, "validate", path)
     assert code == 1 and "Malformed JSON" in output and "line 1" in output
     assert "secret-sentinel" not in output
@@ -386,19 +386,19 @@ def test_cli_save_explicit_create_and_replace_offline(tmp_path, monkeypatch, cap
     monkeypatch.setattr(socket, "socket", forbidden)
     source, destination = tmp_path / "input.json", tmp_path / "checkpoint.json"
     doc = state()
-    source.write_text(json.dumps(doc))
+    source.write_text(json.dumps(doc), encoding="utf-8")
     code, output = run_cli(monkeypatch, capsys, "save", source, destination)
     assert code == 0 and "Saved checkpoint" in output
     assert workflow.load_checkpoint(destination) == doc
     original = destination.read_bytes()
     doc["workflow_id"] = "changed"
-    source.write_text(json.dumps(doc))
+    source.write_text(json.dumps(doc), encoding="utf-8")
     code, output = run_cli(monkeypatch, capsys, "save", source, destination)
     assert code == 1 and "--replace" in output
     assert destination.read_bytes() == original
     code, _ = run_cli(monkeypatch, capsys, "save", source, destination, "--replace")
     assert code == 0 and workflow.load_checkpoint(destination) == doc
-    source.write_text("{}")
+    source.write_text("{}", encoding="utf-8")
     code, _ = run_cli(monkeypatch, capsys, "save", source, destination, "--replace")
     assert code == 1 and workflow.load_checkpoint(destination) == doc
 
@@ -431,3 +431,200 @@ def test_set_result_unknown_input_raises_validation_error():
     row["input_id"] = "missing"
     with pytest.raises(workflow.ValidationError, match="Unknown input ID"):
         workflow.set_result(state(), row)
+
+
+def _deeply_nested_doc(depth: int = 1500):
+    doc = workflow.new_workflow("deep-nest", [request()], 1, 1)
+    row = success(doc["results"][0])
+    nested: list = ["leaf"]
+    for _ in range(depth):
+        nested = [nested]
+    row["candidates"][0]["facts"] = {"nested": nested}
+    row["lookup_status"] = "success"
+    row["match_status"] = "confirmed"
+    doc["results"][0] = row
+    return doc
+
+
+@pytest.mark.parametrize("depth", [500, 1500])
+def test_validate_rejects_excessive_nesting(depth):
+    doc = _deeply_nested_doc(depth)
+    with pytest.raises(workflow.ValidationError, match="nesting|finite JSON"):
+        workflow.validate(doc)
+
+
+@pytest.mark.parametrize("depth", [500, 1500])
+def test_save_checkpoint_rejects_excessive_nesting_with_validation_error(tmp_path, depth):
+    doc = _deeply_nested_doc(depth)
+    dest = tmp_path / "out.json"
+    with pytest.raises(workflow.ValidationError, match="nesting"):
+        workflow.save_checkpoint(doc, dest, requested=True)
+    assert not dest.exists()
+
+
+@pytest.mark.parametrize("depth", [500, 1500])
+def test_cli_save_rejects_excessive_nesting_without_traceback(tmp_path, depth):
+    import subprocess
+    import sys
+
+    doc = workflow.new_workflow("deep-nest", [request()], 1, 1)
+    row = success(doc["results"][0])
+    row["candidates"][0]["facts"] = {"nested": "__DEEP__"}
+    row["lookup_status"] = "success"
+    row["match_status"] = "confirmed"
+    doc["results"][0] = row
+    source = tmp_path / "deep.json"
+    dest = tmp_path / "out.json"
+    # Build JSON text directly so Python 3.10's json.dumps does not fail in test setup.
+    nested_json = "[" * depth + '"leaf"' + "]" * depth
+    source.write_text(json.dumps(doc).replace('"__DEEP__"', nested_json, 1), encoding="utf-8")
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT), "save", str(source), str(dest)],
+        text=True,
+        capture_output=True,
+    )
+    assert proc.returncode == 1
+    assert "Invalid handoff/checkpoint" in proc.stdout
+    assert "nesting" in proc.stdout
+    assert "Traceback" not in proc.stdout
+    assert "Traceback" not in proc.stderr
+    assert not dest.exists()
+
+
+def test_deep_nesting_cannot_reach_reserve_attempt_or_upgrade_workflow():
+    doc = _deeply_nested_doc(500)
+    with pytest.raises(workflow.ValidationError, match="nesting"):
+        workflow.upgrade_workflow(doc)
+    pending_doc = workflow.new_workflow("deep-pending", [request()], 1, 1)
+    pending_doc["results"][0]["candidates"] = [
+        {
+            "parcel_id": None,
+            "address": None,
+            "facts": {"nested": [[["leaf"]]]},
+            "provenance": {
+                "provider": "Regrid",
+                "retrieved_at": "2026-10-27T18:00:00Z",
+                "source_refreshed_at": None,
+                "source_url": None,
+                "evidence_id": "e-1",
+            },
+        }
+    ]
+    nested: list = ["leaf"]
+    for _ in range(500):
+        nested = [nested]
+    pending_doc["results"][0]["candidates"][0]["facts"]["nested"] = nested
+    with pytest.raises(workflow.ValidationError, match="nesting"):
+        workflow.reserve_attempt(pending_doc, ["input-000001"], 1)
+
+
+def test_save_checkpoint_falls_back_when_os_link_unsupported(tmp_path, monkeypatch):
+    import errno
+
+    def unsupported_link(src, dst):
+        raise OSError(errno.ENOTSUP, "hard links not supported")
+
+    monkeypatch.setattr(workflow.os, "link", unsupported_link)
+    dest = tmp_path / "checkpoint.json"
+    doc = state()
+    workflow.save_checkpoint(doc, dest, requested=True)
+    assert workflow.load_checkpoint(dest) == doc
+    assert list(tmp_path.iterdir()) == [dest]
+
+    original = dest.read_bytes()
+    with pytest.raises(FileExistsError):
+        workflow.save_checkpoint(doc, dest, requested=True)
+    assert dest.read_bytes() == original
+    assert list(tmp_path.iterdir()) == [dest]
+
+
+def test_upgrade_workflow_on_1_1_validates_once(monkeypatch):
+    doc = workflow.new_workflow("v11", [request()], 1, 1, schema_version="1.1")
+    calls = 0
+    real_validate = workflow.validate
+
+    def spy_validate(d):
+        nonlocal calls
+        calls += 1
+        return real_validate(d)
+
+    monkeypatch.setattr(workflow, "validate", spy_validate)
+    upgraded = workflow.upgrade_workflow(doc)
+    assert upgraded == doc and upgraded is not doc
+    assert calls == 1
+
+
+def _spy_validation_and_dumps(monkeypatch):
+    counts = {"validate": 0, "dumps": 0}
+    real_validate = workflow._validate
+    real_dumps = workflow.json.dumps
+
+    def spy_validate(*args, **kwargs):
+        counts["validate"] += 1
+        return real_validate(*args, **kwargs)
+
+    def spy_dumps(*args, **kwargs):
+        counts["dumps"] += 1
+        return real_dumps(*args, **kwargs)
+
+    monkeypatch.setattr(workflow, "_validate", spy_validate)
+    monkeypatch.setattr(workflow.json, "dumps", spy_dumps)
+    return counts
+
+
+def test_reserve_attempt_validates_twice(monkeypatch):
+    doc = state()
+    counts = _spy_validation_and_dumps(monkeypatch)
+    workflow.reserve_attempt(doc, ["input-000001"], 1)
+    assert counts["validate"] == 2
+    assert counts["dumps"] == 2
+
+
+def test_reuse_result_validates_twice(monkeypatch):
+    doc = workflow.new_workflow("supplied", [request(), request()], 1, 1)
+    doc = workflow.set_result(doc, success(doc["results"][0]))
+    counts = _spy_validation_and_dumps(monkeypatch)
+    workflow.reuse_result(doc, "input-000001", "input-000002")
+    assert counts["validate"] == 2
+    assert counts["dumps"] == 2
+
+
+def test_reconcile_attempt_dumps_twice(monkeypatch):
+    doc = workflow.upgrade_workflow(
+        workflow.complete_attempt(
+            workflow.reserve_attempt(state(), ["input-000001"], 1),
+            "attempt-000001",
+            "uncertain",
+        )
+    )
+    proof = {
+        "provider": "Regrid",
+        "evidence_id": "receipt-1",
+        "retrieved_at": "2026-10-28T12:00:00Z",
+        "attempt_id": "attempt-000001",
+        "returned_records": 1,
+        "source_url": None,
+    }
+    counts = _spy_validation_and_dumps(monkeypatch)
+    workflow.reconcile_attempt(doc, "attempt-000001", proof, evidence_verified=True)
+    assert counts["validate"] == 3
+    assert counts["dumps"] == 2
+
+
+def test_save_checkpoint_dumps_once(tmp_path, monkeypatch):
+    doc = state()
+    counts = _spy_validation_and_dumps(monkeypatch)
+    workflow.save_checkpoint(doc, tmp_path / "checkpoint.json", requested=True)
+    assert counts["validate"] == 1
+    assert counts["dumps"] == 1
+
+
+def test_cli_save_validates_and_dumps_once(tmp_path, monkeypatch, capsys):
+    source = tmp_path / "input.json"
+    destination = tmp_path / "checkpoint.json"
+    source.write_text(json.dumps(state()), encoding="utf-8")
+    counts = _spy_validation_and_dumps(monkeypatch)
+    code, output = run_cli(monkeypatch, capsys, "save", source, destination)
+    assert code == 0 and "Saved checkpoint" in output
+    assert counts["validate"] == 1
+    assert counts["dumps"] == 1

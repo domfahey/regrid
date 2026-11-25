@@ -1,8 +1,7 @@
-"""Shared local HTTPS fake Regrid server and CLI runner for e2e tests.
+"""Shared local HTTPS fake Regrid server and CLI runner for e2e tests."""
 
-Import in tests with ``from e2e_support import regrid_server, run_cli  # noqa: F401``.
-"""
-
+import atexit
+import functools
 import json as jsonlib
 import os
 import shutil
@@ -103,8 +102,12 @@ class FakeRegrid:
                 fake.requests.append(recorded)
                 route = fake.routes.get(parsed.path)
                 if route is None:
-                    status, body, ctype, headers = 404, b'{"error":"not found"}', "", {}
-                    ctype = "application/json"
+                    status, body, ctype, headers = (
+                        404,
+                        b'{"error":"not found"}',
+                        "application/json",
+                        {},
+                    )
                 else:
                     if route.delay:
                         time.sleep(route.delay)
@@ -150,7 +153,9 @@ class FakeRegrid:
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(cert, key)
         self.httpd.socket = context.wrap_socket(self.httpd.socket, server_side=True)
-        self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
+        self.thread = threading.Thread(
+            target=self.httpd.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
+        )
         self.thread.start()
         self.base = f"https://127.0.0.1:{self.httpd.server_port}"
         self.api = self.base + "/api/v2"
@@ -189,12 +194,15 @@ class FakeRegrid:
         self.thread.join()
 
 
-@pytest.fixture
-def regrid_server(tmp_path):
+@functools.lru_cache(maxsize=1)
+def _cert_paths() -> tuple[Path, Path]:
     openssl = shutil.which("openssl")
     if openssl is None:
         pytest.skip("openssl is required to generate the temporary TLS certificate")
-    cert, key = tmp_path / "cert.pem", tmp_path / "key.pem"
+    cert_dir = tempfile.TemporaryDirectory()
+    atexit.register(cert_dir.cleanup)
+    root = Path(cert_dir.name)
+    cert, key = root / "cert.pem", root / "key.pem"
     subprocess.run(
         [
             openssl,
@@ -217,32 +225,31 @@ def regrid_server(tmp_path):
         check=True,
         capture_output=True,
     )
+    return cert, key
+
+
+def start_regrid_server() -> FakeRegrid:
+    cert, key = _cert_paths()
     server = FakeRegrid(cert, key)
     server.route("/api/v2/parcels/address", json=parcel_response())
     server.route("/api/v2/usage", json=DEFAULT_USAGE)
     server.route("/api/v2/schemas/parcel", json=DEFAULT_SCHEMA)
-    try:
-        yield server
-    finally:
-        server.close()
+    return server
 
 
 # Unreachable endpoints for offline commands: they must never fall back to the real Regrid URL.
 DEAD_API = "https://127.0.0.1:9/api/v2"
 DEAD_BASE = "https://127.0.0.1:9"
 GLOBAL_VALUE_OPTIONS = ("--timeout", "--base-url", "--tiles-base-url")
-SUBCOMMANDS_RUN: set[str] = set()  # runtime record; the inventory test parses sources instead
 
 
-def subcommand_of(args: tuple[str, ...]) -> str | None:
-    """First non-option token after the global options and their values."""
-    items = iter(args)
-    for item in items:
-        if item in GLOBAL_VALUE_OPTIONS:
-            next(items, None)
-        elif not item.startswith("--"):
-            return item
-    return None
+def inprocess_tls_env(monkeypatch: pytest.MonkeyPatch, cert_file: Path) -> None:
+    """Point in-process TLS clients at ``cert_file`` and bypass local proxies."""
+    monkeypatch.setenv("SSL_CERT_FILE", str(cert_file))
+    monkeypatch.setenv("NO_PROXY", "127.0.0.1")
+    monkeypatch.setenv("no_proxy", "127.0.0.1")
+    for var in ("http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY", "all_proxy", "ALL_PROXY"):
+        monkeypatch.delenv(var, raising=False)
 
 
 def e2e_env(
@@ -270,9 +277,6 @@ def _run(
     timeout: float,
     env: dict[str, str] | None,
 ) -> subprocess.CompletedProcess:
-    command = subcommand_of(argv)
-    if command:
-        SUBCOMMANDS_RUN.add(command)
     with tempfile.TemporaryDirectory() as home:
         return subprocess.run(
             [sys.executable, "-m", "regrid", *argv],

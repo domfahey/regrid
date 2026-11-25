@@ -1,4 +1,5 @@
 import json
+import os
 import runpy
 import sys
 
@@ -267,10 +268,94 @@ def test_bad_output(requests, tmp_path, capsys):
     assert cli.main(["tile", "10", "0", "0", "--output", str(tmp_path)]) == 1
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert captured.err == "regrid: Invalid input or output file\nregrid: requests made: 1\n"
+    assert captured.err == "regrid: Output path is a directory\nregrid: requests made: 0\n"
+    assert str(tmp_path) not in captured.err
     assert tmp_path.is_dir()
     assert list(tmp_path.iterdir()) == []
+    assert not requests
+
+
+@pytest.mark.parametrize("target", ["", "missing"])
+def test_tile_empty_or_missing_parent_output_makes_no_request(requests, tmp_path, capsys, target):
+    output = "" if target == "" else str(tmp_path / "missing" / "tile.mvt")
+    expected = "Output path cannot be empty" if target == "" else "Output directory does not exist"
+    assert cli.main(["tile", "10", "0", "0", "--output", output]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == f"regrid: {expected}\nregrid: requests made: 0\n"
+    assert str(tmp_path) not in captured.err
+    assert not requests
+
+
+def test_tile_existing_output_requires_replace(requests, tmp_path, capsys):
+    dest = tmp_path / "tile.png"
+    dest.write_bytes(b"keep")
+    assert cli.main(["tile", "10", "0", "0", "--format", "png", "--output", str(dest)]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert (
+        captured.err
+        == "regrid: Output file exists; pass --replace to overwrite it\nregrid: requests made: 0\n"
+    )
+    assert str(dest) not in captured.err
+    assert not requests
+    assert dest.read_bytes() == b"keep"
+
+    assert (
+        cli.main(["tile", "10", "0", "0", "--format", "png", "--output", str(dest), "--replace"])
+        == 0
+    )
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == "regrid: requests made: 1\n"
     assert len(requests) == 1
+    assert dest.read_bytes() == TILE_BYTES
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlinks need privilege on Windows")
+def test_tile_replace_does_not_write_through_symlink(requests, tmp_path, capsys):
+    target = tmp_path / "victim.bin"
+    target.write_bytes(b"keep")
+    link = tmp_path / "tile.mvt"
+    link.symlink_to(target)
+
+    assert cli.main(["tile", "10", "0", "0", "--output", str(link)]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert (
+        captured.err
+        == "regrid: Output file exists; pass --replace to overwrite it\nregrid: requests made: 0\n"
+    )
+    assert str(link) not in captured.err
+    assert not requests
+    assert link.is_symlink()
+    assert target.read_bytes() == b"keep"
+
+    assert cli.main(["tile", "10", "0", "0", "--output", str(link), "--replace"]) == 0
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == "regrid: requests made: 1\n"
+    assert len(requests) == 1
+    assert not link.is_symlink()
+    assert link.read_bytes() == TILE_BYTES
+    assert target.read_bytes() == b"keep"
+
+
+def test_tile_atomic_write_map_error_surfaces_safe_message(requests, monkeypatch, tmp_path, capsys):
+    dest = tmp_path / "tile.mvt"
+
+    def fail_write(*args, **kwargs):
+        raise cli.parcel_map.MapError(cli.parcel_map.EXISTS)
+
+    monkeypatch.setattr(cli.parcel_map, "write_atomic_bytes", fail_write)
+    assert cli.main(["tile", "10", "0", "0", "--output", str(dest)]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert (
+        captured.err
+        == "regrid: Output file exists; pass --replace to overwrite it\nregrid: requests made: 1\n"
+    )
+    assert str(dest) not in captured.err
 
 
 @pytest.mark.parametrize("response", [httpx.Response(403), httpx.Response(200, text="broken")])
@@ -388,3 +473,22 @@ def test_surrounding_whitespace_is_trimmed_from_token(requests, monkeypatch, cap
     monkeypatch.setenv("REGRID_TOKEN", "  padded-token\n")
     assert cli.main(["address", "123 Main"]) == 0
     assert requests[-1].url.params["token"] == "padded-token"
+
+
+def test_file_input_reads_utf8_json(requests, tmp_path, capsys):
+    fields = tmp_path / "utf8-fields.json"
+    fields.write_text('{"owner":{"eq":"Café — Straße"}}', encoding="utf-8")
+    assert cli.main(["query", "--fields", "@" + str(fields)]) == 0
+    assert requests[-1].url.params["fields[owner][eq]"] == "Café — Straße"
+    assert json.loads(capsys.readouterr().out) == RESPONSE
+
+
+def test_fields_command_rejects_nan_values(monkeypatch, capsys):
+    monkeypatch.setattr(
+        cli.parcel_fields, "search", lambda catalog, term: [{"name": "x", "bad": float("nan")}]
+    )
+    assert cli.main(["fields", "search", "x"]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "Traceback" not in captured.err
+    assert captured.err.startswith("regrid: ")

@@ -173,13 +173,12 @@ parameters, and `{"geojson": <geometry>}` as the body (the shape the SDK sends):
 ```
 
 A `/parcels/point` POST example has the same shape, with `lat`/`lon` omitted and the
-Point or MultiPoint GeoJSON in the body, plus the same four `false` premium flags.
-POST point takes no `offset_id` or `return_geometry`; POST area accepts `limit`,
-`radius`, `return_count`, `offset_id`, `return_geometry` and the premium flags. Every
-other POST (`/report`, Batch creation) stays forbidden, as do `/client_token/typeahead`
-and all DELETEs.
-POST point accepts `return_parcels=true` (verified live 2026-11-20); POST area is
-unverified. GET searches set it explicitly.
+Point or MultiPoint GeoJSON in the body, plus return_stacked=false and the same four
+false premium flags. POST point takes no `offset_id` or `return_geometry`; POST area
+accepts `limit`, `radius`, `return_count`, `offset_id`, `return_geometry` and the
+premium flags. Every other POST (`/report`, Batch creation) stays forbidden, as do
+`/client_token/typeahead` and all DELETEs. POST point accepts `return_parcels=true`;
+POST area remains unverified. GET searches set it explicitly.
 
 ### Response options
 
@@ -282,8 +281,8 @@ Dated observations, not instructions; the live schema takes precedence.
   `usage` and no MCP error; no parcels were retrieved. This verifies direct MCP header
   forwarding, not Claude/Cowork import or credential storage.
 - The address example above is schema-verified but has not been executed through MCP.
-- POST geometry search has not been executed through MCP; the live POST point and area
-  checks ran through the SDK/CLI only.
+- November 20, 2026: a live SDK check verified POST point accepts `return_parcels=true`;
+  POST area `return_parcels` and POST geometry search over MCP remain unverified.
 
 Sources: live MCP initialization, tools/list, the discovery calls above, and the usage
 call; [Regrid MCP docs](https://support.regrid.com/docs/mcp-server).

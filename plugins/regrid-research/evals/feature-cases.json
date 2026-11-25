@@ -5,7 +5,7 @@
   {
    "id": "map_single_address",
    "user_request": "Show 12 Example Ave, Haddonfield NJ on a satellite map",
-   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Paid datasets are not authorized. Calls in tool_history have already happened. The host can run local commands and show files. No earlier lookups exist in this task.",
+   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Premium datasets are not authorized. Calls in tool_history have already happened. The host can run local commands and show files. No earlier lookups exist in this task.",
    "us_only": true,
    "available_tools": [
     {
@@ -73,7 +73,7 @@
   {
    "id": "map_with_neighbours",
    "user_request": "Show 12 Example Ave, Haddonfield NJ on a satellite map, and the neighbouring lots",
-   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Paid datasets are not authorized. Calls in tool_history have already happened. The host can run local commands. The subject was already looked up and saved verbatim to RESPONSE.json (lat 39.9005, lon -75.0295); no neighbour request has been made. No workflow ledger is in use.",
+   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Premium datasets are not authorized. Calls in tool_history have already happened. The host can run local commands. The subject was already looked up and saved verbatim to RESPONSE.json (lat 39.9005, lon -75.0295); no neighbour request has been made. No workflow ledger is in use.",
    "us_only": true,
    "available_tools": [
     {
@@ -161,7 +161,7 @@
   {
    "id": "export_spreadsheet",
    "user_request": "Export these parcels to a spreadsheet",
-   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Paid datasets are not authorized. Calls in tool_history have already happened. The lookup response is saved verbatim at ./RESPONSE.json. The user wants a CSV they can open in a spreadsheet.",
+   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Premium datasets are not authorized. Calls in tool_history have already happened. The lookup response is saved verbatim at ./RESPONSE.json. The user wants a CSV they can open in a spreadsheet.",
    "us_only": true,
    "available_tools": [
     {
@@ -242,7 +242,7 @@
       "content": [
        {
         "type": "text",
-        "text": "{\"parcels\": {\"type\": \"FeatureCollection\", \"features\": [{\"type\": \"Feature\", \"properties\": {\"headline\": \"12 EXAMPLE AVE\", \"path\": \"/us/nj/camden/haddonfield/1\", \"fields\": {\"address\": \"12 EXAMPLE AVE\", \"owner\": \"Example Restoration LLC\", \"parcelnumb\": \"TEST_67_6\", \"ll_uuid\": \"00000000-0000-4000-8000-000000000001\", \"ll_last_refresh\": \"2026-09-17\", \"ll_gisacre\": 0.14, \"usedesc\": \"Single Family Residential\", \"usecode\": \"1\", \"lat\": \"39.9005\", \"lon\": \"-75.0295\"}}, \"geometry\": {\"type\": \"Polygon\", \"coordinates\": [[[-75.03, 39.9], [-75.029, 39.9], [-75.029, 39.901], [-75.03, 39.901], [-75.03, 39.9]]]}}, {\"type\": \"Feature\", \"properties\": {\"headline\": \"14 EXAMPLE AVE\", \"path\": \"/us/nj/camden/haddonfield/1\", \"fields\": {\"address\": \"14 EXAMPLE AVE\", \"owner\": \"Example Restoration LLC\", \"parcelnumb\": \"TEST_67_6\", \"ll_uuid\": \"00000000-0000-4000-8000-000000000001\", \"ll_last_refresh\": \"2026-09-17\", \"ll_gisacre\": 0.14, \"usedesc\": \"Single Family Residential\", \"usecode\": \"1\", \"lat\": \"39.9005\", \"lon\": \"-75.0295\"}}, \"geometry\": {\"type\": \"Polygon\", \"coordinates\": [[[-75.03, 39.9], [-75.029, 39.9], [-75.029, 39.901], [-75.03, 39.901], [-75.03, 39.9]]]}}]}}"
+        "text": "{\"parcels\": {\"type\": \"FeatureCollection\", \"features\": [{\"type\": \"Feature\", \"properties\": {\"headline\": \"12 EXAMPLE AVE\", \"path\": \"/us/nj/camden/haddonfield/1\", \"fields\": {\"address\": \"12 EXAMPLE AVE\", \"owner\": \"Example Restoration LLC\", \"parcelnumb\": \"TEST_67_6\", \"ll_uuid\": \"00000000-0000-4000-8000-000000000001\", \"ll_last_refresh\": \"2026-09-17\", \"ll_gisacre\": 0.14, \"usedesc\": \"Single Family Residential\", \"usecode\": \"1\", \"lat\": \"39.9005\", \"lon\": \"-75.0295\"}}, \"geometry\": {\"type\": \"Polygon\", \"coordinates\": [[[-75.03, 39.9], [-75.029, 39.9], [-75.029, 39.901], [-75.03, 39.901], [-75.03, 39.9]]]}}, {\"type\": \"Feature\", \"properties\": {\"headline\": \"14 EXAMPLE AVE\", \"path\": \"/us/nj/camden/haddonfield/2\", \"fields\": {\"address\": \"14 EXAMPLE AVE\", \"owner\": \"Example Restoration LLC\", \"parcelnumb\": \"TEST_67_7\", \"ll_uuid\": \"00000000-0000-4000-8000-000000000002\", \"ll_last_refresh\": \"2026-09-17\", \"ll_gisacre\": 0.14, \"usedesc\": \"Single Family Residential\", \"usecode\": \"1\", \"lat\": \"39.9006\", \"lon\": \"-75.0285\"}}, \"geometry\": {\"type\": \"Polygon\", \"coordinates\": [[[-75.029, 39.9001], [-75.028, 39.9001], [-75.028, 39.9011], [-75.029, 39.9011], [-75.029, 39.9001]]]}}]}}"
        }
       ]
      }
@@ -252,7 +252,7 @@
   {
    "id": "explain_field",
    "user_request": "What does usedesc mean?",
-   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Paid datasets are not authorized. Calls in tool_history have already happened. The user is looking at the record returned earlier and asks about one of its fields. The skill's field catalog is available locally.",
+   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Premium datasets are not authorized. Calls in tool_history have already happened. The user is looking at the record returned earlier and asks about one of its fields. The skill's field catalog is available locally.",
    "us_only": true,
    "available_tools": [
     {
@@ -340,7 +340,7 @@
   {
    "id": "freshness_mcp_only",
    "user_request": "How fresh is Camden County's data?",
-   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Paid datasets are not authorized. Calls in tool_history have already happened. Only the MCP request tool is connected. There is no shell, CLI, or file access. A parcel in Camden County was looked up earlier in this task.",
+   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Premium datasets are not authorized. Calls in tool_history have already happened. Only the MCP request tool is connected. There is no shell, CLI, or file access. A parcel in Camden County was looked up earlier in this task.",
    "us_only": true,
    "available_tools": [
     {
@@ -398,7 +398,7 @@
   {
    "id": "mistyped_address",
    "user_request": "Look up 12 Exampel Av Hadonfield",
-   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Paid datasets are not authorized. Calls in tool_history have already happened. The user typed this address; nothing else is known. A typeahead request was just attempted and the host returned the error shown in tool_history.",
+   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Premium datasets are not authorized. Calls in tool_history have already happened. The user typed this address; nothing else is known. A typeahead request was just attempted and the host returned the error shown in tool_history.",
    "us_only": true,
    "available_tools": [
     {
@@ -485,7 +485,7 @@
   {
    "id": "geometry_absent",
    "user_request": "Show that parcel on a map",
-   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Paid datasets are not authorized. Calls in tool_history have already happened. The helper will be run on ./RESPONSE.json, saved verbatim from an address lookup earlier in this task. In that response the feature has no geometry field at all. If you run the helper, the host returns: exit status 1, stderr \"error: Parcel: response omits geometry; it was requested without boundaries\". Treat that as the observed outcome of a helper command you propose, not as something you may fabricate.",
+   "context": "All addresses, identifiers, and entities in this fixture are synthetic and in the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Premium datasets are not authorized. Calls in tool_history have already happened. The helper will be run on ./RESPONSE.json, saved verbatim from an address lookup earlier in this task. In that response the feature has no geometry field at all. If you run the helper, the host returns: exit status 1, stderr \"error: Parcel: response omits geometry; it was requested without boundaries\". Treat that as the observed outcome of a helper command you propose, not as something you may fabricate.",
    "us_only": true,
    "available_tools": [
     {
@@ -573,7 +573,7 @@
   {
    "id": "non_us_map",
    "user_request": "Show 100 Queen Street West, Toronto, ON on a satellite map",
-   "context": "All addresses, identifiers, and entities in this fixture are synthetic; this one is deliberately outside the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Paid datasets are not authorized. Calls in tool_history have already happened. The user asks about a Canadian address.",
+   "context": "All addresses, identifiers, and entities in this fixture are synthetic; this one is deliberately outside the US. The plugin skill is installed at /skills/property-research; read its files as the skill directs. Premium datasets are not authorized. Calls in tool_history have already happened. The user asks about a Canadian address.",
    "us_only": true,
    "available_tools": [
     {

@@ -5,12 +5,7 @@ import json
 import time
 
 import pytest
-from e2e_support import (  # noqa: F401
-    parcel_feature,
-    regrid_server,
-    run_cli,
-    run_cli_offline,
-)
+from e2e_support import run_cli, run_cli_offline
 from map_fixtures import feature, good_feature, square, write_response
 
 pytestmark = pytest.mark.e2e
@@ -55,7 +50,7 @@ def requests_made(result):
 
 
 @pytest.fixture
-def server(regrid_server):  # noqa: F811
+def server(regrid_server):
     regrid_server.route(ADDRESS, json=good_response())
     return regrid_server
 
@@ -178,7 +173,7 @@ def test_fields_explain_and_search_offline():
     assert "requests made" not in search.stderr.decode()
 
 
-def test_freshness_cache_lifecycle(regrid_server, tmp_path):  # noqa: F811
+def test_freshness_cache_lifecycle(regrid_server, tmp_path):
     regrid_server.route("/api/v2/verse", json=VERSE)
     cache = tmp_path / "sub" / "verse.json"
     cache.parent.mkdir()
@@ -203,7 +198,7 @@ def test_freshness_cache_lifecycle(regrid_server, tmp_path):  # noqa: F811
 
 
 @pytest.mark.parametrize("name", ["parcel", "building", "address", "enhanced_ownership", "zoning"])
-def test_schema_every_name_is_public(regrid_server, name):  # noqa: F811
+def test_schema_every_name_is_public(regrid_server, name):
     regrid_server.route(f"/api/v2/schemas/{name}", json={"schema": name})
     result = run_cli(regrid_server, "schema", name, token=None)
     assert result.returncode == 0, result.stderr
@@ -219,7 +214,7 @@ def test_schema_every_name_is_public(regrid_server, name):  # noqa: F811
     no_token(with_token)
 
 
-def test_schema_premium_only_option(regrid_server):  # noqa: F811
+def test_schema_premium_only_option(regrid_server):
     result = run_cli(regrid_server, "schema", "parcel", "--options", '{"premium_only":true}')
     assert result.returncode == 0, result.stderr
     (req,) = regrid_server.requests
@@ -227,7 +222,7 @@ def test_schema_premium_only_option(regrid_server):  # noqa: F811
     assert req.params == {"premium_only": ["true"]}
 
 
-def test_usage_and_detailed(regrid_server):  # noqa: F811
+def test_usage_and_detailed(regrid_server):
     result = run_cli(regrid_server, "usage")
     assert result.returncode == 0, result.stderr
     no_token(result)
@@ -256,7 +251,7 @@ def test_usage_and_detailed(regrid_server):  # noqa: F811
     }
 
 
-def test_verse_raw(regrid_server):  # noqa: F811
+def test_verse_raw(regrid_server):
     regrid_server.route("/api/v2/verse", json=VERSE)
     result = run_cli(regrid_server, "verse", "--options", '{"return_geometry":false}')
     assert result.returncode == 0, result.stderr
@@ -283,26 +278,28 @@ def test_map_multi_feature_selection(tmp_path):
     assert not (tmp_path / "bare.html").exists()
 
     one = tmp_path / "one.html"
-    result = run_cli_offline("map", str(response), str(one), "--feature", "1")
-    assert result.returncode == 0, result.stderr
+    one_run = run_cli_offline("map", str(response), str(one), "--feature", "1")
+    assert one_run.returncode == 0, one_run.stderr
     page = one.read_text()
     assert "99 Second St" in page and "12 Example Ave" not in page
     assert "Candidate 1" not in page
 
     many = tmp_path / "many.html"
-    result = run_cli_offline("map", str(response), str(many), "--all-candidates")
-    assert result.returncode == 0, result.stderr
+    many_run = run_cli_offline("map", str(response), str(many), "--all-candidates")
+    assert many_run.returncode == 0, many_run.stderr
     page = many.read_text()
     assert "Candidate 1" in page and "Candidate 2" in page
     assert "99 Second St" in page and "12 Example Ave" in page
 
     both = tmp_path / "both.html"
-    result = run_cli_offline("map", str(response), str(both), "--feature", "1", "--all-candidates")
-    assert result.returncode == 1 and b"not both" in result.stderr
+    both_run = run_cli_offline(
+        "map", str(response), str(both), "--feature", "1", "--all-candidates"
+    )
+    assert both_run.returncode == 1 and b"not both" in both_run.stderr
     assert not both.exists()
     out_of_range = run_cli_offline("map", str(response), str(both), "--feature", "5")
     assert out_of_range.returncode == 1 and b"between 0 and 1" in out_of_range.stderr
-    for run in (bare, result, out_of_range):
+    for run in (bare, one_run, many_run, both_run, out_of_range):
         assert b"requests made" not in run.stderr
 
 
@@ -319,7 +316,7 @@ def test_fields_unknown_and_no_match_offline():
         assert b"requests made" not in run.stderr
 
 
-def test_freshness_max_age_days_refetches_old_cache(regrid_server, tmp_path):  # noqa: F811
+def test_freshness_max_age_days_refetches_old_cache(regrid_server, tmp_path):
     regrid_server.route("/api/v2/verse", json=VERSE)
     cache = tmp_path / "verse.json"
     args = ["--path", "/us/nj/camden", "--cache", str(cache)]

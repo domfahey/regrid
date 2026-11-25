@@ -13,7 +13,9 @@
 
 Use the CLI only in Claude Code, with `regrid` on PATH and `REGRID_TOKEN` already in
 the environment. It is the full path for every lookup when MCP is unavailable, and
-the only path for files (exports, tiles, saved maps). Inside the regrid repository,
+the CLI-only path for tiles and live county freshness (`regrid freshness`); saved
+maps and exports can also be produced offline with `map.py` from saved MCP
+responses. Inside the regrid repository,
 load `.env` into the child process: `uv run --env-file .env --no-sync regrid ...`.
 Rule: never read `.env`, print it, or echo the token. Output is JSON on stdout; the
 request count is on stderr. Apply the same scope, limit and premium rules as over MCP.
@@ -38,7 +40,8 @@ request count is on stderr. Apply the same scope, limit and premium rules as ove
 
 Single-result searches take `"limit":1`: `address` defaults to 1 record, while `apn`,
 `owner`, `point`, `area` and `query` default to 5. `parcel` and `parcel-path` return one record and reject `limit`.
-The CLI does not default premium or stacked flags to false; pass
+The CLI/SDK sets `return_parcels=true` automatically on parcel endpoints, while stacked
+and premium flags are not defaulted to false; pass
 `"return_stacked":false,"return_zoning":false,...` in `--options` as SKILL.md says,
 unless the user requested them. This applies to `parcel` and `parcel-path` too, which
 accept those flags but not `limit`.
@@ -76,7 +79,12 @@ Endpoint commands also take `--country us|ca` (default `us`; Canada stays as leg
 out of this skill's scope):
 Commands accepting `--country`: `point`, `area`, `address`, `apn`, `owner`, `query`, `parcel`, `parcel-path`, `typeahead`, `verse`, `usage`.
 `--options` takes JSON; each command rejects keys it does not support:
-- `--options` on `point`, `area`, `address`, `apn`, `owner`, `query`: `limit` plus return flags.
+- `--options` on `address`, `apn`, `owner`: `limit`, `path`, plus return flags.
+- `--options` on `point` and `area`: `limit`, `radius`, `offset_id`, `return_count`,
+  `return_geometry`, `return_custom_id`, plus return flags (`point --method POST` omits
+  `offset_id` and `return_geometry`).
+- `--options` on `query`: `limit`, `path`, `geojson`, `radius`, `offset_id`,
+  `return_count`, `return_geometry`, `return_custom_id`, plus return flags.
 - `--options` on `parcel` and `parcel-path`: return flags only (`limit` is rejected).
 - `--options` on `verse`: `return_geometry` only.
 - `--options` on `usage`: `return_full_history`, `begin_date`, `end_date`, `return_by_token`,
@@ -101,7 +109,7 @@ Commands accepting `--country`: `point`, `area`, `address`, `apn`, `owner`, `que
   `address-map ... --replace` allows overwriting the output.
 - `map RESPONSE OUT.html` options: `map --feature N`, `map --all-candidates`,
   `map --retrieved-at ISO`, `map --neighbours FILE`, `map --replace`; see [map](map.md).
-- `tilejson [--format mvt|png]`, `tile Z X Y --output FILE [--format mvt|png] [--retina]`,
+- `tilejson [--format mvt|png]`, `tile Z X Y --output FILE [--format mvt|png] [--retina] [--replace]`,
   `grid Z X Y [--metadata RASTER_TILEJSON]`. `--retina` gives `@2x` raster tiles and requires `--format png`.
 - Never run: `report` (`--comment`, `--path`, `--ll-uuid`, `--details`, `--details-text`)
   and `client-token-typeahead` (`--exp`); the first files an external report and
@@ -111,7 +119,10 @@ Commands accepting `--country`: `point`, `area`, `address`, `apn`, `owner`, `que
 
 `regrid tilejson`, `regrid tile` and `regrid grid` are CLI-only: there is no MCP
 equivalent. Tile output is binary or UTFGrid data for files; never put it in the map
-page and keep it out of chat. `tile` requires `--output FILE`. Each call is one request: reserve it as a diagnostic.
+page and keep it out of chat. `tile` requires `--output FILE`. `tilejson` and
+`tile` make one request each; `grid` makes two requests unless `--metadata` is
+supplied (one for raster TileJSON discovery plus one for the UTFGrid). Reserve
+each request as a diagnostic.
 
 ## County pull dates (freshness)
 

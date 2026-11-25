@@ -1,9 +1,0 @@
-{
-  "plugin_version": "0.7.0",
-  "hosts": {
-    "claude_code": "not_run",
-    "claude_apps": "not_run",
-    "cowork": "not_run"
-  },
-  "notes": ""
-}

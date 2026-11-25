@@ -33,10 +33,19 @@ agent evaluation result.
 `--suite composition` uses six handoff scenarios from `composition-cases.json`:
 spreadsheet preservation, report reuse, interrupted-batch resumption, a shared
 budget across stages, conflicting source observations, and absent optional skills.
-`--suite all` combines research, composition and feature. The packet includes the current canonical skill and
+`--suite all` combines research, composition and feature, and `validate --suite all`
+also checks `composability-regressions.json`, `composability-rubric.json`, and
+`discovery-rubric.json`. The packet includes the current canonical skill and
 its references, including the result schema and batch procedure, so the agent can
 produce a self-contained handoff. `--without-skill` omits those materials; a fair
 baseline requiring schema-valid output must supply the same schema separately.
+
+`--suite feature` adds eight map, export, field-explanation, freshness, typo, and
+out-of-scope scenarios (`feature-cases.json`, grader-only `feature-rubric.json`);
+`--suite all` includes it. `trigger-cases.json` lists 17 prompts (including exclusion
+cases such as Batch API, data-issue filing, appraisals, and legal ownership opinions)
+labelled with the expected skill (`property-research`, `setup`, or `none`) for
+skill-discovery checks; validation checks structure only, not model behavior.
 
 Composition packets contain previously supplied evidence and authoritative budget
 ledgers rather than claiming more MCP requests occurred. They request `handoff`,
@@ -149,9 +158,10 @@ python3 plugins/regrid-research/evals/discovery.py compare \
   --skill /tmp/discovery-skill-record.json --baseline /tmp/discovery-baseline-record.json
 ```
 
-Records retain requested/observed model IDs, CLI version, file hashes, read paths,
-tool inputs and raw trace events. Comparison requires the same case, requested
-model and CLI version. It rejects differing observed model IDs or shared input
+Records written by `discovery.py record` retain requested/observed model IDs, CLI
+version, file hashes, read paths, tool inputs and embedded raw trace events (while
+`run_discovery_claude.py` also writes `trace.jsonl` alongside `record.json`).
+Comparison requires the same case, requested model and CLI version. It rejects differing observed model IDs or shared input
 hashes, and marks missing model/input evidence incomplete. It reports observations
 without assigning a quality score.
 Grade both variants independently against `discovery-rubric.json`; compare semantic
@@ -255,12 +265,6 @@ Run per host (Claude Code, Claude apps, Cowork) with the 0.9.6 archive:
 3. Check the browser console for blocked scripts or tile errors.
 4. Record `verified`, `failed` or `not_run` per host in
    `results/map-hosts-0.9.6.json`, with notes. Leave `not_run` without evidence.
-
-`--suite feature` adds eight map, export, field-explanation, freshness, typo, and
-out-of-scope scenarios (`feature-cases.json`, grader-only `feature-rubric.json`);
-`--suite all` includes it. `trigger-cases.json` lists 15 prompts (including exclusion cases such as Batch API, data-issue reports, and appraisals) labelled with the
-expected skill (`property-research`, `setup`, or `none`) for skill-discovery checks;
-validation checks structure only, not model behavior.
 
 ## Historical verification
 
