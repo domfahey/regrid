@@ -214,6 +214,16 @@ Status for 0.9.7:
   - Feature packet (`claude-sonnet-5-5`): `7/8` cases passed (`34/36` criteria; `freshness_mcp_only` failed by presenting parcel `ll_last_refresh` as county-wide refresh).
   - Trigger routing (`claude-haiku-5-5` and `claude-sonnet-5-5`): `16/17` each (`trigger_13` Toronto routed to `none` instead of `property-research`).
   - 24-trial filesystem discovery (`run_discovery_claude.py`, Haiku/Sonnet/Opus): `23/24` completed, `1` budget-capped (`opus-structured-handoff-skill` hit USD 0.25 at USD 0.2644), `0` critical failures / `0` outside reads; independent rubric grades — Skill: Haiku `1/4`, Sonnet `3/4`, Opus `2/4` (`1` FAIL, `1` INCOMPLETE); Baseline: Haiku `3/4`, Sonnet `4/4`, Opus `4/4` (all three models skipped `SKILL.md` on `checkpoint-correction` when `support/workflow.py` was staged in `task_dependencies`).
+- Targeted post-fix model retests (`2026-11-24`, authorized, `live_calls: 0`,
+  Claude CLI `2.1.331`; see `evals/results/model-eval-0.9.7-retest-report.json`):
+  after clarifying `ll_last_refresh`, adding handoff/checkpoint discovery cues to
+  `SKILL.md` frontmatter, aligning `trigger_13` (`none`), and raising the runner's
+  default per-trial cap to USD 0.50 — Triggers `17/17` on Haiku & Sonnet; Feature
+  packet `8/8` (`36/36` criteria, `freshness_mcp_only` PASS) on Sonnet; Discovery
+  retests (`8/8` completed, `0` critical failures) — Opus `structured-handoff` `PASS`
+  (skill + baseline, USD 0.2726 skill), Sonnet & Opus `checkpoint-correction` `PASS`
+  (skill + baseline), Haiku `checkpoint-correction` skill `FAIL` (still skipped
+  `SKILL.md` when `support/workflow.py` was staged) / baseline `PASS`.
 - Earlier live checks (authorized, `2026-11-19` / `2026-11-20`): `make live-full`
   checked every read-only endpoint (26 requests) and one POST point request
   verified `return_parcels=true`.

@@ -44,6 +44,7 @@ def test_trigger_cases_cover_every_label():
     none_prompts = {
         item["id"]: item["prompt"].lower() for item in prompts if item["expected_skill"] == "none"
     }
+    assert "toronto" in none_prompts["trigger_13"]
     assert "data-issue" in none_prompts["trigger_16"]
     assert "legal ownership opinion" in none_prompts["trigger_17"]
 

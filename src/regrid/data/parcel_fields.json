@@ -1318,7 +1318,7 @@
       "name": "ll_last_refresh",
       "datatype": "date",
       "tier": "standard",
-      "description": "Last date Regrid refreshed county data",
+      "description": "Last date Regrid refreshed this parcel record (per-parcel; county-wide pull dates come from /verse)",
       "documentation_url": "https://support.regrid.com/docs/source-lineage",
       "queryable": false,
       "source": "Regrid",

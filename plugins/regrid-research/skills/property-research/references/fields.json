@@ -469,7 +469,7 @@
    "datatype": "date",
    "tier": "standard",
    "category": "Source & Lineage",
-   "description": "Last date Regrid refreshed county data"
+   "description": "Last date Regrid refreshed this parcel record (per-parcel; county-wide pull dates come from /verse)"
   },
   {
    "name": "ll_row_parcel",

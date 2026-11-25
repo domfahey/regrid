@@ -334,17 +334,16 @@ MCP tool names, and actionable validation. See the
 and [checkpoint commands](plugins/regrid-research/skills/property-research/references/batch.md#optional-offline-helper).
 The helper needs Python 3.10+ and no third-party packages.
 
-Offline real-model evaluations for `0.9.7` (trigger routing, blinded research/composition/feature packets, and the 24-trial Haiku/Sonnet/Opus discovery suite, `live_calls: 0`) are recorded with unedited transcripts and independent rubric grades in [model-eval-0.9.7-report.json](plugins/regrid-research/evals/results/model-eval-0.9.7-report.json). To run the 24-trial discovery suite locally with an authenticated Claude CLI:
+Offline real-model evaluations for `0.9.7` (trigger routing, blinded research/composition/feature packets, and the 24-trial Haiku/Sonnet/Opus discovery suite, `live_calls: 0`) are recorded with unedited transcripts and independent rubric grades in [model-eval-0.9.7-report.json](plugins/regrid-research/evals/results/model-eval-0.9.7-report.json), with targeted post-fix retests in [model-eval-0.9.7-retest-report.json](plugins/regrid-research/evals/results/model-eval-0.9.7-retest-report.json). To run the 24-trial discovery suite locally with an authenticated Claude CLI:
 
 ```sh
 python3 plugins/regrid-research/evals/run_discovery_claude.py --output /tmp/regrid-discovery-results
 ```
 
 Use a new output directory for each run. The runner attempts 24 trials across
-Haiku, Sonnet, and Opus, with a default USD 0.25 CLI budget per trial (note: Opus
-`structured-handoff` `skill` exceeded USD 0.25 at USD 0.2644; use `--max-budget-usd`
-to raise the per-trial cap). It never loads `.env` or enables Regrid tools.
-Completed trials still require independent
+Haiku, Sonnet, and Opus, with a default USD 0.50 CLI budget per trial (plus
+optional `--model` and `--case` filters for targeted retests). It never loads
+`.env` or enables Regrid tools. Completed trials still require independent
 [rubric grading](plugins/regrid-research/evals/README.md#reproducible-claude-cli-runner);
 they do not establish Cowork acceptance.
 

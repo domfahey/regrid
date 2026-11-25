@@ -1,0 +1,193 @@
+{
+  "suite": "triggers_retest",
+  "cli_version": "2.1.331 (Claude Code)",
+  "live_calls": 0,
+  "models": {
+    "haiku": {
+      "observed_models": [
+        "claude-haiku-5-5"
+      ],
+      "cost_usd": 0.001145,
+      "results": [
+        {
+          "id": "trigger_01",
+          "selected_skill": "property-research",
+          "reason": "Requests a satellite parcel map for a US address, which is a listed parcel map use."
+        },
+        {
+          "id": "trigger_02",
+          "selected_skill": "property-research",
+          "reason": "Asks for a parcel boundary by APN in a US county, matching the boundary and APN triggers."
+        },
+        {
+          "id": "trigger_03",
+          "selected_skill": "property-research",
+          "reason": "Asks to draw lot lines for a US address, which is a parcel boundary request."
+        },
+        {
+          "id": "trigger_04",
+          "selected_skill": "property-research",
+          "reason": "Asks to export parcel data to a spreadsheet, which matches the CSV export capability."
+        },
+        {
+          "id": "trigger_05",
+          "selected_skill": "property-research",
+          "reason": "Asks who owns a US address and when it last sold, matching owner and sale detail lookups."
+        },
+        {
+          "id": "trigger_06",
+          "selected_skill": "property-research",
+          "reason": "Asks for the meaning of a parcel record field (usedesc), which is explicitly listed as a field-meaning lookup."
+        },
+        {
+          "id": "trigger_07",
+          "selected_skill": "setup",
+          "reason": "Asks whether Regrid is connected, which is a connection status check for setup."
+        },
+        {
+          "id": "trigger_08",
+          "selected_skill": "setup",
+          "reason": "Reports a rejected token and asks to diagnose the connection, matching authentication and connection failure diagnosis."
+        },
+        {
+          "id": "trigger_09",
+          "selected_skill": "setup",
+          "reason": "Asks to check whether the Regrid MCP tools and authentication work, which is a setup verification."
+        },
+        {
+          "id": "trigger_10",
+          "selected_skill": "none",
+          "reason": "General programming request unrelated to property data or Regrid."
+        },
+        {
+          "id": "trigger_11",
+          "selected_skill": "none",
+          "reason": "General knowledge question unrelated to property research or setup."
+        },
+        {
+          "id": "trigger_12",
+          "selected_skill": "none",
+          "reason": "Email summarization unrelated to property research or setup."
+        },
+        {
+          "id": "trigger_13",
+          "selected_skill": "none",
+          "reason": "Ownership lookup for a Toronto, Canada address, but the skill covers US properties only."
+        },
+        {
+          "id": "trigger_14",
+          "selected_skill": "none",
+          "reason": "Regrid Batch API jobs are explicitly excluded from property-research."
+        },
+        {
+          "id": "trigger_15",
+          "selected_skill": "none",
+          "reason": "Market-value appraisal is explicitly excluded from property-research."
+        },
+        {
+          "id": "trigger_16",
+          "selected_skill": "none",
+          "reason": "Filing data-issue reports is explicitly excluded from property-research."
+        },
+        {
+          "id": "trigger_17",
+          "selected_skill": "none",
+          "reason": "Legal ownership opinions are explicitly excluded from property-research."
+        }
+      ]
+    },
+    "sonnet": {
+      "observed_models": [
+        "claude-sonnet-5-5"
+      ],
+      "cost_usd": 0.016555,
+      "results": [
+        {
+          "id": "trigger_01",
+          "selected_skill": "property-research",
+          "reason": "Satellite parcel map for a US address"
+        },
+        {
+          "id": "trigger_02",
+          "selected_skill": "property-research",
+          "reason": "Parcel boundary lookup by APN in a US county"
+        },
+        {
+          "id": "trigger_03",
+          "selected_skill": "property-research",
+          "reason": "Drawing lot lines means a parcel boundary map for a US address"
+        },
+        {
+          "id": "trigger_04",
+          "selected_skill": "property-research",
+          "reason": "Exporting parcels to CSV/spreadsheet is a listed capability"
+        },
+        {
+          "id": "trigger_05",
+          "selected_skill": "property-research",
+          "reason": "Owner and sale details for a US address"
+        },
+        {
+          "id": "trigger_06",
+          "selected_skill": "property-research",
+          "reason": "Explaining a parcel field such as usedesc is explicitly covered"
+        },
+        {
+          "id": "trigger_07",
+          "selected_skill": "setup",
+          "reason": "Asks whether Regrid is connected"
+        },
+        {
+          "id": "trigger_08",
+          "selected_skill": "setup",
+          "reason": "Authentication error and connection diagnosis"
+        },
+        {
+          "id": "trigger_09",
+          "selected_skill": "setup",
+          "reason": "Checks MCP tool and auth availability"
+        },
+        {
+          "id": "trigger_10",
+          "selected_skill": "none",
+          "reason": "General programming task, not related to property"
+        },
+        {
+          "id": "trigger_11",
+          "selected_skill": "none",
+          "reason": "General knowledge question"
+        },
+        {
+          "id": "trigger_12",
+          "selected_skill": "none",
+          "reason": "Email summarization, not related to property"
+        },
+        {
+          "id": "trigger_13",
+          "selected_skill": "none",
+          "reason": "Non-US address; the skill covers US properties only"
+        },
+        {
+          "id": "trigger_14",
+          "selected_skill": "none",
+          "reason": "Regrid Batch API jobs are explicitly excluded"
+        },
+        {
+          "id": "trigger_15",
+          "selected_skill": "none",
+          "reason": "Market-value appraisals are explicitly excluded"
+        },
+        {
+          "id": "trigger_16",
+          "selected_skill": "none",
+          "reason": "Filing data-issue reports is explicitly excluded"
+        },
+        {
+          "id": "trigger_17",
+          "selected_skill": "none",
+          "reason": "Legal ownership opinions are explicitly excluded"
+        }
+      ]
+    }
+  }
+}

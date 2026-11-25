@@ -65,7 +65,7 @@
   {
    "id": "trigger_13",
    "prompt": "Who owns 100 Queen Street West, Toronto?",
-   "expected_skill": "property-research"
+   "expected_skill": "none"
   },
   {
    "id": "trigger_14",

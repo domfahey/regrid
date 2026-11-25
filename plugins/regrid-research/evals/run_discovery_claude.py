@@ -220,12 +220,31 @@ def run_trial(
 
 
 def run_suite(
-    output: Path, cli: str = "claude", timeout: float = 90, budget: float = 0.25
+    output: Path,
+    cli: str = "claude",
+    timeout: float = 90,
+    budget: float = 0.50,
+    models: tuple[str, ...] | None = None,
+    case_ids: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     if not math.isfinite(timeout) or not 1 <= timeout <= 600:
         raise ValueError("timeout must be between 1 and 600 seconds")
     if not math.isfinite(budget) or not 0 < budget <= 5:
         raise ValueError("per-trial budget must be greater than zero and at most 5 USD")
+    selected_models = MODELS if models is None else tuple(dict.fromkeys(models))
+    invalid_models = [model for model in selected_models if model not in MODELS]
+    if not selected_models or invalid_models:
+        raise ValueError(f"Unknown model filter: {', '.join(invalid_models) or 'empty'}")
+    all_cases = discovery.read_json(discovery.ROOT / "discovery-cases.json")
+    cases_by_id = {case["id"]: case for case in all_cases}
+    if case_ids is None:
+        cases = all_cases
+    else:
+        selected_ids = tuple(dict.fromkeys(case_ids))
+        invalid_cases = [cid for cid in selected_ids if cid not in cases_by_id]
+        if not selected_ids or invalid_cases:
+            raise ValueError(f"Unknown case filter: {', '.join(invalid_cases) or 'empty'}")
+        cases = [cases_by_id[cid] for cid in selected_ids]
     output.mkdir(parents=True, exist_ok=False)
     try:
         version_result = subprocess.run(
@@ -241,10 +260,9 @@ def run_suite(
         version = version_result.stdout.strip() if version_result.returncode == 0 else "unavailable"
     except (OSError, subprocess.TimeoutExpired):
         version = "unavailable"
-    cases = discovery.read_json(discovery.ROOT / "discovery-cases.json")
     reports, blocked = [], version == "unavailable"
     deadline = time.monotonic() + 900  # Bound the complete suite to 15 minutes.
-    for model in MODELS:
+    for model in selected_models:
         for case in cases:
             for variant in ("skill", "baseline"):
                 remaining = deadline - time.monotonic()
@@ -280,10 +298,30 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True, help="New results directory")
     parser.add_argument("--cli", default="claude")
     parser.add_argument("--timeout", type=float, default=90)
-    parser.add_argument("--max-budget-usd", type=float, default=0.25)
+    parser.add_argument("--max-budget-usd", type=float, default=0.50)
+    parser.add_argument(
+        "--model",
+        action="append",
+        dest="models",
+        choices=MODELS,
+        help="Optional model filter (repeatable; defaults to all three models)",
+    )
+    parser.add_argument(
+        "--case",
+        action="append",
+        dest="cases",
+        help="Optional case ID filter (repeatable; defaults to all discovery cases)",
+    )
     args = parser.parse_args()
     try:
-        report = run_suite(args.output.resolve(), args.cli, args.timeout, args.max_budget_usd)
+        report = run_suite(
+            args.output.resolve(),
+            args.cli,
+            args.timeout,
+            args.max_budget_usd,
+            models=tuple(args.models) if args.models else None,
+            case_ids=tuple(args.cases) if args.cases else None,
+        )
     except (OSError, ValueError) as exc:
         parser.exit(2, f"Discovery runner failed: {exc}\n")
     completed = sum(item["status"] == "completed" for item in report["runs"])

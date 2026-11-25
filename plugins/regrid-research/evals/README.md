@@ -179,12 +179,13 @@ python3 plugins/regrid-research/evals/run_discovery_claude.py \
   --output /tmp/regrid-discovery-results
 ```
 
-This executes 24 sequential trials with a 90-second timeout and USD 0.25 CLI budget
-per trial, bounded by a 15-minute suite deadline. `--timeout` and
-`--max-budget-usd` adjust per-trial limits. Model aliases resolve at execution;
-reports preserve both the requested alias and observed explicit model IDs. Compare
-only pairs with matching observed IDs and shared evidence/dependency hashes.
-Missing model evidence makes a comparison incomplete.
+This executes 24 sequential trials with a 90-second timeout and USD 0.50 CLI budget
+per trial, bounded by a 15-minute suite deadline. `--timeout`, `--max-budget-usd`,
+`--model`, and `--case` adjust per-trial limits or filter to targeted model/case
+retests. Model aliases resolve at execution; reports preserve both the requested alias
+and observed explicit model IDs. Compare only pairs with matching observed IDs,
+shared evidence/dependency hashes, and completed trial status. Missing model evidence
+or a non-completed trial makes a comparison incomplete.
 
 The runner uses a fresh temporary workspace, safe/restricted mode, Read/Glob/Grep
 only, empty MCP configuration, no session persistence, and denied permission
@@ -215,18 +216,23 @@ python3 plugins/regrid-research/evals/discovery.py compare \
 ```
 
 The [0.9.7 model evaluation report](results/model-eval-0.9.7-report.json) records the
-latest offline Claude CLI evaluation (`2.1.331 (Claude Code)`, `live_calls: 0`,
+pre-fix offline Claude CLI evaluation (`2.1.331 (Claude Code)`, `live_calls: 0`,
 `claude-haiku-5-5`, `claude-sonnet-5-5`, and `claude-opus-5-5`) across trigger routing,
 blinded research/composition/feature packets, and the 24-trial discovery suite, with
 unedited transcripts saved alongside it and all failures/incomplete trials preserved
-before any skill edits. On the 24-trial discovery run, `run_discovery_claude.py`
-required preserving OS user/profile environment variables (`USER`, `LOGNAME`, etc.) for
-macOS Keychain OAuth access; 23/24 trials completed and `opus-structured-handoff-skill`
-hit the default USD 0.25 cap at USD 0.2644 (`error_max_budget_usd`) after reading all
-five relevant files. Earlier reports (`results/authoring-0.4.0-report.json`,
-`results/composability-0.5.0-report.json`, and 0.2.0/0.3.0 packet reports) remain
-preserved as historical records; none establish Cowork acceptance or executed helper
-runs.
+before any skill edits. On that run, `run_discovery_claude.py` required preserving OS
+user/profile environment variables (`USER`, `LOGNAME`, etc.) for macOS Keychain OAuth
+access; 23/24 trials completed and `opus-structured-handoff-skill` hit the former
+USD 0.25 cap at USD 0.2644 (`error_max_budget_usd`). Following targeted fixes to
+`ll_last_refresh` wording, `SKILL.md` frontmatter, `trigger_13`, and the runner's
+USD 0.50 default cap, the [0.9.7 retest report](results/model-eval-0.9.7-retest-report.json)
+records targeted retests on all affected suites (`17/17` triggers on Haiku & Sonnet;
+`8/8` feature cases / `36/36` criteria on Sonnet; Opus `structured-handoff` `PASS` at
+USD 0.2726; Sonnet and Opus `checkpoint-correction` `PASS`; Haiku `checkpoint-correction`
+still `FAIL` for skipping `SKILL.md` when `support/workflow.py` is staged). Earlier
+reports (`results/authoring-0.4.0-report.json`, `results/composability-0.5.0-report.json`,
+and 0.2.0/0.3.0 packet reports) remain preserved as historical records; none establish
+Cowork acceptance or executed helper runs.
 
 Saved reports pin SHA-256 hashes of the files each evaluation received. Plugin 0.5.2
 regenerated `tools.json` and `endpoints.json` and added US-only scope, so earlier

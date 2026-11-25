@@ -355,3 +355,49 @@ def test_environment_preserves_os_identity_vars_but_strips_credentials(monkeypat
     assert env.get("LOGNAME") == "tester"
     assert "REGRID_TOKEN" not in env
     assert "ANTHROPIC_API_KEY" not in env
+
+
+def test_suite_defaults_to_half_dollar_budget_and_supports_filters(tmp_path, monkeypatch):
+    commands = []
+
+    def fake_run(command, **kwargs):
+        commands.append(command)
+        if command[-1] == "--version":
+            return SimpleNamespace(stdout="2.test", returncode=0)
+        return SimpleNamespace(stdout=success_trace(), stderr="", returncode=0)
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    report = runner.run_suite(
+        tmp_path / "filtered",
+        models=("opus", "opus"),
+        case_ids=("structured-handoff",),
+    )
+    assert len(report["runs"]) == 2
+    assert {(r["requested_model"], r["case_id"], r["variant"]) for r in report["runs"]} == {
+        ("opus", "structured-handoff", "skill"),
+        ("opus", "structured-handoff", "baseline"),
+    }
+    trial_commands = [cmd for cmd in commands if "--max-budget-usd" in cmd]
+    assert len(trial_commands) == 2
+    assert all(cmd[cmd.index("--max-budget-usd") + 1] == "0.5" for cmd in trial_commands)
+
+
+@pytest.mark.parametrize(
+    ("models", "case_ids", "message"),
+    [
+        (("unknown",), None, "Unknown model filter"),
+        ((), None, "Unknown model filter"),
+        (None, ("missing-case",), "Unknown case filter"),
+        (None, (), "Unknown case filter"),
+    ],
+)
+def test_invalid_suite_filters_fail_before_creating_output(
+    tmp_path, monkeypatch, models, case_ids, message
+):
+    def forbidden(*args, **kwargs):
+        pytest.fail("invalid filters must be rejected before starting CLI")
+
+    monkeypatch.setattr(runner.subprocess, "run", forbidden)
+    with pytest.raises(ValueError, match=message):
+        runner.run_suite(tmp_path / "out", models=models, case_ids=case_ids)
+    assert not (tmp_path / "out").exists()

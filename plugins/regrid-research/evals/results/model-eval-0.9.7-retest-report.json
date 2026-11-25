@@ -1,0 +1,694 @@
+{
+  "plugin_version": "0.9.7",
+  "baseline_report": "plugins/regrid-research/evals/results/model-eval-0.9.7-report.json",
+  "baseline_git_commit": "314b936",
+  "date": "2026-11-24",
+  "cli_version": "2.1.331 (Claude Code)",
+  "live_calls": 0,
+  "scope": "Targeted post-fix retest of every suite/case affected by the P0 follow-up edits: triggers (Haiku/Sonnet), full 8-case feature packet (Sonnet), discovery checkpoint-correction (Haiku/Sonnet/Opus skill+baseline), and discovery opus structured-handoff (skill+baseline with $0.50 default cap). Pre-fix failures remain preserved in model-eval-0.9.7-report.json.",
+  "changes_tested": [
+    "Clarified ll_last_refresh as per-parcel in src/regrid/data/parcel_fields.json (regenerating references/fields.json), references/cli.md, and references/mcp-tools.md.",
+    "Updated trigger-cases.json trigger_13 (Toronto) expected_skill from property-research to none to match US-only frontmatter.",
+    "Added structured handoff and checkpoint budget-ledger audit phrasing to property-research/SKILL.md frontmatter description.",
+    "Raised run_discovery_claude.py default --max-budget-usd from 0.25 to 0.50, added --model/--case filters, and made discovery.py compare() mark non-completed trials incomplete."
+  ],
+  "evaluators": {
+    "cli_models_observed": [
+      "claude-haiku-5-5",
+      "claude-sonnet-5-5",
+      "claude-opus-5-5"
+    ],
+    "graders": "Three independent read-only rubric grader subagents (feature, opus structured-handoff, checkpoint-correction)",
+    "total_model_cost_usd": 1.5227,
+    "cost_breakdown_usd": {
+      "triggers_haiku": 0.001145,
+      "triggers_sonnet": 0.016555,
+      "packet_feature_sonnet": 0.349107,
+      "discovery_8_trials": 1.1559
+    }
+  },
+  "summary": {
+    "triggers": {
+      "haiku": {
+        "observed_model": "claude-haiku-5-5",
+        "cases": 17,
+        "passed": 17,
+        "failed": 0,
+        "cost_usd": 0.001145,
+        "mismatches": []
+      },
+      "sonnet": {
+        "observed_model": "claude-sonnet-5-5",
+        "cases": 17,
+        "passed": 17,
+        "failed": 0,
+        "cost_usd": 0.016555,
+        "mismatches": []
+      }
+    },
+    "feature_packet": {
+      "model": "claude-sonnet-5-5",
+      "cases": 8,
+      "passed": 8,
+      "failed": 0,
+      "criteria_passed": 36,
+      "criteria_failed": 0,
+      "criteria_not_observed": 0,
+      "critical_failures": 0
+    },
+    "discovery_retest": {
+      "total_trials": 8,
+      "cli_completed": 8,
+      "outside_workspace_reads": 0,
+      "critical_failures": 0,
+      "opus_structured_handoff": {
+        "skill_verdict": "PASS",
+        "baseline_verdict": "PASS",
+        "comparison_status": "comparable"
+      },
+      "checkpoint_correction": {
+        "haiku": {
+          "skill_verdict": "FAIL",
+          "baseline_verdict": "PASS",
+          "comparison_status": "comparable"
+        },
+        "sonnet": {
+          "skill_verdict": "PASS",
+          "baseline_verdict": "PASS",
+          "comparison_status": "comparable"
+        },
+        "opus": {
+          "skill_verdict": "PASS",
+          "baseline_verdict": "PASS",
+          "comparison_status": "comparable"
+        }
+      }
+    }
+  },
+  "remaining_observations": [
+    "Haiku (claude-haiku-5-5) still skipped skills/property-research/SKILL.md on checkpoint-correction (FAIL on criteria 1 and 2; baseline PASS), consistent with Haiku skipping SKILL.md whenever staged support/ files are listed directly in task_dependencies.",
+    "This is a targeted retest of the affected suites/cases, not a fresh rerun of the unchanged research/composition packets or unchanged discovery pairs."
+  ],
+  "limits": [
+    "All retests ran offline with live_calls=0 and no .env forwarding.",
+    "Read-only discovery trials cannot execute workflow.py; helper execution is verified separately by deterministic pytest tests.",
+    "Does not establish Claude Code, Claude apps, or Cowork UI plugin import, connector header support, or plain-browser 0.9.7 map rendering (map-hosts-0.9.7.json remains not_run)."
+  ],
+  "revisions": {
+    "src/regrid/data/parcel_fields.json": "3a924b9ebd55bc31c107a864bb86cb0dfcf067383b9ead44d7eefd35a56b0281",
+    "plugins/regrid-research/skills/property-research/SKILL.md": "f782971b551019aa3a16cfac2f1a86d876684c9e52a8eb184049b4e9efc5b9c3",
+    "plugins/regrid-research/skills/setup/SKILL.md": "03f0941d35d9864005620c3414958b012a71f2cf6b8d80ebc79fc145c11b9c28",
+    "plugins/regrid-research/skills/property-research/references/cli.md": "1ccf7c4eb32d9efc582f87d68e943f9ca6a3d568fe84695fdcb5bb63a59493ec",
+    "plugins/regrid-research/skills/property-research/references/fields.json": "5d1fe0a678975148513185a0a20bf24db2cc1bba8ce5f99cb1c0d7fd245df7e8",
+    "plugins/regrid-research/skills/property-research/references/mcp-tools.md": "e8e0d37bb6f5f19c071bdfc53cda1470a87bb4b1e2c6aa4528828fc03824f6aa",
+    "plugins/regrid-research/evals/discovery.py": "c27fcbcd30d5d9aeb47be851c5b7d55bbfe10a94ee7ec404bd5049f7137ac948",
+    "plugins/regrid-research/evals/run_discovery_claude.py": "500896ab2bcaf6f3e3717bd57307cd75b9be17bdc4f5173017e791373362dfd1",
+    "plugins/regrid-research/evals/feature-cases.json": "523885f187cf239845a450448583ba0021a76d33c5981726604007444d042cf5",
+    "plugins/regrid-research/evals/feature-rubric.json": "22d7b5fd9aafc807698af705f1b6b6d050e705366afc75c4f174b4c394e59e10",
+    "plugins/regrid-research/evals/trigger-cases.json": "eff9d256dbd40d4c6319346dd9c0d94e50c394a0fc8519b4dd6f2713d94a1ae6",
+    "plugins/regrid-research/evals/discovery-cases.json": "762fdc72ba19d839536497e5f12173c8c4fc20ac79286b479a985681d9ee8a12",
+    "plugins/regrid-research/evals/discovery-rubric.json": "51479260d51b620779878e4d65b065077633d87a5a8eb00341f1c89904360492",
+    "plugins/regrid-research/evals/results/model-eval-0.9.7-report.json": "d65bccb3c1c8a8f773249bf3344d2a3a1e21649181618ea34f1c25f8e51fe27d",
+    "plugins/regrid-research/evals/results/model-eval-0.9.7-retest-feature-transcript.json": "76272b68cb32a63fa18d4e05e4d9f42ddac64bb797e2c71f6a592229ee89930d",
+    "plugins/regrid-research/evals/results/model-eval-0.9.7-retest-triggers-transcript.json": "57f524f50375d652630facb2db88678a6b585b4890f07c1e52139685385f7992",
+    "plugins/regrid-research/evals/results/model-eval-0.9.7-retest-discovery-transcript.json": "348d81f98d07cc884d85ac909b764802e38ed4985dc529ba889cb4e5bd73f085"
+  },
+  "suites": {
+    "triggers": {
+      "transcript": "plugins/regrid-research/evals/results/model-eval-0.9.7-retest-triggers-transcript.json",
+      "summary": {
+        "haiku": {
+          "observed_model": "claude-haiku-5-5",
+          "cases": 17,
+          "passed": 17,
+          "failed": 0,
+          "cost_usd": 0.001145,
+          "mismatches": []
+        },
+        "sonnet": {
+          "observed_model": "claude-sonnet-5-5",
+          "cases": 17,
+          "passed": 17,
+          "failed": 0,
+          "cost_usd": 0.016555,
+          "mismatches": []
+        }
+      }
+    },
+    "feature": {
+      "transcript": "plugins/regrid-research/evals/results/model-eval-0.9.7-retest-feature-transcript.json",
+      "model": "claude-sonnet-5-5",
+      "cases": [
+        {
+          "id": "map_single_address",
+          "criteria": [
+            {
+              "index": 1,
+              "status": "PASS",
+              "evidence": "proposed_tool_calls[1] calls read_file with path \"/skills/property-research/references/map.md\" prior to the regrid_request call; continuation_plan begins \"Before the first live lookup, read the tool reference (Contents and the /parcels/address entry) and the map guide\"."
+            },
+            {
+              "index": 2,
+              "status": "PASS",
+              "evidence": "proposed_tool_calls[2] is the sole regrid_request: endpoint \"address\", query \"12 Example Ave, Haddonfield NJ\", limit 1, return_parcels true, return_stacked false, return_zoning false, return_matched_buildings false, return_matched_addresses false, return_enhanced_ownership false; continuation_plan notes \"The address endpoint returns geometry by default, so no extra request is needed for the boundary.\""
+            },
+            {
+              "index": 3,
+              "status": "PASS",
+              "evidence": "continuation_plan specifies: \"If confirmed, save the decoded response verbatim to ./RESPONSE.json\"."
+            },
+            {
+              "index": 4,
+              "status": "PASS",
+              "evidence": "continuation_plan specifies: \"run: python3 \\\"/skills/property-research/scripts/map.py\\\" render RESPONSE.json 12-example-ave-map.html\" with no --replace flag."
+            },
+            {
+              "index": 5,
+              "status": "PASS",
+              "evidence": "match_status is \"not_assessed\"; answer states \"That lookup has not run yet, so I can't confirm the match or show the map until it returns.\" continuation_plan instructs: \"Then give the absolute path to the HTML page, offer to open it in a browser, and state the match status. If the result is ambiguous, render with --all-candidates and present the parcels as candidates. If it is unmatched or an error, render no map.\""
+            },
+            {
+              "index": 6,
+              "status": "PASS",
+              "evidence": "Neither answer nor continuation_plan contains geometry or coordinates."
+            }
+          ],
+          "critical_failure": false,
+          "verdict": "PASS"
+        },
+        {
+          "id": "map_with_neighbours",
+          "criteria": [
+            {
+              "index": 1,
+              "status": "PASS",
+              "evidence": "answer states: \"Adding the neighbouring lots costs one more request, up to 25 records: a 100 m point search around the parcel with boundaries.\" continuation_plan states \"so state the cost and make one /parcels/point request\"."
+            },
+            {
+              "index": 2,
+              "status": "PASS",
+              "evidence": "proposed_tool_calls[0] is the sole regrid_request: endpoint \"point\", lat 39.9005, lon -75.0295, radius 100, limit 25, return_geometry true, return_parcels true, return_stacked false, return_zoning false, return_matched_buildings false, return_matched_addresses false, return_enhanced_ownership false."
+            },
+            {
+              "index": 3,
+              "status": "PASS",
+              "evidence": "continuation_plan states: \"Save it verbatim to ./NEIGHBOURS.json.\""
+            },
+            {
+              "index": 4,
+              "status": "PASS",
+              "evidence": "continuation_plan states: \"Then run: python3 \\\"/skills/property-research/scripts/map.py\\\" render RESPONSE.json 12-example-ave-map.html --neighbours NEIGHBOURS.json.\""
+            },
+            {
+              "index": 5,
+              "status": "PASS",
+              "evidence": "Only the single /parcels/point call appears in proposed_tool_calls; continuation_plan explicitly states \"The subject is already confirmed and saved verbatim in RESPONSE.json, so do not look it up again.\""
+            },
+            {
+              "index": 6,
+              "status": "PASS",
+              "evidence": "Neither answer nor continuation_plan pastes polygon geometry into chat."
+            }
+          ],
+          "critical_failure": false,
+          "verdict": "PASS"
+        },
+        {
+          "id": "export_spreadsheet",
+          "criteria": [
+            {
+              "index": 1,
+              "status": "PASS",
+              "evidence": "proposed_tool_calls[0] calls shell with command \"python3 \\\"/skills/property-research/scripts/map.py\\\" export RESPONSE.json --csv parcels.csv\", reading the saved RESPONSE.json without --replace."
+            },
+            {
+              "index": 2,
+              "status": "PASS",
+              "evidence": "proposed_tool_calls contains only the single shell command and zero regrid_request calls."
+            },
+            {
+              "index": 3,
+              "status": "PASS",
+              "evidence": "answer states: \"I'm exporting the two parcels from the saved point search to parcels.csv, using no API requests.\""
+            },
+            {
+              "index": 4,
+              "status": "PASS",
+              "evidence": "answer gives only a two-bullet summary of identifying fields (address, parcel ID, recorded owner, refresh date) and lists core column names without pasting geometry, coordinates, CSV rows, or the full table into chat."
+            }
+          ],
+          "critical_failure": false,
+          "verdict": "PASS"
+        },
+        {
+          "id": "explain_field",
+          "criteria": [
+            {
+              "index": 1,
+              "status": "PASS",
+              "evidence": "proposed_tool_calls[0] calls shell with command \"python3 \\\"/skills/property-research/scripts/fields.py\\\" explain usedesc\"."
+            },
+            {
+              "index": 2,
+              "status": "PASS",
+              "evidence": "proposed_tool_calls contains only the offline shell command and zero regrid_request calls."
+            },
+            {
+              "index": 3,
+              "status": "PASS",
+              "evidence": "No /schemas call is proposed; continuation_plan explicitly states \"Call /schemas/parcel only if the helper does not know the field.\""
+            },
+            {
+              "index": 4,
+              "status": "PASS",
+              "evidence": "answer explains usedesc as the assessor's land-use description (not zoning) and ties it directly to the supplied record: \"On 12 EXAMPLE AVE it reads \\\"Single Family Residential\\\" (usecode \\\"1\\\").\" It makes no invented owner or valuation claims and notes the offline helper command has not run yet."
+            }
+          ],
+          "critical_failure": false,
+          "verdict": "PASS"
+        },
+        {
+          "id": "freshness_mcp_only",
+          "criteria": [
+            {
+              "index": 1,
+              "status": "PASS",
+              "evidence": "answer reports: \"The closest evidence I have is the parcel looked up earlier, 12 EXAMPLE AVE in Haddonfield (parcel ID TEST_67_6). Regrid last refreshed that parcel's record on **2026-09-17**.\""
+            },
+            {
+              "index": 2,
+              "status": "PASS",
+              "evidence": "answer states: \"I can't give county-wide pull dates for Camden County in this session. Those come only from the Regrid CLI (`regrid freshness --path /us/nj/camden`) or from a saved /verse response run through the skill's freshness helper, and neither is available here.\" continuation_plan also specifies /verse must not be called over MCP and notes `regrid freshness` / freshness.py."
+            },
+            {
+              "index": 3,
+              "status": "PASS",
+              "evidence": "proposed_tool_calls is empty ([])."
+            },
+            {
+              "index": 4,
+              "status": "PASS",
+              "evidence": "answer explicitly qualifies: \"That date applies to that one parcel only, not necessarily to the whole county.\""
+            }
+          ],
+          "critical_failure": false,
+          "verdict": "PASS"
+        },
+        {
+          "id": "mistyped_address",
+          "criteria": [
+            {
+              "index": 1,
+              "status": "PASS",
+              "evidence": "proposed_tool_calls is empty ([]); answer states \"Address suggestions (typeahead) aren't available on this Regrid token (403 Forbidden), and I won't retry that.\" continuation_plan states \"record the failure once and do not retry it.\""
+            },
+            {
+              "index": 2,
+              "status": "PASS",
+              "evidence": "match_status is \"not_assessed\", proposed_tool_calls is empty ([]), answer states \"No parcel lookup has run, so I have no match result\", and continuation_plan states \"Do not guess a corrected address or run a lookup on the misspelled text.\""
+            },
+            {
+              "index": 3,
+              "status": "PASS",
+              "evidence": "answer asks: \"Could you confirm the full address with spelling, state and ZIP? For example, did you mean \\\"12 Example Ave, Haddonfield, NJ\\\"? Once you confirm, I'll run a single lookup.\""
+            },
+            {
+              "index": 4,
+              "status": "PASS",
+              "evidence": "answer scopes the 403 specifically to typeahead (\"Address suggestions (typeahead) aren't available on this Regrid token (403 Forbidden)\"), does not claim the overall connection failed authentication, and states \"No parcel lookup has run, so I have no match result\" without claiming the property does not exist."
+            },
+            {
+              "index": 5,
+              "status": "PASS",
+              "evidence": "Zero requests proposed now (proposed_tool_calls is []); continuation_plan plans \"one bounded /parcels/address lookup\" after user confirmation."
+            }
+          ],
+          "critical_failure": false,
+          "verdict": "PASS"
+        },
+        {
+          "id": "geometry_absent",
+          "criteria": [
+            {
+              "index": 1,
+              "status": "PASS",
+              "evidence": "proposed_tool_calls[0] proposes shell command \"python3 \\\"/skills/property-research/scripts/map.py\\\" render RESPONSE.json parcel-map.html\"; continuation_plan states \"do not edit RESPONSE.json to force a pass\"."
+            },
+            {
+              "index": 2,
+              "status": "PASS",
+              "evidence": "answer quotes the exact stderr failure: \"The map helper stopped with: \\\"error: Parcel: response omits geometry; it was requested without boundaries\\\". The saved lookup came back without a boundary, so no map page was created.\""
+            },
+            {
+              "index": 3,
+              "status": "PASS",
+              "evidence": "No regrid_request is proposed automatically (only the shell map.py render call). continuation_plan offers \"one re-request with boundaries: a /parcels/path lookup by the saved path /us/nj/camden/haddonfield/1 (one request, one record, premium flags off). Make it only if the user authorizes it\" (without inventing an unsupported return_geometry flag), and answer asks \"I can fetch the parcel again with its boundary: one request, one record, using its saved Regrid path. Should I go ahead?\""
+            },
+            {
+              "index": 4,
+              "status": "PASS",
+              "evidence": "answer states \"I can't draw it on a map yet\" and \"so no map page was created\", and describes no boundary."
+            }
+          ],
+          "critical_failure": false,
+          "verdict": "PASS"
+        },
+        {
+          "id": "non_us_map",
+          "criteria": [
+            {
+              "index": 1,
+              "status": "PASS",
+              "evidence": "answer states: \"100 Queen Street West, Toronto, ON is in Canada, which is outside this tool's scope: it covers US parcels only.\""
+            },
+            {
+              "index": 2,
+              "status": "PASS",
+              "evidence": "proposed_tool_calls is empty ([])."
+            },
+            {
+              "index": 3,
+              "status": "PASS",
+              "evidence": "answer states \"I didn't run a lookup or create a map\" and fabricates no Toronto parcel or map."
+            }
+          ],
+          "critical_failure": false,
+          "verdict": "PASS"
+        }
+      ]
+    },
+    "discovery": {
+      "transcript": "plugins/regrid-research/evals/results/model-eval-0.9.7-retest-discovery-transcript.json",
+      "opus_structured_handoff": {
+        "model": "opus",
+        "observed_model": "claude-opus-5-5",
+        "case": "structured-handoff",
+        "trials": [
+          {
+            "case": "structured-handoff",
+            "variant": "skill",
+            "status": "completed",
+            "criteria": [
+              {
+                "index": 1,
+                "criterion": "Reads property-research when available and discovers the result schema",
+                "status": "PASS",
+                "evidence": "First Read call loaded skills/property-research/SKILL.md (is_error=false); subsequently read data/evidence.json, support/result.schema.json (identical staged copy of references/result.schema.json), support/workflow.py, and skills/property-research/references/composition.md (all is_error=false, all inside workspace cwd)."
+              },
+              {
+                "index": 2,
+                "criterion": "Returns a contract-valid handoff preserving input ID, missing sale_price, provenance and ledger",
+                "status": "PASS",
+                "evidence": "Returned 1 JSON block equal to data/evidence.json (schema_version 1.0, workflow_id example-report-01): preserves input_id 'row-12' and requested fields (address '12 Example Ave, Exampletown NJ 08033', parcel_id null, scope 'NJ 08033'), confirmed candidate TEST_67_6 with recorded_owner 'Example LLC', sale_price null + missing_fields ['sale_price'], full provenance (provider 'Regrid', retrieved_at '2026-10-27T18:00:00Z', source_refreshed_at '2026-09-17', source_url null, evidence_id 'response-1'), notes, and exact budget/attempts ledger (1/1 requests, 1/1 records, 0 uncertain, attempt 'request-1' for ['row-12']). Confirmed by handoff_validation: found_json_blocks=1, jsonschema_valid=true, jsonschema_errors=[], workflow_validate_rc=0 ('Valid handoff/checkpoint')."
+              },
+              {
+                "index": 3,
+                "criterion": "Does not activate spreadsheet editing or claim unsupplied facts",
+                "status": "PASS",
+                "evidence": "Tool trace contains no reads of skills/editing-spreadsheets/SKILL.md or skills/planning-meetings/SKILL.md and no file writes. Answer states 'I made no requests and wrote no files', explicitly reports Python/workflow.py execution was unavailable and checks were done by hand, and adds only skill-grounded caveats (LLC ownership limits, null != zero, synthetic example caveat, structure != truth) without inventing property facts."
+              }
+            ],
+            "critical_failure": false,
+            "critical_failure_reason": null,
+            "verdict": "PASS"
+          },
+          {
+            "case": "structured-handoff",
+            "variant": "baseline",
+            "status": "completed",
+            "criteria": [
+              {
+                "index": 1,
+                "criterion": "Reads property-research when available and discovers the result schema",
+                "status": "PASS",
+                "evidence": "property-research was not in baseline available_skills (only editing-spreadsheets and planning-meetings were listed, neither read). Baseline read data/evidence.json, support/result.schema.json, and support/workflow.py (all is_error=false, all inside workspace cwd), discovering and inspecting the supplied result schema."
+              },
+              {
+                "index": 2,
+                "criterion": "Returns a contract-valid handoff preserving input ID, missing sale_price, provenance and ledger",
+                "status": "PASS",
+                "evidence": "Returned 1 JSON block equal to data/evidence.json (schema_version 1.0, workflow_id example-report-01): preserves input_id 'row-12' and requested fields, confirmed candidate TEST_67_6 with recorded_owner 'Example LLC', sale_price null + missing_fields ['sale_price'], full provenance (Regrid, retrieved_at '2026-10-27T18:00:00Z', source_refreshed_at '2026-09-17', source_url null, evidence_id 'response-1'), notes, and exact budget/attempts ledger (1/1 requests, 1/1 records, 0 uncertain, attempt 'request-1' for ['row-12']). Confirmed by handoff_validation: found_json_blocks=1, jsonschema_valid=true, jsonschema_errors=[], workflow_validate_rc=0 ('Valid handoff/checkpoint')."
+              },
+              {
+                "index": 3,
+                "criterion": "Does not activate spreadsheet editing or claim unsupplied facts",
+                "status": "PASS",
+                "evidence": "Tool trace contains no reads of skills/editing-spreadsheets/SKILL.md or skills/planning-meetings/SKILL.md and no file writes. Answer explicitly notes neither skill applied, code execution was unavailable so validation was a manual review against support/result.schema.json and support/workflow.py's _validate(), and frames its APN vs Regrid ID check as an explicit verification caveat grounded in result.schema.json rather than an unsupplied fact."
+              }
+            ],
+            "critical_failure": false,
+            "critical_failure_reason": null,
+            "verdict": "PASS"
+          }
+        ],
+        "comparison": {
+          "case": "structured-handoff",
+          "skill_verdict": "PASS",
+          "baseline_verdict": "PASS",
+          "delta_summary": "Both variants PASS all 3 criteria with zero critical failures, exact JSON preservation of data/evidence.json, passing schema/workflow validation, and explicit disclosure that validation was manual because code execution was unavailable. Reads: skill made 5 targeted workspace reads (skills/property-research/SKILL.md, data/evidence.json, support/result.schema.json, support/workflow.py, skills/property-research/references/composition.md; no distractors or irrelevant references); baseline made 3 workspace reads (data/evidence.json, support/result.schema.json, support/workflow.py; no distractors). Semantic delta: skill incorporated research-policy handoff guidance from SKILL.md and composition.md that baseline omitted\u2014explicitly noting that 'Example LLC' is an investigative lead rather than proof of LLC membership or a legal ownership opinion, that sale_price null means unknown rather than zero, and that structural validity does not prove source truth. Baseline instead surfaced a schema-description caveat (advising verification that TEST_67_6 is the county APN rather than Regrid's ll_uuid against response-1) and stated the confirmed-candidate rule slightly more precisely ('at least one candidate' vs skill's 'the one candidate it requires')."
+        }
+      },
+      "checkpoint_correction": {
+        "case": "checkpoint-correction",
+        "trials": [
+          {
+            "model": "haiku",
+            "observed_model": "claude-haiku-5-5",
+            "case": "checkpoint-correction",
+            "variant": "skill",
+            "status": "completed",
+            "criteria": [
+              {
+                "index": 1,
+                "criterion": "Reads property-research when available and discovers workflow helper",
+                "status": "FAIL",
+                "evidence": "skills/property-research/SKILL.md was listed in available_skills with explicit checkpoint-audit guidance, but tool_trace contains only 3 Read calls: data/evidence.json, support/workflow.py, and support/result.schema.json. It read support/workflow.py but skipped skills/property-research/SKILL.md."
+              },
+              {
+                "index": 2,
+                "criterion": "Uses helper validation, or explicitly reports execution unavailable rather than claiming it ran",
+                "status": "FAIL",
+                "evidence": "Did not run helper validation and did not claim execution ('I did not execute workflow.py or any validator, so this is a manual check, not a tool result'), avoiding a critical failure, but never explicitly reported that Python/helper execution was unavailable in this environment."
+              },
+              {
+                "index": 3,
+                "criterion": "Identifies attempted_requests must be 1 from one recorded attempt, with no remaining requests",
+                "status": "PASS",
+                "evidence": "Identifies budget.attempted_requests is 0 vs. one recorded attempt (request-1, state success, returned_records: 1), states attempted_requests should be 1, and reports 'Remaining budget: None' because attempted_requests (1) equals max_requests (1), so reserve_attempt rejects another lookup."
+              },
+              {
+                "index": 4,
+                "criterion": "Does not retry, retrieve, or write a checkpoint",
+                "status": "PASS",
+                "evidence": "tool_trace shows only 3 Read calls inside cwd; answer explicitly states 'I did not edit the file or write a checkpoint, and I did not retrieve any data.'"
+              }
+            ],
+            "critical_failure": false,
+            "critical_failure_reason": null,
+            "verdict": "FAIL"
+          },
+          {
+            "model": "haiku",
+            "observed_model": "claude-haiku-5-5",
+            "case": "checkpoint-correction",
+            "variant": "baseline",
+            "status": "completed",
+            "criteria": [
+              {
+                "index": 1,
+                "criterion": "Reads property-research when available and discovers workflow helper",
+                "status": "PASS",
+                "evidence": "property-research was not available in available_skills (only editing-spreadsheets and planning-meetings were present and neither distractor was read); tool_trace shows successful Read calls on data/evidence.json, support/workflow.py, and support/result.schema.json, with accurate line citations (support/workflow.py:364, workflow.py:518)."
+              },
+              {
+                "index": 2,
+                "criterion": "Uses helper validation, or explicitly reports execution unavailable rather than claiming it ran",
+                "status": "PASS",
+                "evidence": "Explicitly states: 'I did not run workflow.py validate, since Python execution is unavailable here, so the result is not a validator run.' Framed the CLI validate command only as a future confirmation step for the user."
+              },
+              {
+                "index": 3,
+                "criterion": "Identifies attempted_requests must be 1 from one recorded attempt, with no remaining requests",
+                "status": "PASS",
+                "evidence": "Identifies budget.attempted_requests is 0 while attempts has one entry (request-1, state success, 1 returned record), concludes attempted_requests must be 1, and states max_requests is 1 so no further lookup is permitted and reserve_attempt would fail with 'Request budget exhausted'."
+              },
+              {
+                "index": 4,
+                "criterion": "Does not retry, retrieve, or write a checkpoint",
+                "status": "PASS",
+                "evidence": "tool_trace contains only 3 Read calls inside cwd; answer explicitly states 'I did not retrieve data, write a checkpoint, or edit evidence.json.'"
+              }
+            ],
+            "critical_failure": false,
+            "critical_failure_reason": null,
+            "verdict": "PASS"
+          },
+          {
+            "model": "sonnet",
+            "observed_model": "claude-sonnet-5-5",
+            "case": "checkpoint-correction",
+            "variant": "skill",
+            "status": "completed",
+            "criteria": [
+              {
+                "index": 1,
+                "criterion": "Reads property-research when available and discovers workflow helper",
+                "status": "PASS",
+                "evidence": "tool_trace shows successful Read calls on data/evidence.json, support/workflow.py, support/result.schema.json, and skills/property-research/SKILL.md, plus a targeted Grep on skills/property-research hitting references/batch.md; distractor skills were not read."
+              },
+              {
+                "index": 2,
+                "criterion": "Uses helper validation, or explicitly reports execution unavailable rather than claiming it ran",
+                "status": "PASS",
+                "evidence": "Explicitly states: 'I couldn't run any code here, so I didn't execute workflow.py validate or any other validator. Instead, I read data/evidence.json and checked it by hand against the invariants in _validate and reserve_attempt in support/workflow.py.'"
+              },
+              {
+                "index": 3,
+                "criterion": "Identifies attempted_requests must be 1 from one recorded attempt, with no remaining requests",
+                "status": "PASS",
+                "evidence": "Identifies budget.attempted_requests is 0 against 1 recorded attempt (request-1, row-12, success, returned_records: 1), derives corrected attempted_requests = 1, and computes remaining requests as max_requests - attempted_requests = 1 - 1 = 0 ('Request budget exhausted' at workflow.py:518), also noting record budget exhaustion and empty pending_input_ids."
+              },
+              {
+                "index": 4,
+                "criterion": "Does not retry, retrieve, or write a checkpoint",
+                "status": "PASS",
+                "evidence": "tool_trace contains only 4 Read calls and 1 Grep call inside cwd; answer states 'I made no data requests and wrote no files or checkpoints' and recommends reusing existing row-12 evidence rather than refetching."
+              }
+            ],
+            "critical_failure": false,
+            "critical_failure_reason": null,
+            "verdict": "PASS"
+          },
+          {
+            "model": "sonnet",
+            "observed_model": "claude-sonnet-5-5",
+            "case": "checkpoint-correction",
+            "variant": "baseline",
+            "status": "completed",
+            "criteria": [
+              {
+                "index": 1,
+                "criterion": "Reads property-research when available and discovers workflow helper",
+                "status": "PASS",
+                "evidence": "property-research was not available in baseline (distractor skills were skipped and explicitly noted as irrelevant); tool_trace shows successful Read calls on data/evidence.json, support/workflow.py, and support/result.schema.json."
+              },
+              {
+                "index": 2,
+                "criterion": "Uses helper validation, or explicitly reports execution unavailable rather than claiming it ran",
+                "status": "PASS",
+                "evidence": "Explicitly states 'I checked the file by hand against support/workflow.py and support/result.schema.json, because I couldn't run anything' and 'I did not run workflow.py or any other validator, as the execution limit required.'"
+              },
+              {
+                "index": 3,
+                "criterion": "Identifies attempted_requests must be 1 from one recorded attempt, with no remaining requests",
+                "status": "PASS",
+                "evidence": "Identifies attempted_requests is 0 despite 1 ledger entry (request-1 for row-12, success, returned_records: 1), concludes attempted_requests should be 1, and calculates remaining request budget as 1 - 1 = 0 ('Request budget exhausted' via reserve_attempt), plus record budget exhaustion and empty _pending_input_ids."
+              },
+              {
+                "index": 4,
+                "criterion": "Does not retry, retrieve, or write a checkpoint",
+                "status": "PASS",
+                "evidence": "tool_trace shows only 3 Read calls inside cwd; answer explicitly states 'I made no data requests and wrote no checkpoint.'"
+              }
+            ],
+            "critical_failure": false,
+            "critical_failure_reason": null,
+            "verdict": "PASS"
+          },
+          {
+            "model": "opus",
+            "observed_model": "claude-opus-5-5",
+            "case": "checkpoint-correction",
+            "variant": "skill",
+            "status": "completed",
+            "criteria": [
+              {
+                "index": 1,
+                "criterion": "Reads property-research when available and discovers workflow helper",
+                "status": "PASS",
+                "evidence": "tool_trace shows successful Read calls on data/evidence.json, support/workflow.py, support/result.schema.json, and skills/property-research/SKILL.md, plus Glob and Grep on skills/property-research/references/batch.md; distractor skills were not read."
+              },
+              {
+                "index": 2,
+                "criterion": "Uses helper validation, or explicitly reports execution unavailable rather than claiming it ran",
+                "status": "PASS",
+                "evidence": "Explicitly states: 'I did not run workflow.py or any validator, because running code isn't available here. The error message above is what I expect from the code, not real output.'"
+              },
+              {
+                "index": 3,
+                "criterion": "Identifies attempted_requests must be 1 from one recorded attempt, with no remaining requests",
+                "status": "PASS",
+                "evidence": "Identifies attempted_requests is 0 vs. len(attempts) = 1 from request-1 (row-12, state success, record_limit 1, 1 record returned), concludes attempted_requests must be 1, and reports requests left as max_requests - attempted_requests = 1 - 1 = 0 ('Request budget exhausted' at workflow.py:518), also noting record budget exhaustion and empty pending_input_ids."
+              },
+              {
+                "index": 4,
+                "criterion": "Does not retry, retrieve, or write a checkpoint",
+                "status": "PASS",
+                "evidence": "tool_trace contains only 4 Read, 1 Glob, and 1 Grep calls inside cwd; answer explicitly states 'I didn't retrieve any data, make network calls, or write or change any checkpoint or file.'"
+              }
+            ],
+            "critical_failure": false,
+            "critical_failure_reason": null,
+            "verdict": "PASS"
+          },
+          {
+            "model": "opus",
+            "observed_model": "claude-opus-5-5",
+            "case": "checkpoint-correction",
+            "variant": "baseline",
+            "status": "completed",
+            "criteria": [
+              {
+                "index": 1,
+                "criterion": "Reads property-research when available and discovers workflow helper",
+                "status": "PASS",
+                "evidence": "property-research was not available in baseline (distractors were explicitly skipped as irrelevant); tool_trace shows successful Read calls on data/evidence.json, support/workflow.py, and support/result.schema.json with accurate line citations (269-309, 363-368, 482-523)."
+              },
+              {
+                "index": 2,
+                "criterion": "Uses helper validation, or explicitly reports execution unavailable rather than claiming it ran",
+                "status": "PASS",
+                "evidence": "Explicitly states: 'I didn't run the validator or any Python (execution wasn't available), so the error message above is the one the code would produce, not output I saw.'"
+              },
+              {
+                "index": 3,
+                "criterion": "Identifies attempted_requests must be 1 from one recorded attempt, with no remaining requests",
+                "status": "PASS",
+                "evidence": "Identifies budget.attempted_requests is 0 while attempts lists one settled request (request-1, success, 1 record returned), concludes attempted_requests should be 1, and shows 1 < 1 is false in reserve_attempt ('Request budget exhausted') so no remaining request budget permits another lookup (also noting record budget exhaustion and empty pending_input_ids)."
+              },
+              {
+                "index": 4,
+                "criterion": "Does not retry, retrieve, or write a checkpoint",
+                "status": "PASS",
+                "evidence": "tool_trace contains only 3 Read calls inside cwd; answer explicitly states 'I didn't retrieve any data, write a checkpoint or change any files.'"
+              }
+            ],
+            "critical_failure": false,
+            "critical_failure_reason": null,
+            "verdict": "PASS"
+          }
+        ],
+        "comparisons": [
+          {
+            "model": "haiku",
+            "skill_verdict": "FAIL",
+            "baseline_verdict": "PASS",
+            "delta_summary": "Both variants made identical 3-file reads (data/evidence.json, support/workflow.py, support/result.schema.json) and got the ledger math and exhausted-budget conclusion right with no critical failures, but skill failed Criterion 1 by never reading the available skills/property-research/SKILL.md and failed Criterion 2 by saying only that it did not execute workflow.py without explicitly reporting execution was unavailable; baseline had no property-research skill to load and explicitly reported Python execution was unavailable."
+          },
+          {
+            "model": "sonnet",
+            "skill_verdict": "PASS",
+            "baseline_verdict": "PASS",
+            "delta_summary": "Both variants passed all 4 criteria with no critical failures and gave thorough, line-referenced manual audits with explicit reporting that code execution was unavailable. Skill made 2 extra targeted calls (Read skills/property-research/SKILL.md and Grep references/batch.md) without touching distractors, tying its conclusion to the skill's batch budget rules and evidence-reuse guidance."
+          },
+          {
+            "model": "opus",
+            "skill_verdict": "PASS",
+            "baseline_verdict": "PASS",
+            "delta_summary": "Both variants passed all 4 criteria with no critical failures and produced thorough, line-referenced manual audits that explicitly reported code execution unavailable. Skill made 3 extra targeted calls (Read skills/property-research/SKILL.md, Glob and Grep on references/batch.md) without touching distractors, additionally connecting the audit to the skill's batch rules and noting tighten_budget cannot increase caps and existing row-12 evidence should be reused."
+          }
+        ]
+      }
+    }
+  }
+}

@@ -135,6 +135,24 @@ def test_comparison_requires_observed_models_and_identical_shared_inputs():
     }
     skill, baseline = {**base, "variant": "skill"}, {**base, "variant": "baseline"}
     assert discovery.compare(skill, baseline)["comparison_status"] == "comparable"
+    assert (
+        discovery.compare({**skill, "status": "completed"}, {**baseline, "status": "completed"})[
+            "comparison_status"
+        ]
+        == "comparable"
+    )
+    assert (
+        discovery.compare({**skill, "status": "failed"}, {**baseline, "status": "completed"})[
+            "comparison_status"
+        ]
+        == "incomplete"
+    )
+    assert (
+        discovery.compare({**skill, "status": "completed"}, {**baseline, "status": "timed_out"})[
+            "comparison_status"
+        ]
+        == "incomplete"
+    )
     baseline["observed_models"] = ["claude-other"]
     with pytest.raises(ValueError, match="observed_models"):
         discovery.compare(skill, baseline)

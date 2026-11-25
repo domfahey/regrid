@@ -434,10 +434,20 @@ def test_county_freshness_is_cli_only_over_mcp():
         line for line in tools.splitlines() if line.startswith("| County pull dates | `/verse`")
     )
     assert "CLI only" in verse_row and "ll_last_refresh" in verse_row
+    assert "not county-wide freshness" in verse_row
+    cli = (SKILL_ROOT / "references/cli.md").read_text(encoding="utf-8")
+    assert "never as the whole county's freshness" in cli
+    fields = json.loads((SKILL_ROOT / "references/fields.json").read_text(encoding="utf-8"))[
+        "fields"
+    ]
+    refresh_field = next(entry for entry in fields if entry["name"] == "ll_last_refresh")
+    assert "parcel" in refresh_field["description"].lower()
     skill_lines = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8").splitlines()
     cli_line = next(line for line in skill_lines if "cli.md" in line)
     assert "county pull dates" in cli_line.lower()
     assert "CLI only" in cli_line
+    description = next(line for line in skill_lines if line.startswith("description:")).lower()
+    assert "handoff" in description and "checkpoint" in description
 
 
 def test_cli_is_the_fallback_route_and_freshness_script_is_routed():

@@ -75,7 +75,7 @@ Premium `return_*` flags need user authorization (see also [premium datasets](pr
 | Regrid ID | `/parcels/{ll_uuid}` | UUID in the URL path | none |
 | Regrid path (refresh) | `/parcels/path` | `path` | none; one request, one record |
 | Address suggestions | `/parcels/typeahead` | `query` | Enterprise only; trial tokens cover 7 counties |
-| County pull dates | `/verse` | none | CLI only (`regrid freshness`, see [cli.md](cli.md)); over MCP never call `/verse`: report the parcel's `ll_last_refresh` and say county pull dates need the CLI |
+| County pull dates | `/verse` | none | CLI only (`regrid freshness`, see [cli.md](cli.md)); over MCP never call `/verse`: report the parcel's `ll_last_refresh` strictly as that parcel's refresh date (not county-wide freshness) and say county pull dates need the CLI |
 | Field definitions | `/schemas/parcel`, `/schemas/building`, `/schemas/address`, `/schemas/enhanced_ownership`, `/schemas/zoning` | none | `premium_only` (parcel only); no token, but counts as a request |
 | Detailed usage | `/usage/detailed` | none | date and token options |
 | Usage diagnostic | `/usage` | none | none |

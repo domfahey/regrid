@@ -1,0 +1,556 @@
+{
+  "suite": "discovery_retest",
+  "cli_version": "2.1.331 (Claude Code)",
+  "runner": "plugins/regrid-research/evals/run_discovery_claude.py",
+  "max_budget_usd_per_trial": 0.5,
+  "timeout_seconds_per_trial": 90,
+  "helper_execution": "unavailable_read_only",
+  "live_calls": 0,
+  "trials": [
+    {
+      "requested_model": "opus",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "case_id": "structured-handoff",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.272606,
+      "trace_sha256": "e8bad502e77428e88b5aa576e22100c98bc5dffa0fd8be502dcee2a57ec21a9d",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "985523b0d54bc5ba8749d2d8af3f03415db75228b2189ea0451288a39359c170",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "f782971b551019aa3a16cfac2f1a86d876684c9e52a8eb184049b4e9efc5b9c3",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "1ccf7c4eb32d9efc582f87d68e943f9ca6a3d568fe84695fdcb5bb63a59493ec",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "5d1fe0a678975148513185a0a20bf24db2cc1bba8ce5f99cb1c0d7fd245df7e8",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "e8e0d37bb6f5f19c071bdfc53cda1470a87bb4b1e2c6aa4528828fc03824f6aa",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "skills/property-research/SKILL.md",
+        "data/evidence.json",
+        "support/result.schema.json",
+        "support/workflow.py",
+        "skills/property-research/references/composition.md"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/property-research/SKILL.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/property-research/references/composition.md"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": {
+        "found_json_blocks": 1,
+        "jsonschema_valid": true,
+        "jsonschema_errors": [],
+        "workflow_validate_rc": 0,
+        "workflow_validate_out": "Valid handoff/checkpoint"
+      },
+      "answer": "The handoff is below. `data/evidence.json` already matched the contract in `support/result.schema.json`, so I've passed it on unchanged. Python wasn't available, so I didn't run the validator in `support/workflow.py`. I checked the document by hand against the schema and against the extra rules the validator enforces.\n\n## Handoff (schema 1.0, workflow `example-report-01`)\n\n```json\n{\n  \"schema_version\": \"1.0\",\n  \"workflow_id\": \"example-report-01\",\n  \"results\": [\n    {\n      \"input_id\": \"row-12\",\n      \"requested\": {\n        \"address\": \"12 Example Ave, Exampletown NJ 08033\",\n        \"parcel_id\": null,\n        \"scope\": \"NJ 08033\"\n      },\n      \"lookup_status\": \"success\",\n      \"match_status\": \"confirmed\",\n      \"candidates\": [\n        {\n          \"parcel_id\": \"TEST_67_6\",\n          \"address\": \"12 EXAMPLE AVE, EXAMPLETOWN NJ 08033\",\n          \"facts\": {\n            \"recorded_owner\": \"Example LLC\",\n            \"sale_price\": null\n          },\n          \"provenance\": {\n            \"provider\": \"Regrid\",\n            \"retrieved_at\": \"2026-10-27T18:00:00Z\",\n            \"source_refreshed_at\": \"2026-09-17\",\n            \"source_url\": null,\n            \"evidence_id\": \"response-1\"\n          }\n        }\n      ],\n      \"missing_fields\": [\"sale_price\"],\n      \"error\": null,\n      \"notes\": [\"Synthetic example; no live property.\"]\n    }\n  ],\n  \"budget\": {\n    \"max_requests\": 1,\n    \"max_records\": 1,\n    \"attempted_requests\": 1,\n    \"returned_records\": 1,\n    \"uncertain_records\": 0\n  },\n  \"attempts\": [\n    {\n      \"attempt_id\": \"request-1\",\n      \"input_ids\": [\"row-12\"],\n      \"state\": \"success\",\n      \"record_limit\": 1,\n      \"returned_records\": 1\n    }\n  ]\n}\n```\n\n## Notes for the receiving analyst\n- **Identity:** Input `row-12` is kept exactly as requested: no parcel ID was given, and the scope is `NJ 08033`. It's a **confirmed** match to parcel `TEST_67_6`. The matched address is the same as the requested one, just in capitals.\n- **Owner:** The recorded owner is \"Example LLC\". That's a starting point for further research, not proof of who the LLC's members are or a legal ownership opinion.\n- **Missing values:** `sale_price` is `null` and is listed in `missing_fields`. It means the value is unknown, not zero.\n- **Provenance:** Regrid, evidence ID `response-1`, retrieved 2026-10-27T18:00:00Z, source data refreshed 2026-09-17. The source URL was never supplied, so it stays `null`.\n- **Budget:** The ledger records one earlier request, which used up the budget (1 of 1 requests, 1 of 1 records). Any further lookup needs a new budget. I made no requests and wrote no files.\n- **Caveat:** The evidence itself says it is a synthetic example, not a real property. Don't treat it as real research.\n\n## Checks performed\n- **Envelope:** Version 1.0 has exactly the five required top-level fields, with no `reconciliations` field and no `kind` on attempts.\n- **Requested address:** It uses the legacy format, has all three fields, and includes an address, which satisfies the rule that an address or parcel ID must be present.\n- **Status pair:** `success` with `confirmed` is a valid pair, `error` is `null`, and a confirmed match has the one candidate it requires.\n- **Candidate and provenance:** All required fields are present, each is either text or `null`, and the provider and evidence ID are not empty.\n- **Uniqueness:** The input ID, the attempt ID and the `missing_fields` entries are all unique. The attempt's input IDs all refer to existing results.\n- **Ledger arithmetic:** 1 request attempted out of 1 recorded. 1 record returned from 1 successful attempt. 0 records unaccounted for, since no attempts are pending or uncertain. All counts are within the 1-request, 1-record limits.\n\nThis shows the structure is valid, not that the data is true."
+    },
+    {
+      "requested_model": "opus",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "case_id": "structured-handoff",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.203276,
+      "trace_sha256": "d5b48b53166b5b9f4b9bf553f6ec32c850b0d0252d604d41dc24d61daad6c326",
+      "files": {
+        "data/evidence.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "prompt.json": "f74b5eacc12751eeb194b99b00a0e10833b61646e8a29e4013d650c8c47a8e93",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/result.schema.json",
+        "support/workflow.py"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": {
+        "found_json_blocks": 1,
+        "jsonschema_valid": true,
+        "jsonschema_errors": [],
+        "workflow_validate_rc": 0,
+        "workflow_validate_out": "Valid handoff/checkpoint"
+      },
+      "answer": "The evidence file already meets the contract, so the handoff below copies it exactly with nothing added, removed or normalized. I didn't run the validator because I can't execute code here. Instead I checked the file by hand against `support/result.schema.json` and the rules in `support/workflow.py`'s `_validate()`. No files were written and I didn't use either skill, since neither applies.\n\n## Handoff (identical to `data/evidence.json`)\n\n```json\n{\n  \"schema_version\": \"1.0\",\n  \"workflow_id\": \"example-report-01\",\n  \"results\": [\n    {\n      \"input_id\": \"row-12\",\n      \"requested\": {\n        \"address\": \"12 Example Ave, Exampletown NJ 08033\",\n        \"parcel_id\": null,\n        \"scope\": \"NJ 08033\"\n      },\n      \"lookup_status\": \"success\",\n      \"match_status\": \"confirmed\",\n      \"candidates\": [\n        {\n          \"parcel_id\": \"TEST_67_6\",\n          \"address\": \"12 EXAMPLE AVE, EXAMPLETOWN NJ 08033\",\n          \"facts\": {\n            \"recorded_owner\": \"Example LLC\",\n            \"sale_price\": null\n          },\n          \"provenance\": {\n            \"provider\": \"Regrid\",\n            \"retrieved_at\": \"2026-10-27T18:00:00Z\",\n            \"source_refreshed_at\": \"2026-09-17\",\n            \"source_url\": null,\n            \"evidence_id\": \"response-1\"\n          }\n        }\n      ],\n      \"missing_fields\": [\"sale_price\"],\n      \"error\": null,\n      \"notes\": [\"Synthetic example; no live property.\"]\n    }\n  ],\n  \"budget\": {\n    \"max_requests\": 1,\n    \"max_records\": 1,\n    \"attempted_requests\": 1,\n    \"returned_records\": 1,\n    \"uncertain_records\": 0\n  },\n  \"attempts\": [\n    {\n      \"attempt_id\": \"request-1\",\n      \"input_ids\": [\"row-12\"],\n      \"state\": \"success\",\n      \"record_limit\": 1,\n      \"returned_records\": 1\n    }\n  ]\n}\n```\n\n## Summary for the next analyst\n- **Input `row-12`:** the address lookup succeeded and one candidate was **confirmed**.\n  - Parcel `TEST_67_6`, `12 EXAMPLE AVE, EXAMPLETOWN NJ 08033`.\n  - Recorded owner: Example LLC.\n- **Missing values, kept as they are:**\n  - `sale_price` is `null` and is listed in `missing_fields`.\n  - The requested `parcel_id` is `null` because the lookup was by address.\n  - The provenance `source_url` is `null`.\n- **Where the data came from:** Regrid, evidence `response-1`, retrieved 2026-10-27T18:00:00Z. The source data was last refreshed on 2026-09-17.\n- **Request budget:** 1 of 1 requests and 1 of 1 records were used, and none are uncertain. The budget is fully used, so another lookup would need a larger budget.\n- **Note:** this is a synthetic example, not a real property.\n\n## Checks I did by hand\n- **Format version:** 1.0, so there's no `reconciliations` list and no attempt `kind`. The requested fields use the older address/parcel/scope form, which is required for 1.0, and the address is filled in.\n- **Required fields:** every top-level, result, candidate, provenance, budget and attempt object has exactly the fields it should, with nothing extra.\n- **Status rules:** a successful lookup is paired with `confirmed`, `error` is `null`, and a confirmed match has at least one candidate.\n- **Text and nulls:** `provider` and `evidence_id` contain text. The nullable fields are either `null` or text. `missing_fields` has no duplicates.\n- **IDs:** `row-12` and `request-1` each appear once, and the attempt points to a known input.\n- **Budget matches the attempt log:** 1 attempt equals `attempted_requests` of 1. One settled attempt returned 1 record, matching `returned_records` of 1. With nothing pending or uncertain, `uncertain_records` is 0.\n\n**Result:** the file meets the contract on every check above. This is a manual review, not output from the validator.\n\n## One thing to confirm\nThe contract says `parcel_id` must be the county assessor's parcel number (the APN), not Regrid's own ID. `TEST_67_6` looks like an APN, but the evidence doesn't say which field it came from. The next analyst should check it against the saved response `response-1` before relying on it."
+    },
+    {
+      "requested_model": "haiku",
+      "observed_models": [
+        "claude-haiku-5-5"
+      ],
+      "case_id": "checkpoint-correction",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.005688,
+      "trace_sha256": "7639ba862df7a559f65636c5c6762c01bf8baa32b9b699f76d40347303d315be",
+      "files": {
+        "data/evidence.json": "bbcb8b776ea0a9681ae61de89cb50b54f41867f9887ce75e7a22c699501ab5c1",
+        "prompt.json": "3babbaa01c29648643b1a0dec9f925fd4e47f08f6104636a3d503475162405b3",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "f782971b551019aa3a16cfac2f1a86d876684c9e52a8eb184049b4e9efc5b9c3",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "1ccf7c4eb32d9efc582f87d68e943f9ca6a3d568fe84695fdcb5bb63a59493ec",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "5d1fe0a678975148513185a0a20bf24db2cc1bba8ce5f99cb1c0d7fd245df7e8",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "e8e0d37bb6f5f19c071bdfc53cda1470a87bb4b1e2c6aa4528828fc03824f6aa",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/workflow.py",
+        "support/result.schema.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "## Checkpoint audit: `data/evidence.json`\n\n**Inconsistency:** `budget.attempted_requests` is `0`, but the attempt ledger has one entry (`request-1`, state `success`, `returned_records: 1`). The workflow helper's `_validate` requires `attempted_requests == len(attempts)`, so this file fails with \"Budget does not match attempt ledger\" at `$.budget.attempted_requests`.\n\n**Corrected counter:** `attempted_requests` should be `1`. The other counters already match the ledger:\n- `returned_records`: 1, which equals the sum of settled attempts (1).\n- `uncertain_records`: 0, which equals the sum of pending or uncertain reservations (none).\n- `max_requests`: 1 and `max_records`: 1 are unchanged.\n\n**Remaining budget:** None. With the corrected count, `attempted_requests` (1) equals `max_requests` (1). `reserve_attempt` rejects a new attempt when `attempted_requests < max_requests` is false, so another lookup is not permitted. The record budget is also used up (1 of 1). Row `row-12` already has a successful lookup, so nothing is pending anyway.\n\n**Validation performed:** I read `data/evidence.json`, `support/workflow.py`, and `support/result.schema.json`, and checked the file against the helper's rules by reading the code. I did not execute `workflow.py` or any validator, so this is a manual check, not a tool result. Everything else I checked passes: schema version 1.0 with no `reconciliations` key, unique input and attempt IDs, a matching status pair for `row-12`, provenance fields present, and a legacy-format `requested` block.\n\nI did not edit the file or write a checkpoint, and I did not retrieve any data. Fixing the counter means changing `attempted_requests` from `0` to `1` in the file. That edit is yours to make; I can apply it if you want."
+    },
+    {
+      "requested_model": "haiku",
+      "observed_models": [
+        "claude-haiku-5-5"
+      ],
+      "case_id": "checkpoint-correction",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.005022,
+      "trace_sha256": "8a89ca75110296315b66d8dff18fc9ac203ba81f12165e2fe43d62cda0553ccf",
+      "files": {
+        "data/evidence.json": "bbcb8b776ea0a9681ae61de89cb50b54f41867f9887ce75e7a22c699501ab5c1",
+        "prompt.json": "508e7a24a750d6f001c13f90c0e9ca27110f689ad392c88036383ae0f9a8046a",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/workflow.py",
+        "support/result.schema.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "**Finding: `budget.attempted_requests` is wrong.** It reads `0`, but `attempts` has one entry (`request-1`, state `success`, 1 returned record). The validator requires `attempted_requests == len(attempts)` (`support/workflow.py:364`), so this file fails validation as written.\n\n**Corrected counter, from the ledger:**\n- `attempted_requests`: **1** (was 0). Only one attempt is recorded.\n- `returned_records`: 1. This matches the sum of settled `returned_records` across attempts, so it is correct.\n- `uncertain_records`: 0. No pending or uncertain attempts exist, so it is correct.\n\n**Remaining budget:** `max_requests` is 1, so **no further lookup is permitted**. With the corrected count, `reserve_attempt` would reject another attempt with \"Request budget exhausted\" (`workflow.py:518`). The stored `0` would have wrongly suggested one request remained. `max_records` is also fully used (1 of 1).\n\n**Other checks:** The rest of the file passed my manual review against `workflow.py` and `result.schema.json`. The row, requested identity, candidate, provenance, and attempt fields are structurally valid, and the success/confirmed status pair is consistent. This is a 1.0 document, so there is no reconciliation ledger to check.\n\n**Validation performed:** I read `data/evidence.json`, `support/workflow.py`, and `support/result.schema.json` and checked the invariants by hand. I did not run `workflow.py validate`, since Python execution is unavailable here, so the result is not a validator run. I did not retrieve data, write a checkpoint, or edit `evidence.json`.\n\n**Suggested fix:** Change `budget.attempted_requests` from `0` to `1` in `data/evidence.json`. I have not made this edit. Tell me if you want me to apply it. Running `python3 -I support/workflow.py validate data/evidence.json` afterward would confirm the fix."
+    },
+    {
+      "requested_model": "sonnet",
+      "observed_models": [
+        "claude-sonnet-5-5"
+      ],
+      "case_id": "checkpoint-correction",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.121658,
+      "trace_sha256": "3a6d70293e8a02b8718dcd309789c26573ba16edf5837602260c4531bde6924e",
+      "files": {
+        "data/evidence.json": "bbcb8b776ea0a9681ae61de89cb50b54f41867f9887ce75e7a22c699501ab5c1",
+        "prompt.json": "3babbaa01c29648643b1a0dec9f925fd4e47f08f6104636a3d503475162405b3",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "f782971b551019aa3a16cfac2f1a86d876684c9e52a8eb184049b4e9efc5b9c3",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "1ccf7c4eb32d9efc582f87d68e943f9ca6a3d568fe84695fdcb5bb63a59493ec",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "5d1fe0a678975148513185a0a20bf24db2cc1bba8ce5f99cb1c0d7fd245df7e8",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "e8e0d37bb6f5f19c071bdfc53cda1470a87bb4b1e2c6aa4528828fc03824f6aa",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/workflow.py",
+        "support/result.schema.json",
+        "skills/property-research/SKILL.md"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/property-research/SKILL.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "attempted_requests|max_requests|exhaust",
+            "path": "skills/property-research",
+            "output_mode": "content"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "The checkpoint is inconsistent, and no further lookup is allowed. Once the counter is corrected, the request budget is used up.\n\n**The inconsistency.** In `data/evidence.json`, `budget.attempted_requests` is **0**, but the attempt ledger records **1** attempt (`request-1`, row `row-12`, state `success`, `returned_records: 1`). The helper requires `attempted_requests` to equal the number of ledger attempts (`support/workflow.py:363-368`). `validate` or `load_checkpoint` would therefore reject this file with:\n\n`$.budget.attempted_requests: Budget does not match attempt ledger`\n\n**Corrected counters, worked out from the ledger:**\n\n| Counter | Recorded | Derived from ledger | Status |\n|---|---|---|---|\n| `attempted_requests` | 0 | 1 (one attempt in the ledger) | **Wrong; should be 1** |\n| `returned_records` | 1 | 1 (the only attempt is settled and returned 1) | OK |\n| `uncertain_records` | 0 | 0 (no attempts are pending or uncertain) | OK |\n\n**Remaining budget:**\n- **Requests:** `max_requests - attempted_requests` = 1 \u2212 1 = **0**. The helper's `reserve_attempt` only allows a new attempt when `attempted_requests < max_requests` (`workflow.py:518`). Since 1 < 1 is false, it would stop with \"Request budget exhausted\".\n- **Records:** `returned + uncertain + new limit \u2264 max_records` gives 1 + 0 + 1 = 2, which is more than 1. So any new lookup asking for at least one record would also fail with \"Record budget exhausted\" (`workflow.py:519-523`).\n- `row-12` has also already been attempted, so `pending_input_ids` would return `[]`. A retry would need explicit `authorized_retry` and would still hit the budget limits above.\n\n**Conclusion:** No further lookup is allowed. Before resuming, the checkpoint should be corrected to `attempted_requests: 1`. The existing evidence for `row-12` (confirmed match, parcel `TEST_67_6`, `sale_price` missing) should be reused, not fetched again. Filling in `sale_price` would require the caller to grant more budget.\n\n**Validation performed:** I couldn't run any code here, so I didn't execute `workflow.py validate` or any other validator. Instead, I read `data/evidence.json` and checked it by hand against the invariants in `_validate` and `reserve_attempt` in `support/workflow.py`. I also checked it against `support/result.schema.json` and the budget rules in the skill's `references/batch.md` (\"attempted_requests equals the number of attempts\"; \"Remaining requests: max_requests - attempted_requests\"). The rest of the document passes those checks: the field sets, the status pair (success/confirmed with one candidate), provenance, `missing_fields`, and that the attempt refers to a known input ID. I made no data requests and wrote no files or checkpoints."
+    },
+    {
+      "requested_model": "sonnet",
+      "observed_models": [
+        "claude-sonnet-5-5"
+      ],
+      "case_id": "checkpoint-correction",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.099194,
+      "trace_sha256": "ec8a29402968be9c5872eddc7d022c153ecb3cf8e8f62e4d4427ae4f6966b013",
+      "files": {
+        "data/evidence.json": "bbcb8b776ea0a9681ae61de89cb50b54f41867f9887ce75e7a22c699501ab5c1",
+        "prompt.json": "508e7a24a750d6f001c13f90c0e9ca27110f689ad392c88036383ae0f9a8046a",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/workflow.py",
+        "support/result.schema.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "I checked the file by hand against `support/workflow.py` and `support/result.schema.json`, because I couldn't run anything. The request counter is wrong, and the request budget does not allow another lookup.\n\n## The inconsistency\n\n`data/evidence.json` sets `budget.attempted_requests` to **0**. But the attempt ledger (`attempts[]`) records one attempt: `request-1` for `row-12`, with state `success` and `returned_records: 1`.\n\nThe validator's budget check (`support/workflow.py:363-368`) requires `attempted_requests == len(attempts)`. Running the helper (`validate`, or `load_checkpoint` when resuming) would reject the file at the first counter it checks:\n\n```\nInvalid handoff/checkpoint: $.budget.attempted_requests: Budget does not match attempt ledger\n```\n\n## Corrected counters, worked out from the ledger\n\n| Counter | File value | From the ledger | Rule |\n|---|---|---|---|\n| `attempted_requests` | 0 | **1** | `len(attempts)`: one entry |\n| `returned_records` | 1 | 1 \u2713 | sum of `returned_records` over settled attempts (one `success` with 1) |\n| `uncertain_records` | 0 | 0 \u2713 | sum of `record_limit` over `pending`/`uncertain` attempts (none) |\n\nOnly `attempted_requests` is wrong; it should be **1**. The other two already match the ledger.\n\n## Is there budget for another lookup? No.\n\nWith the corrected counter, `reserve_attempt` (`support/workflow.py:482-543`) would refuse a new lookup at more than one point:\n\n1. **Request budget is used up.** It requires `attempted_requests < max_requests`, which is now `1 < 1`, so it's false and fails with \"Request budget exhausted\". Remaining request budget: `1 \u2212 1 = 0`.\n2. **Record budget is also used up.** `returned_records + uncertain_records + record_limit <= max_records` is `1 + 0 + limit <= 1`. Only a zero-record reservation would pass, and that's useless for a lookup.\n3. **There's no input left to look up.** `row-12` is already covered by `request-1` (and is `success`/`confirmed`), so `_pending_input_ids` returns `[]`. Re-querying it would need `authorized_retry=True`, and even then checks 1 and 2 would still block it.\n\nThe uncorrected file shows `0 < 1`, which wrongly suggests one request is still available. Trusting that counter would let the workflow go past the caller's one-request limit.\n\n## Everything else checks out\n\n- **Top level:** the fields are exactly the 1.0 set (no `reconciliations`, no attempt `kind`).\n- **Result row:** `row-12` has a valid legacy `requested` (address present). Its `success`/`confirmed` status pair is consistent, it has one candidate with complete provenance (`provider`, `evidence_id`), `error: null`, and no duplicate `missing_fields`.\n- **Attempt:** the keys are valid, the input ID refers to a real row, a settled state has an integer `returned_records`, and `record_limit: 1` is fine.\n- **Minor, not an error:** the attempt ID `request-1` doesn't follow the helper's `attempt-NNNNNN` format, but the validator only requires it to be non-empty and unique.\n\n## Validation performed\n\nI read the evidence file, the helper and the schema. Then I traced `_validate` and `reserve_attempt` by hand against the file's values. I did **not** run `workflow.py` or any other validator, as the execution limit required. I made no data requests and wrote no checkpoint. The two available skills (spreadsheets, meeting planning) weren't relevant, so I didn't open them."
+    },
+    {
+      "requested_model": "opus",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "case_id": "checkpoint-correction",
+      "variant": "skill",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.249467,
+      "trace_sha256": "555987eb2798b460bc3284501cfea3ea660fec5c14694e40c0e2ac9d67afc4f2",
+      "files": {
+        "data/evidence.json": "bbcb8b776ea0a9681ae61de89cb50b54f41867f9887ce75e7a22c699501ab5c1",
+        "prompt.json": "3babbaa01c29648643b1a0dec9f925fd4e47f08f6104636a3d503475162405b3",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "skills/property-research/SKILL.md": "f782971b551019aa3a16cfac2f1a86d876684c9e52a8eb184049b4e9efc5b9c3",
+        "skills/property-research/references/answers.md": "f15aac9ded7fe6f4db9d1914509260cae4831fd343ae2c7c30f29dba2326b9b1",
+        "skills/property-research/references/batch.md": "e645a5008da97756189710cea9521bc5140366bab470f55b13229460fcda720f",
+        "skills/property-research/references/cli.md": "1ccf7c4eb32d9efc582f87d68e943f9ca6a3d568fe84695fdcb5bb63a59493ec",
+        "skills/property-research/references/composition.md": "26ee60a0d96357c10cc9d8f00eefd04d4b4cdb2c789881f89212c03f77be14fd",
+        "skills/property-research/references/endpoints.json": "3386e4fe0ec41d674ed3f4b70518e3e84e66a80376f0eb8c77abd6d8f0583965",
+        "skills/property-research/references/fields.json": "5d1fe0a678975148513185a0a20bf24db2cc1bba8ce5f99cb1c0d7fd245df7e8",
+        "skills/property-research/references/map.md": "498026ef68493f9a0d88f3eb1837084756bd1d10b083fffc84d92a02d8c73f6c",
+        "skills/property-research/references/mcp-tools.md": "e8e0d37bb6f5f19c071bdfc53cda1470a87bb4b1e2c6aa4528828fc03824f6aa",
+        "skills/property-research/references/premium.md": "f8403a3d463c998e97ed6481f1c48e87dd9b4a43b2cbfbfa7fabab3a9f77305c",
+        "skills/property-research/references/result-example.json": "910388a14c54081264c0f617cf9e688d4a78cbbfad3f59159044839b9a5c9706",
+        "skills/property-research/references/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "skills/property-research/references/tools.json": "c9ed9c1d8395306aecf64a341b5d0b47d85047f809d92cb16e5759baa4a21cc4",
+        "skills/property-research/scripts/fields.py": "f5bced51fad02cfbdc426c19d42e20468846b7603527bbb4d91416c73a57c9be",
+        "skills/property-research/scripts/freshness.py": "ec90ba7320206666dba3dc4dcc7e7d3d0a230f7bcea8062cbb1b103e38864fb9",
+        "skills/property-research/scripts/map.py": "b956b082f5c4921cd6221ad8ae168416fef8017409ca9822974366b6c9f02795",
+        "skills/property-research/scripts/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/workflow.py",
+        "support/result.schema.json",
+        "skills/property-research/SKILL.md"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "skills/property-research/SKILL.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Glob",
+          "input": {
+            "pattern": "skills/property-research/references/batch.md"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "(?i)attempted_requests|exhaust|max_requests|stop",
+            "path": "skills/property-research/references/batch.md",
+            "output_mode": "content"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "I audited the checkpoint by reading it. The ledger records one completed request, but the counter says zero. With the corrected count, the request budget is used up, so **another lookup is not allowed**.\n\n## The inconsistency\n\nThe helper's `validate()` rebuilds the budget counters from the `attempts` ledger and requires them to match exactly (`support/workflow.py:362-368`):\n\n| Counter | Value in `data/evidence.json` | Value from the ledger | Matches? |\n|---|---|---|---|\n| `attempted_requests` | **0** | `len(attempts)` = **1** | \u274c |\n| `returned_records` | 1 | `request-1`'s `returned_records` = 1 | \u2705 |\n| `uncertain_records` | 0 | no pending or uncertain attempts = 0 | \u2705 |\n\nEverything checked before the budget passes: the fields, the input ID, the `success`/`confirmed` status pair, the candidate provenance, `error: null`, and the `request-1` entry itself. So, by my reading, the validator would stop at the budget check and report:\n\n`Invalid handoff/checkpoint: $.budget.attempted_requests: Budget does not match attempt ledger`\n\n## Corrected counter\n\nThe ledger has one attempt: `request-1`, for input `row-12`, with state `success`, `record_limit` 1 and 1 record returned. A settled attempt still counts as a request made, so the corrected value is **`attempted_requests: 1`**. The other counters are already right. The corrected budget would be:\n\n```json\n\"budget\": { \"max_requests\": 1, \"max_records\": 1, \"attempted_requests\": 1, \"returned_records\": 1, \"uncertain_records\": 0 }\n```\n\n## Can another lookup run?\n\n**No.**\n- **Requests left:** `max_requests \u2212 attempted_requests` = 1 \u2212 1 = **0**. `reserve_attempt` would refuse with \"Request budget exhausted\" (`workflow.py:518`).\n- **Records left:** returned 1 + uncertain 0 + any new `record_limit` (at least 1) would go over `max_records` = 1, so the record budget is also used up (`workflow.py:519-522`).\n- **No inputs are waiting:** `row-12` is already resolved, so `pending_input_ids` would return `[]`. A new attempt on it would need `authorized_retry=True` and still wouldn't fit the budget.\n- As saved, the file would fail validation, so the helper would refuse to load or reserve anything until the counter is fixed. Trusting the stored `0` would wrongly suggest one request is still available.\n\nTo resume, you need to raise `max_requests` and `max_records` explicitly; the helper's `tighten_budget` can only lower them. Otherwise the existing `row-12` result (owner Example LLC, `sale_price` missing) should be used as it is.\n\n## How I checked this\n- I only read files: `data/evidence.json`, `support/workflow.py`, `support/result.schema.json`, the property-research skill, and the budget rules in its `batch.md`. I followed the validator's checks by hand against the file.\n- **I did not run `workflow.py` or any validator**, because running code isn't available here. The error message above is what I expect from the code, not real output.\n- I didn't retrieve any data, make network calls, or write or change any checkpoint or file."
+    },
+    {
+      "requested_model": "opus",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "case_id": "checkpoint-correction",
+      "variant": "baseline",
+      "status": "completed",
+      "subtype": "success",
+      "cost_usd": 0.198963,
+      "trace_sha256": "176d84c2f502656cb1f142cebc312a1704fb4aa5bfad96260587f86e1b0d6074",
+      "files": {
+        "data/evidence.json": "bbcb8b776ea0a9681ae61de89cb50b54f41867f9887ce75e7a22c699501ab5c1",
+        "prompt.json": "508e7a24a750d6f001c13f90c0e9ca27110f689ad392c88036383ae0f9a8046a",
+        "skills/editing-spreadsheets/SKILL.md": "7e40bd53b0009dfda55f6e9c5a5189c1c8fa5f69c1effedb8ea47c95fda0df7a",
+        "skills/planning-meetings/SKILL.md": "6e8500142303b206857873736f95075faf4ef2ee6d4e20ff829013deed18d311",
+        "support/result.schema.json": "626c00ed1c19eba571db3ff8d3eef604742cfe650ebda466effaf90a6fb89537",
+        "support/workflow.py": "98e838ce6e1f6be85b325e7afeaf5d85075d57ce7a418aa1df3778ed2a892012"
+      },
+      "read_paths_relative": [
+        "data/evidence.json",
+        "support/workflow.py",
+        "support/result.schema.json"
+      ],
+      "outside_workspace_reads": [],
+      "tool_calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "data/evidence.json"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/workflow.py"
+          },
+          "is_error": false
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "support/result.schema.json"
+          },
+          "is_error": false
+        }
+      ],
+      "handoff_validation": null,
+      "answer": "I audited `data/evidence.json` by reading it and tracing it by hand through `support/workflow.py`. The request counter is wrong: it should be **1**, not 0. Once corrected, **the budget does not allow another lookup.**\n\n## The inconsistency\n\nThe checkpoint says `budget.attempted_requests: 0`, but its attempt ledger lists one settled request (`request-1`, state `success`, 1 record returned). The helper's budget check (`support/workflow.py:363-368`) requires the counter to equal the number of ledger entries. So validation would stop with:\n\n> `Invalid handoff/checkpoint: $.budget.attempted_requests: Budget does not match attempt ledger`\n\nThe counters recalculated from the ledger (`workflow.py:269-309`):\n\n| Counter | Stored | From the ledger | Status |\n|---|---|---|---|\n| `attempted_requests` | 0 | 1 (one entry) | **Wrong** |\n| `returned_records` | 1 | 1 (the one successful attempt returned 1) | OK |\n| `uncertain_records` | 0 | 0 (nothing pending or uncertain; no reconciliations in 1.0) | OK |\n\nEverything else checks out: the field sets match schema 1.0, there's one input ID (`row-12`), the status pair `success`/`confirmed` is consistent and backed by a candidate, the provenance fields are complete, `error` is null, and the attempt only refers to the known input `row-12`.\n\n## Corrected counter\n\n`attempted_requests` should be **1**. The ledger is the source of truth, and the helper never lowers the count of past requests (`tighten_budget` explicitly says it won't refund them).\n\n## Is there budget for another lookup?\n\nNo. Using the corrected budget (`max_requests: 1`, `max_records: 1`), `reserve_attempt` (`workflow.py:482-523`) would refuse another lookup for three separate reasons:\n\n1. **Request budget:** it requires `attempted_requests < max_requests`, and 1 < 1 is false, so it fails with \"Request budget exhausted\".\n2. **Record budget:** `returned + uncertain + record_limit \u2264 max_records` means 1 + 0 + limit \u2264 1, so any request asking for 1 or more records fails with \"Record budget exhausted\".\n3. **Nothing left to look up:** `row-12` is already in an attempt and marked `success`, so `pending_input_ids` returns an empty list. Repeating it would need `authorized_retry=True` and would still hit both limits above.\n\nWith the stored counter at 0, it looks like one request is still available. That's wrong: the real ledger shows the budget is used up. The helper wouldn't actually be fooled, because `reserve_attempt` runs `validate()` first and rejects the file.\n\n## How I checked\n- I read `data/evidence.json`, `support/workflow.py` and `support/result.schema.json`, and worked through `_validate` and `reserve_attempt` by hand.\n- **I didn't run the validator or any Python** (execution wasn't available), so the error message above is the one the code would produce, not output I saw.\n- I didn't retrieve any data, write a checkpoint or change any files.\n- Neither available skill (spreadsheets, meetings) applied, so I didn't read them.\n- Something you may want to look at, though the helper doesn't check it: the candidate's `evidence_id` is `response-1` and the attempt is `request-1`. They look like a pair, but nothing in the file formally links them."
+    }
+  ]
+}

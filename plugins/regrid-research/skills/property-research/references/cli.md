@@ -126,9 +126,10 @@ each request as a diagnostic.
 
 ## County pull dates (freshness)
 
-`ll_last_refresh` on each parcel stays the default freshness answer over MCP. County
-pull dates are not available over MCP; say they need the CLI. Report dates only and
-never label data stale.
+`ll_last_refresh` on each parcel stays the default freshness answer over MCP—report it
+strictly as that parcel's refresh date, never as the whole county's freshness. County
+pull dates are not available over MCP; say they need the CLI (`regrid freshness`, or
+`freshness.py` on a supplied `/verse` file). Report dates only and never label data stale.
 
 If the user supplies a saved `/verse` response file, run
 `python3 "<skill>/scripts/freshness.py" county VERSE.json --path /us/<st>/<county>`

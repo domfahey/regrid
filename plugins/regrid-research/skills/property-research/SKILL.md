@@ -1,6 +1,6 @@
 ---
 name: property-research
-description: Looks up recorded owners, parcel IDs, field meanings (e.g. usedesc), sale and assessment details, zoning, and parcel boundaries for US properties with Regrid, and draws satellite parcel maps with optional neighbours. Exports to CSV or GeoJSON, runs geographic parcel searches, and reports county data freshness. Use for US address, APN, owner-name, "who owns", parcel map or boundary, and property-research requests. Do not use for Regrid Batch API jobs, filing data-issue reports, or market-value appraisals and legal ownership opinions.
+description: Looks up recorded owners, parcel IDs, field meanings (e.g. usedesc), sale and assessment details, zoning, and parcel boundaries for US properties with Regrid, and draws satellite parcel maps with optional neighbours. Exports to CSV or GeoJSON, runs geographic parcel searches, and reports county data freshness. Prepares structured property-research handoffs and audits checkpoint budget ledgers with the workflow helper. Use for US address, APN, owner-name, "who owns", parcel map or boundary, structured handoff, checkpoint audit, and property-research requests. Do not use for Regrid Batch API jobs, filing data-issue reports, or market-value appraisals and legal ownership opinions.
 ---
 
 # Regrid property research

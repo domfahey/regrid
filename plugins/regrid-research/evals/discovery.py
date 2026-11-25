@@ -205,7 +205,10 @@ def compare(skill: dict[str, Any], baseline: dict[str, Any]) -> dict[str, Any]:
     skill_inputs, baseline_inputs = shared_inputs(skill), shared_inputs(baseline)
     if skill_inputs != baseline_inputs:
         raise ValueError("Comparison requires matching shared input hashes")
-    comparable = bool(skill_models and baseline_models and skill_inputs)
+    statuses_ok = all(
+        record.get("status", "completed") == "completed" for record in (skill, baseline)
+    )
+    comparable = bool(skill_models and baseline_models and skill_inputs and statuses_ok)
     return {
         "comparison_status": "comparable" if comparable else "incomplete",
         "read_paths_semantics": "requested reads; verify successful tool_result evidence separately",
