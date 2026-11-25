@@ -534,7 +534,7 @@ def test_manifest_has_privacy_policy_url_and_privacy_note_ships(packaged_archive
 def test_token_pattern_ignores_identifiers_but_catches_tokens(tmp_path):
     root = tmp_path / "pk"
     root.mkdir()
-    (root / "ok.md").write_text("org_default_value and my_rg_something_long\n", encoding="utf-8")
+    (root / "ok.md").write_bytes(b"org_default_value and my_rg_something_long\n")
     assert (
         builder.read_public_file(root, "ok.md") == b"org_default_value and my_rg_something_long\n"
     )

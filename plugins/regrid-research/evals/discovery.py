@@ -166,7 +166,8 @@ def record(manifest: dict[str, Any], trace: Path, model: str, cli_version: str) 
     """Preserve raw stream-json and extract observed tool calls without grading."""
     if not model.strip() or model in {"haiku", "sonnet", "opus"} or not cli_version.strip():
         raise ValueError("An explicit model ID and CLI version are required")
-    raw = trace.read_text(encoding="utf-8")
+    raw_bytes = trace.read_bytes()
+    raw = raw_bytes.decode("utf-8")
     events = [json.loads(line) for line in raw.splitlines() if line.strip()]
     observed_models, calls = extract_calls(events)
     return {
@@ -176,7 +177,7 @@ def record(manifest: dict[str, Any], trace: Path, model: str, cli_version: str) 
         "cli_version": cli_version,
         "tool_calls": calls,
         "read_paths": read_paths(calls),
-        "trace_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest(),
+        "trace_sha256": hashlib.sha256(raw_bytes).hexdigest(),
         "trace": events,
         "grading_status": "not_graded",
         "read_paths_semantics": "requested reads; verify successful tool_result evidence separately",

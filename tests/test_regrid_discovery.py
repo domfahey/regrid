@@ -275,3 +275,32 @@ def test_stage_normalizes_relative_paths_with_as_posix(tmp_path, monkeypatch):
     assert "data/evidence.json" in manifest["files"]
     assert "support/workflow.py" in manifest["files"]
     assert all("\\" not in key for key in manifest["files"])
+
+
+def test_record_hashes_raw_crlf_trace_bytes(tmp_path):
+    trace = tmp_path / "trace.jsonl"
+    line = json.dumps(
+        {
+            "type": "assistant",
+            "message": {
+                "model": "claude-sonnet-test-1",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "Read",
+                        "input": {"file_path": "skills/property-research/SKILL.md"},
+                    }
+                ],
+            },
+        }
+    )
+    raw_bytes = (line + "\r\n").encode("utf-8")
+    trace.write_bytes(raw_bytes)
+    report = discovery.record(
+        {"case_id": "existing-evidence", "variant": "skill"},
+        trace,
+        "claude-sonnet-test-1",
+        "2.test",
+    )
+    assert report["trace_sha256"] == hashlib.sha256(raw_bytes).hexdigest()
+    assert report["read_paths"] == ["skills/property-research/SKILL.md"]
