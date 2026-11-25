@@ -33,6 +33,8 @@ secrets*.json
 
 # Local research/tool output
 .firecrawl/
+.gstack/
+.superpowers/
 
 # Editor and macOS metadata
 .DS_Store

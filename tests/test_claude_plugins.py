@@ -182,21 +182,62 @@ def test_command_is_bounded_and_links_map_guide():
 
 
 def test_host_results_never_claim_unrun_checks():
-    files = sorted((PLUGIN / "evals/results").glob("map-hosts-*.json"))
+    version = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))[
+        "version"
+    ]
+    results = PLUGIN / "evals/results"
+    assert (results / f"map-hosts-{version}.json").is_file()
+    files = sorted(results.glob("map-hosts-*.json"))
     assert len(files) >= 2
     for path in files:
         data = json.loads(path.read_text(encoding="utf-8"))
         assert set(data) == {"plugin_version", "hosts", "notes"}, path.name
+        assert path.name == f"map-hosts-{data['plugin_version']}.json", path.name
         assert set(data["hosts"]) == {"claude_code", "claude_apps", "cowork"}
         assert set(data["hosts"].values()) <= {"verified", "failed", "not_run"}
+
+
+def _load_pyproject() -> dict:
+    try:
+        import tomllib
+    except ModuleNotFoundError:
+        import tomli as tomllib
+    return tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
 
 def test_versions():
     assert (
         json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))["version"]
-        == "0.9.6"
+        == "0.9.7"
     )
-    assert regrid.__version__ == "0.4.5"
+    assert regrid.__version__ == "0.5.0"
+    pyproject = _load_pyproject()
+    assert pyproject["project"]["version"] == regrid.__version__
+
+
+def test_sdist_only_include_allowlist_and_gitignore():
+    pyproject = _load_pyproject()
+    sdist = pyproject["tool"]["hatch"]["build"]["targets"]["sdist"]
+    assert set(sdist) == {"only-include"}
+    entries = sdist["only-include"]
+    expected = [
+        "src/regrid",
+        "pyproject.toml",
+        "README.md",
+        "LICENSE",
+        "changelog.md",
+    ]
+    assert len(entries) == len(set(entries))
+    assert set(entries) == set(expected)
+    for entry in entries:
+        assert (ROOT / entry).exists(), f"missing allowlisted sdist entry: {entry}"
+    gitignore = {
+        line.strip()
+        for line in (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    }
+    assert ".gstack/" in gitignore
+    assert ".superpowers/" in gitignore
 
 
 def test_premium_guide_covers_every_flag_and_requires_authorization():
@@ -448,15 +489,18 @@ def test_manifest_carries_distribution_metadata():
 
 
 def test_shipped_readme_leads_with_current_status_and_omits_history():
+    version = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))[
+        "version"
+    ]
     readme = (PLUGIN / "README.md").read_text(encoding="utf-8")
     section = readme.split("## Validation and acceptance", 1)[1]
-    assert section.lstrip().startswith("Status for 0.9.6")
+    assert section.lstrip().startswith(f"Status for {version}")
     assert "Historical 0.4.0" not in readme
     assert "Historical 0.3.0" not in readme
     history = (PLUGIN / "evals/README.md").read_text(encoding="utf-8")
     assert "## Historical verification" in history
     assert "Historical 0.2.0 verification" in history
-    assert "results/map-hosts-0.9.6.json" in history
+    assert f"results/map-hosts-{version}.json" in history
     assert "map-hosts-0.7.0.json" not in history
 
 

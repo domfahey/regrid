@@ -263,12 +263,11 @@ Invalid local arguments raise `ValueError` or `TypeError`. The client checks lim
 
 ## Verification status
 
-For Regrid Research 0.9.6 and SDK 0.4.5 (PR #31 and the release PR, patch release):
-- **Tests:** `make check` passed **1480 tests** (2 skipped) with **97.40%** SDK/CLI coverage, `make e2e` passed **58**, `claude plugin validate --strict` passed and the 27 eval fixtures validated.
+For Regrid Research 0.9.7 and SDK 0.5.0 (PR #33 and the release PR):
+- **Tests:** `make check` passed **1639 tests** (2 skipped) with **97.69%** SDK/CLI coverage, `make e2e` passed **56**, `claude plugin validate --strict` passed and the 27 eval fixtures validated.
 - **CI:** passed on Python 3.10, 3.12 and 3.13 and on Windows.
-- **Live (authorized, 2026-11-20):** one POST point request verified that `return_parcels` is accepted.
-- **Map render check:** the map helper is unchanged since 0.9.3, so the 0.9.3 plain-browser render check applies; see `plugins/regrid-research/evals/results/map-hosts-0.9.6.json`.
-- **Not run:** the Claude Code, Claude apps and Cowork map host checks, a live `/mcp` connection, typeahead, POST area `return_parcels`, and model and Cowork acceptance evaluations.
+- **Map render check:** not re-rendered in a browser for `0.9.7` after `map.py` hardening (`NaN`/`Infinity` rejection, empty-path guards, `same_file_key` error handling); last plain-browser render check was `0.9.3`. See `plugins/regrid-research/evals/results/map-hosts-0.9.7.json`.
+- **Not run:** the Claude Code, Claude apps and Cowork map host checks, a fresh browser map render for `0.9.7`, live API checks against `0.5.0`, a live `/mcp` connection, typeahead, POST area `return_parcels`, and model and Cowork acceptance evaluations.
 
 For earlier release verification history and retained reports (`composability-0.5.0-report.json`, `authoring-0.4.0-report.json`, `final-report.json`, `forward-report.json`), see [changelog.md](changelog.md) and [plugins/regrid-research/evals/README.md](plugins/regrid-research/evals/README.md#historical-verification).
 
@@ -294,9 +293,9 @@ Output contains only status and aggregate counts, not credentials, addresses, ow
 The [Regrid Research guide](plugins/regrid-research/README.md) covers separate
 Cowork and Claude Code packages built from one canonical research skill:
 
-- `dist/regrid-research-cowork-0.9.6.zip`: remote connector declaration and skills.
-- `dist/regrid-research-claude-code-0.9.6.zip`: native HTTP MCP connection and skills.
-- `dist/regrid-property-research-skill-0.9.6.zip`: standalone skill with references.
+- `dist/regrid-research-cowork-0.9.7.zip`: remote connector declaration and skills.
+- `dist/regrid-research-claude-code-0.9.7.zip`: native HTTP MCP connection and skills.
+- `dist/regrid-property-research-skill-0.9.7.zip`: standalone skill with references.
 
 Build with `.venv/bin/python scripts/build_claude_plugins.py`. For Cowork,
 configure `x-regrid-token` privately in the custom web connector's Request headers
@@ -311,7 +310,7 @@ records observed MCP schemas and a successful authenticated usage-only call.
 using synthetic saved responses. Neither proves Cowork import or account-specific
 header availability; those remain unverified. No credentials enter the packages.
 
-Regrid Research 0.6.0 to 0.9.6 add:
+Regrid Research 0.6.0 to 0.9.7 add:
 - **Maps:** an interactive satellite parcel map (`scripts/map.py`, also `regrid map`) and the `/regrid-research:address-map` command for the address → data → map flow. Neighbouring outlines are opt-in.
 - **Export:** CSV and GeoJSON (`map.py export`, also `regrid export`).
 - **Field catalog:** `scripts/fields.py`, with `references/fields.json`.
