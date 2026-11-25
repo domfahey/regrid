@@ -8,7 +8,7 @@ The Python SDK/CLI and the Regrid Research plugin are versioned independently. T
 
 ### Changed
 
-- Development & CI (`Makefile`, `scripts/check_module_coverage.py`): `make test` and `make check` now enforce at least 95% combined line and branch coverage for every individual module in `src/regrid` alongside the 95% overall gate; added mocked unit tests bringing `doctor.py`, `live.py`, `live_full.py`, and `offline/fields.py` to 100% coverage.
+- Development & CI (`Makefile`, `scripts/check_module_coverage.py`): `make test` and `make check` now enforce at least 95% combined line and branch coverage for every individual module in `src/regrid` alongside the 95% overall gate; added mocked unit tests bringing `doctor.py`, `live.py`, `live_full.py`, and `offline/fields.py` above 95% coverage.
 
 ## [SDK 0.5.1][sdk-v0.5.1] and [Regrid Research 0.9.8][regrid-research-v0.9.8] - 2026-11-24
 

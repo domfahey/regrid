@@ -36,8 +36,9 @@ typecheck:
 	$(PYTHON) -m mypy src
 
 test:
-	$(PYTHON) -m pytest -m "not e2e" --cov=regrid --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=95
-	$(PYTHON) scripts/check_module_coverage.py --fail-under 95
+	$(PYTHON) -m coverage erase
+	$(PYTHON) -m pytest -m "not e2e" --cov=regrid --cov-branch --cov-report=term-missing --cov-report=xml
+	$(PYTHON) scripts/check_module_coverage.py --source-dir src/regrid
 
 e2e:
 	$(PYTHON) -m pytest -m e2e
