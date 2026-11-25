@@ -270,7 +270,7 @@ the shipped helper still requires only Python 3.10+ and the standard library.
 
 ## Satellite map host checklist
 
-Run per host (Claude Code, Claude apps, Cowork) with the 0.9.7 archive:
+Run per host (Claude Code, Claude apps, Cowork) with the 0.9.8 archive:
 
 1. Run `/regrid-research:address-map <US address>` (or render a saved response) and
    open the page.
@@ -278,7 +278,7 @@ Run per host (Claude Code, Claude apps, Cowork) with the 0.9.7 archive:
    credit all show.
 3. Check the browser console for blocked scripts or tile errors.
 4. Record `verified`, `failed` or `not_run` per host in
-   `results/map-hosts-0.9.7.json`, with notes. Leave `not_run` without evidence.
+   `results/map-hosts-0.9.8.json`, with notes. Leave `not_run` without evidence.
 
 ## Historical verification
 

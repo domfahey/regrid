@@ -8,23 +8,23 @@ billable or credentialed call.
 Ranked highest to lowest priority across verification gaps (`P0`–`P1`) and optional
 features/polish (`P2`–`P3`).
 
-## Open (Regrid Research 0.9.7 / SDK 0.5.0)
+## Open (Regrid Research 0.9.8 / SDK 0.5.1)
 
 *No open P0 items.*
 
 ### P1 — Map & host verification after `0.9.7` `map.py` hardening
 
-1. [ ] **Synthetic plain-browser map render check for `0.9.7`** *(zero API cost, unblocked)*:
+1. [ ] **Synthetic plain-browser map render check for `0.9.8`** *(zero API cost, unblocked)*:
    render a synthetic US response + neighbours via `regrid map --neighbours` and confirm
    Leaflet, Esri imagery, outlines, info panel, attribution, and clean console in a local
    browser. Unlike `0.9.4`–`0.9.6`, `0.9.7` modified `map.py` on the `render()` path
-   (`_load_json`, `_check_and_prune`, `_json_for_script`), so the `0.9.3` browser baseline
-   no longer covers identical code.
+   (`_load_json`, `_check_and_prune`, `_json_for_script`; unchanged in `0.9.8`), so the
+   `0.9.3` browser baseline no longer covers identical code.
 2. [ ] **Real-host plugin & map checks** *(manual host apps; **authorization** for live lookup)*:
    verify plugin loading, MCP host connector auth, and `/regrid-research:address-map` once
    each in Claude Code, the Claude apps, and Cowork (confirming `unpkg.com` Leaflet and Esri
    imagery load under each host's CSP/sandbox), and record `verified` or `failed` in
-   `plugins/regrid-research/evals/results/map-hosts-0.9.7.json` (all three hosts remain
+   `plugins/regrid-research/evals/results/map-hosts-0.9.8.json` (all three hosts remain
    `not_run`). Direct Streamable HTTP `/mcp` transport (`GET /usage` + `POST /parcels/area`
    `return_parcels=true`) and SDK `0.5.0` `make live` were verified on 2026-11-24; host UI
    import and Cowork header support remain unverified.

@@ -1,0 +1,9 @@
+{
+  "plugin_version": "0.9.8",
+  "hosts": {
+    "claude_code": "not_run",
+    "claude_apps": "not_run",
+    "cowork": "not_run"
+  },
+  "notes": "Map helper unchanged from 0.9.7; not re-rendered in a browser since 0.9.7 hardened `scripts/map.py` and `src/regrid/offline/map.py` (`_load_json`, `_check_and_prune`, `_json_for_script`, `same_file_key`, empty-path guards, `allow_nan=False`). The last plain-browser render check was on 0.9.3 (map-hosts-0.9.3.json). claude_code, claude_apps and cowork hosts: not run (need the user's apps)."
+}

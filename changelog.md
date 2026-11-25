@@ -2,15 +2,22 @@
 
 User-visible changes are grouped by release using the categories from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version numbering follows [Semantic Versioning](https://semver.org/); the current `0.x` API remains under development.
 
-The Python SDK/CLI and the Regrid Research plugin are versioned independently. The latest tagged releases are SDK `0.5.0` (`sdk-v0.5.0`) and Regrid Research `0.9.7` (`regrid-research-v0.9.7`); the first were SDK `0.3.0` and Regrid Research `0.8.0`. Keep pending changes under Unreleased until the next release is prepared.
+The Python SDK/CLI and the Regrid Research plugin are versioned independently. The latest tagged releases are SDK `0.5.1` (`sdk-v0.5.1`) and Regrid Research `0.9.8` (`regrid-research-v0.9.8`); the first were SDK `0.3.0` and Regrid Research `0.8.0`. Keep pending changes under Unreleased until the next release is prepared.
 
 ## Unreleased
+
+## [SDK 0.5.1][sdk-v0.5.1] and [Regrid Research 0.9.8][regrid-research-v0.9.8] - 2026-11-24
+
+Patch release following authorized live `/mcp` + SDK `0.5.0` smoke verification and real Claude CLI (`2.1.331`) offline model evaluations + targeted post-fix retests. Verified in this cycle: direct Streamable HTTP `/mcp` (`tools/list`, `list-specs`, authenticated `GET /usage`, and `POST /parcels/area` with `return_parcels=true`), SDK `make live`, and offline Claude CLI evaluations across Haiku/Sonnet/Opus (`model-eval-0.9.7-report.json` and `model-eval-0.9.7-retest-report.json`). Unverified at release:
+- the Claude Code, Claude apps and Cowork host UI/map checks (and Cowork connector header support), plus a fresh plain-browser map render since `0.9.7`'s `map.py` hardening (last plain-browser render check was `0.9.3`)
+- Enterprise typeahead (`/parcels/typeahead`)
+- Haiku skill discovery on `checkpoint-correction` (Haiku still skips `SKILL.md` when `support/workflow.py` is staged in `task_dependencies`; Sonnet and Opus pass)
 
 ### Changed
 
 - Skill (`mcp-tools.md`): updated the `POST /parcels/area` example and notes to include `return_parcels=true` and recorded the 2026-11-24 authorized live direct `/mcp` check (`tools/list`, `list-specs`, `GET /usage`, and `POST /parcels/area` with `return_parcels=true`) plus SDK `0.5.0` `make live` verification.
-- Skill & catalog (`parcel_fields.json`, `fields.json`, `cli.md`, `mcp-tools.md`, `SKILL.md`): clarified `ll_last_refresh` as a per-parcel refresh date (never county-wide freshness; county pull dates come from `/verse` / `regrid freshness`), and added structured handoff and checkpoint budget-ledger audit cues to `property-research/SKILL.md` frontmatter description.
-- Evals (`plugins/regrid-research/evals/`): recorded the 2026-11-24 pre-fix real Claude CLI (`2.1.331`) evaluation report (`model-eval-0.9.7-report.json`) and targeted post-fix retest report (`model-eval-0.9.7-retest-report.json`) with unedited transcripts (`live_calls: 0`), updated `trigger_13` (Toronto) to expect `none` matching US-only frontmatter, raised `run_discovery_claude.py`'s default `--max-budget-usd` from `0.25` to `0.50`, and added optional `--model` and `--case` filters.
+- SDK & skill catalog (`parcel_fields.json`, `fields.json`, `cli.md`, `mcp-tools.md`, `SKILL.md`): clarified `ll_last_refresh` as a per-parcel refresh date (never county-wide freshness; county pull dates come from `/verse` / `regrid freshness`), and added structured handoff and checkpoint budget-ledger audit cues to `property-research/SKILL.md` frontmatter description.
+- Evals (`plugins/regrid-research/evals/`): recorded the 2026-11-24 pre-fix real Claude CLI (`2.1.331`) evaluation report (`model-eval-0.9.7-report.json`) and targeted post-fix retest report (`model-eval-0.9.7-retest-report.json`) with unedited transcripts (`live_calls: 0`), updated `trigger_13` (Toronto) to expect `none` matching US-only frontmatter, raised `run_discovery_claude.py`'s default `--max-budget-usd` from `0.25` to `0.50`, added optional `--model` and `--case` filters, and rotated `map-hosts-0.9.7.json` to `map-hosts-0.9.8.json`.
 
 ### Fixed
 
@@ -397,3 +404,5 @@ Describe user-facing changes rather than copying commit logs. Add repository com
 [regrid-research-v0.9.6]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.6
 [sdk-v0.5.0]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.5.0
 [regrid-research-v0.9.7]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.7
+[sdk-v0.5.1]: https://github.com/domfahey/regrid/releases/tag/sdk-v0.5.1
+[regrid-research-v0.9.8]: https://github.com/domfahey/regrid/releases/tag/regrid-research-v0.9.8

@@ -40,7 +40,7 @@ The editable installation provides `.venv/bin/regrid`. Activate `.venv` to use
 a token. Development dependencies resolve locally; `uv.lock` is not tracked.
 The SDK is not published to PyPI; prebuilt wheels are attached to
 [GitHub Releases](https://github.com/domfahey/regrid/releases) (for example,
-`pip install regrid_sdk-0.5.0-py3-none-any.whl`).
+`pip install regrid_sdk-0.5.1-py3-none-any.whl`).
 
 ### Optional authenticated setup
 
@@ -269,13 +269,14 @@ Invalid local arguments raise `ValueError` or `TypeError`. The client checks lim
 
 ## Verification status
 
-For Regrid Research 0.9.7 and SDK 0.5.0 (PR #33 and PR #34):
-- **Tests:** `make check` passed **1639 tests** (2 skipped) with **97.69%** SDK/CLI coverage, `make e2e` passed **56**, `claude plugin validate --strict` passed and the 27 eval fixtures validated.
+For Regrid Research 0.9.8 and SDK 0.5.1:
+- **Tests:** `make check` passed **1645 tests** (2 skipped) with **97.69%** SDK/CLI coverage, `make e2e` passed **56**, `claude plugin validate --strict` passed and the 27 eval fixtures validated.
 - **CI:** passed on Python 3.10, 3.12 and 3.13 and on Windows.
 - **Packaging:** `uv build` verified a 28-file allowlisted sdist (`[tool.hatch.build.targets.sdist]` `only-include`) and wheel with 0 leaked local files; all 3 plugin archives rebuilt deterministically.
-- **Live (authorized, 2026-11-24):** `make live` passed on SDK `0.5.0` (169 schema definitions, 0 type differences, geometry present, observed delta 1); direct Streamable HTTP `/mcp` against `https://support.regrid.com/mcp` with `x-regrid-token` verified `tools/list` (`tools.json` parity), `list-specs`, authenticated `GET /usage`, and `POST /parcels/area` with `return_parcels=true` (`limit=1`, returning `area` + 1 parcel feature with geometry and fields).
-- **Map render check:** not re-rendered in a browser for `0.9.7` after `map.py` hardening (`NaN`/`Infinity` rejection, empty-path guards, `same_file_key` error handling); last plain-browser render check was `0.9.3`. See `plugins/regrid-research/evals/results/map-hosts-0.9.7.json`.
-- **Not run:** the Claude Code, Claude apps and Cowork host UI/map checks, a fresh browser map render for `0.9.7`, typeahead (needs an Enterprise token), and model and Cowork acceptance evaluations.
+- **Live (authorized, 2026-11-24):** `make live` passed on SDK `0.5.0` (169 schema definitions, 0 type differences, geometry present, observed delta 1; `0.5.1` changes only `ll_last_refresh`'s catalog description); direct Streamable HTTP `/mcp` against `https://support.regrid.com/mcp` with `x-regrid-token` verified `tools/list` (`tools.json` parity), `list-specs`, authenticated `GET /usage`, and `POST /parcels/area` with `return_parcels=true` (`limit=1`, returning `area` + 1 parcel feature with geometry and fields).
+- **Offline model evaluations (authorized, 2026-11-24, `live_calls: 0`):** real Claude CLI (`2.1.331`) evaluations and targeted post-fix retests across Haiku, Sonnet, and Opus are recorded with unedited transcripts and independent rubric grades in [model-eval-0.9.7-report.json](plugins/regrid-research/evals/results/model-eval-0.9.7-report.json) and [model-eval-0.9.7-retest-report.json](plugins/regrid-research/evals/results/model-eval-0.9.7-retest-report.json). Post-fix retests passed `17/17` triggers (Haiku & Sonnet), `8/8` feature cases (`36/36` criteria, Sonnet), Opus `structured-handoff` discovery (`PASS`, `$0.2726`), and Sonnet/Opus `checkpoint-correction` discovery (`PASS`; Haiku still skips `SKILL.md` when `support/workflow.py` is staged).
+- **Map render check:** not re-rendered in a browser since `0.9.7`'s `map.py` hardening (`NaN`/`Infinity` rejection, empty-path guards, `same_file_key` error handling); last plain-browser render check was `0.9.3`. See `plugins/regrid-research/evals/results/map-hosts-0.9.8.json`.
+- **Not run:** the Claude Code, Claude apps and Cowork host UI/map checks, a fresh plain-browser map render since `0.9.7`, typeahead (needs an Enterprise token), and Cowork acceptance.
 
 For earlier release verification history and retained reports (`composability-0.5.0-report.json`, `authoring-0.4.0-report.json`, `final-report.json`, `forward-report.json`), see [changelog.md](changelog.md) and [plugins/regrid-research/evals/README.md](plugins/regrid-research/evals/README.md#historical-verification).
 
@@ -301,9 +302,9 @@ Output contains only status and aggregate counts, not credentials, addresses, ow
 The [Regrid Research guide](plugins/regrid-research/README.md) covers separate
 Cowork and Claude Code packages built from one canonical research skill:
 
-- `dist/regrid-research-cowork-0.9.7.zip`: remote connector declaration and skills.
-- `dist/regrid-research-claude-code-0.9.7.zip`: native HTTP MCP connection and skills.
-- `dist/regrid-property-research-skill-0.9.7.zip`: standalone skill with references.
+- `dist/regrid-research-cowork-0.9.8.zip`: remote connector declaration and skills.
+- `dist/regrid-research-claude-code-0.9.8.zip`: native HTTP MCP connection and skills.
+- `dist/regrid-property-research-skill-0.9.8.zip`: standalone skill with references.
 
 Build with `.venv/bin/python scripts/build_claude_plugins.py`. For Cowork,
 configure `x-regrid-token` privately in the custom web connector's Request headers
@@ -318,7 +319,7 @@ records observed MCP schemas and a successful authenticated usage-only call.
 using synthetic saved responses. Neither proves Cowork import or account-specific
 header availability; those remain unverified. No credentials enter the packages.
 
-Regrid Research 0.6.0 to 0.9.7 add:
+Regrid Research 0.6.0 to 0.9.8 add:
 - **Maps:** an interactive satellite parcel map (`scripts/map.py`, also `regrid map`) and the `/regrid-research:address-map` command for the address → data → map flow. Neighbouring outlines are opt-in.
 - **Export:** CSV and GeoJSON (`map.py export`, also `regrid export`).
 - **Field catalog:** `scripts/fields.py`, with `references/fields.json`.
